@@ -68,7 +68,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout() {
     return layout;
 }
 
-// Helper — assumes the parameter exists; will assert in debug if not.
+// Safe to deref unconditionally: callers only pass params::id:: constants,
+// all of which createLayout() registers, so the lookup never returns null.
+// jassert guards against a future param added to id:: but missed in the layout.
 static float raw(const APVTS& apvts, juce::StringRef id) {
     auto* p = apvts.getRawParameterValue(id);
     jassert(p != nullptr);
