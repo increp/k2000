@@ -1,6 +1,8 @@
 add_executable(k2000_tests
     TestMain.cpp
-    SmokeTests.cpp)
+    SmokeTests.cpp
+    ParamSnapshotTests.cpp
+    ../src/params/Parameters.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core
