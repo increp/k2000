@@ -34,8 +34,10 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Build the snapshot once for this block.
     auto snap = params::snapshot(apvts_);
 
-    // Render mono into scratch.
-    if ((int) monoScratch_.size() < n) monoScratch_.assign(n, 0.0f);
+    // Render mono into scratch. prepareToPlay sizes scratch_ to the host's
+    // declared upper bound; a larger block here would mean a host bug or a
+    // missed prepare call, not something to silently allocate around.
+    jassert((int) monoScratch_.size() >= n);
     std::fill(monoScratch_.begin(), monoScratch_.begin() + n, 0.0f);
     voiceManager_.renderBlock(monoScratch_.data(), n, midi, snap);
 
