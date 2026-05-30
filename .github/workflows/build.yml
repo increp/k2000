@@ -19,6 +19,9 @@ jobs:
           - os: windows-2022
             short_name: windows
     runs-on: ${{ matrix.os }}
+    # Windows is the trusted artifact for testing (Ableton 12); Linux build
+    # is informational only — OOM/timeout failures don't block the overall run.
+    continue-on-error: ${{ matrix.os == 'ubuntu-22.04' }}
     steps:
       - uses: actions/checkout@v4
         with:
