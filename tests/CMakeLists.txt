@@ -5,10 +5,12 @@ add_executable(k2000_tests
     OscillatorTests.cpp
     EnvelopeTests.cpp
     SVFFilterTests.cpp
+    WaveshaperTests.cpp
     ../src/params/Parameters.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
-    ../src/dsp/blocks/SVFFilter.cpp)
+    ../src/dsp/blocks/SVFFilter.cpp
+    ../src/dsp/blocks/Waveshaper.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core
