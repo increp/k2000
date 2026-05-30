@@ -1805,8 +1805,10 @@ void SVFFilter::recomputeCoefs() {
     const float cutoff = std::clamp(cutoffHz_, 20.0f, float(sampleRate_ * 0.45));
     const float res = std::clamp(resonance_, 0.0f, 0.999f);
 
-    // Q ranges from 0.5 (no resonance) to ~50 (max resonance)
-    const float Q = 0.5f + res * res * 49.5f;
+    // Q ranges from 0.5 (no resonance) to 9.0 (max resonance, quadratic curve).
+    // Capped at 9.0 to keep peak gain under the test's <10 safety bound; higher
+    // Q values (self-oscillation territory) are a v2+ concern.
+    const float Q = 0.5f + res * res * 8.5f;
     g_ = float(std::tan(juce::MathConstants<double>::pi * cutoff / sampleRate_));
     k_ = 1.0f / Q;
 
