@@ -4,9 +4,11 @@ add_executable(k2000_tests
     ParamSnapshotTests.cpp
     OscillatorTests.cpp
     EnvelopeTests.cpp
+    SVFFilterTests.cpp
     ../src/params/Parameters.cpp
     ../src/dsp/Oscillator.cpp
-    ../src/dsp/Envelope.cpp)
+    ../src/dsp/Envelope.cpp
+    ../src/dsp/blocks/SVFFilter.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core

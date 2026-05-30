@@ -31,7 +31,8 @@ target_sources(k2000 PRIVATE
     src/PluginEditor.cpp
     src/params/Parameters.cpp
     src/dsp/Oscillator.cpp
-    src/dsp/Envelope.cpp)
+    src/dsp/Envelope.cpp
+    src/dsp/blocks/SVFFilter.cpp)
 
 target_compile_definitions(k2000 PUBLIC
     JUCE_WEB_BROWSER=0
