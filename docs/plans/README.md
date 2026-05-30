@@ -8,4 +8,4 @@ Filename convention: `YYYY-MM-DD-<feature>-implementation.md`. The date is when 
 
 | Plan | Spec | Status |
 |---|---|---|
-| [v1 implementation](2026-05-25-v1-implementation.md) | [v1 design](../specs/2026-05-25-v1-skeleton-design.md) | Ready to execute |
+| [v1 implementation](2026-05-25-v1-implementation.md) | [v1 design](../specs/2026-05-25-v1-skeleton-design.md) | Completed |

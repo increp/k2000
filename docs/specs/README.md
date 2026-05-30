@@ -8,4 +8,4 @@ Filename convention: `YYYY-MM-DD-<topic>-design.md`. The date is when the spec w
 
 | Spec | Status |
 |---|---|
-| [v1 — Skeleton end-to-end](2026-05-25-v1-skeleton-design.md) | Approved, not yet implemented |
+| [v1 — Skeleton end-to-end](2026-05-25-v1-skeleton-design.md) | Implemented (v1.0.0) |

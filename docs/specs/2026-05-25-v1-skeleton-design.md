@@ -1,7 +1,7 @@
 # v1 — Skeleton end-to-end
 
 **Date:** 2026-05-25
-**Status:** Approved, not yet implemented
+**Status:** Implemented (tagged v1.0.0 on 2026-05-30). Linux CI build is informational only — Windows is the trusted testing target per [ADR 0003](../decisions/0003-windows-via-github-actions.md).
 **Scope:** The first version of the plugin that ships, makes sound, and proves the architecture.
 
 ## Goal

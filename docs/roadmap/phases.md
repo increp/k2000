@@ -4,7 +4,7 @@ Order is suggestive, not binding. Phases can re-order based on what we learn dur
 
 | Phase | Theme | What lands |
 |---|---|---|
-| **v1** | Skeleton end-to-end | 1 oscillator, 2-slot VAST chain (SVF + waveshaper), ADSR amp, 8-voice polyphony, plain JUCE UI. Linux dev + Windows builds via CI. See [v1 spec](../specs/2026-05-25-v1-skeleton-design.md). |
+| **v1** ✅ | Skeleton end-to-end | 1 oscillator, 2-slot VAST chain (SVF + waveshaper), ADSR amp, 8-voice polyphony, plain JUCE UI. Linux dev + Windows builds via CI. **Shipped 2026-05-30 as v1.0.0.** See [v1 spec](../specs/2026-05-25-v1-skeleton-design.md). |
 | **v2** | Real Peak character | 3 oscillators per voice, Peak-style detune/tune controls, analog-modeled multimode filter (the signature Peak sound), pre/post-filter drive routing. |
 | **v3** | Modulation | 2 LFOs, 2nd envelope (filter env), mod matrix (4–8 slots: source → destination → amount). |
 | **v4** | VAST flexibility | User-selectable block type per slot; expanded block library (EQ, comb filter, ring mod, more shaper flavors); 3–4 slots per voice; multiple algorithms with different routing topologies. |
