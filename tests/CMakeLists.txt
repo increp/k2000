@@ -8,6 +8,8 @@ add_executable(k2000_tests
     WaveshaperTests.cpp
     VoiceTests.cpp
     VoiceManagerTests.cpp
+    PluginLifecycleTests.cpp
+    ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
     ../src/params/Parameters.cpp

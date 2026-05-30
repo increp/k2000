@@ -1,5 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "VoiceManager.h"
+#include "params/Parameters.h"
 
 class K2000AudioProcessor : public juce::AudioProcessor {
 public:
@@ -19,7 +21,7 @@ public:
     bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return 0.0; }
+    double getTailLengthSeconds() const override { return 5.0; }
 
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
@@ -30,6 +32,11 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+    juce::AudioProcessorValueTreeState& apvts() { return apvts_; }
+
 private:
+    juce::AudioProcessorValueTreeState apvts_;
+    VoiceManager voiceManager_;
+    std::vector<float> monoScratch_;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessor)
 };
