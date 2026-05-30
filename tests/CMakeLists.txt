@@ -7,7 +7,9 @@ add_executable(k2000_tests
     SVFFilterTests.cpp
     WaveshaperTests.cpp
     VoiceTests.cpp
+    VoiceManagerTests.cpp
     ../src/Voice.cpp
+    ../src/VoiceManager.cpp
     ../src/params/Parameters.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
