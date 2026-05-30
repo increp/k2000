@@ -3,8 +3,10 @@ add_executable(k2000_tests
     SmokeTests.cpp
     ParamSnapshotTests.cpp
     OscillatorTests.cpp
+    EnvelopeTests.cpp
     ../src/params/Parameters.cpp
-    ../src/dsp/Oscillator.cpp)
+    ../src/dsp/Oscillator.cpp
+    ../src/dsp/Envelope.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core
