@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "dsp/DSPBlock.h"
 
 K2000AudioProcessor::K2000AudioProcessor()
     : juce::AudioProcessor(BusesProperties()
