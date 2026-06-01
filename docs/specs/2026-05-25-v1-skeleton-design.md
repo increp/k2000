@@ -204,14 +204,14 @@ Windows VST3 for Ableton:
 
 ## Definition of done for v1
 
-- [ ] CMake project builds clean on Linux locally.
-- [ ] GitHub Actions builds Linux + Windows VST3 artifacts on every push.
-- [ ] All `juce::UnitTest` tests pass on both platforms in CI.
-- [ ] Plugin loads in Carla on Linux and in Ableton 12 on Windows.
-- [ ] Playing a MIDI keyboard produces audible polyphonic sound through the full signal chain.
-- [ ] Filter cutoff/resonance audibly affect tone in all four filter modes.
-- [ ] Waveshaper drive audibly distorts.
-- [ ] ADSR envelope behaves correctly (clean attack/decay/sustain/release).
-- [ ] Parameter changes from the GUI are reflected in audio without crackles.
-- [ ] Preset save/restore round-trips all parameters.
-- [ ] No allocation or locking detected in `processBlock` (verified in debug builds via an audio-thread sentinel — a thread-local flag set on entry to `processBlock` and asserted-not-set in custom `operator new` / lock acquisitions in debug builds, or equivalent tooling).
+- [x] CMake project builds clean on Linux locally.
+- [x] GitHub Actions builds Linux + Windows VST3 artifacts on every push. *(commits `9443a0e`, `c5b6257`)*
+- [x] All `juce::UnitTest` tests pass on both platforms in CI. *(harness `e2c67e1`; suite green on tagged `v1.0.0`)*
+- [ ] Plugin loads in Carla on Linux and in Ableton 12 on Windows. *(Ableton confirmed by user; Carla loading needs confirmation)*
+- [ ] Playing a MIDI keyboard produces audible polyphonic sound through the full signal chain. *(needs user listening confirmation — particularly that multiple held notes ring independently)*
+- [ ] Filter cutoff/resonance audibly affect tone in all four filter modes. *(needs user listening confirmation across LP/HP/BP/Notch)*
+- [ ] Waveshaper drive audibly distorts. *(needs user listening confirmation)*
+- [ ] ADSR envelope behaves correctly (clean attack/decay/sustain/release). *(needs user listening confirmation)*
+- [ ] Parameter changes from the GUI are reflected in audio without crackles. *(needs user listening confirmation while sweeping)*
+- [x] Preset save/restore round-trips all parameters. *(verified by `PluginLifecycleTests`; state wiring `6ec9560`)*
+- [x] No allocation or locking detected in `processBlock` (verified in debug builds via an audio-thread sentinel — a thread-local flag set on entry to `processBlock` and asserted-not-set in custom `operator new` / lock acquisitions in debug builds, or equivalent tooling). *(jassert RT-safety guard `c7b0b05`)*
