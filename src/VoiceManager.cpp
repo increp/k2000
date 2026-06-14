@@ -1,7 +1,15 @@
 #include "VoiceManager.h"
 
+void VoiceManager::setLayer(Layer* layer) {
+    layer_ = layer;
+    for (auto& v : voices_) v.setLayer(layer);
+}
+
 void VoiceManager::prepare(double sr, int maxBlock) {
-    for (auto& v : voices_) v.prepare(sr, maxBlock);
+    for (auto& v : voices_) {
+        v.setLayer(layer_);  // ensure binding before per-slot state is sized
+        v.prepare(sr, maxBlock);
+    }
     voiceAge_.fill(0);
     ageCounter_ = 0;
 }
@@ -34,13 +42,12 @@ void VoiceManager::noteOff(int midiNote) {
 }
 
 void VoiceManager::renderBlock(float* out, int numSamples,
-                               const juce::MidiBuffer& midi,
-                               const ParamSnapshot& s) {
+                               const juce::MidiBuffer& midi) {
     int cursor = 0;
     auto renderRange = [&](int from, int to) {
         if (to <= from) return;
         const int len = to - from;
-        for (auto& v : voices_) v.render(out + from, len, s);
+        for (auto& v : voices_) v.render(out + from, len);
     };
 
     for (const auto meta : midi) {

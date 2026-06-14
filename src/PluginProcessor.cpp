@@ -11,6 +11,8 @@ K2000AudioProcessor::K2000AudioProcessor()
       apvts_(*this, nullptr, "PARAMS", params::createLayout()) {}
 
 void K2000AudioProcessor::prepareToPlay(double sr, int samplesPerBlock) {
+    program_.prepare(sr, samplesPerBlock);
+    voiceManager_.setLayer(&program_.layer());  // bind before voices size state
     voiceManager_.prepare(sr, samplesPerBlock);
     monoScratch_.assign(samplesPerBlock, 0.0f);
 }
@@ -31,15 +33,17 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     buffer.clear();
 
-    // Build the snapshot once for this block.
+    // Build the snapshot once for this block and push it to the Layer, which
+    // configures its slot blocks. Voices read the snapshot back via the Layer.
     auto snap = params::snapshot(apvts_);
+    program_.layer().updateParameters(snap);
 
     // Render mono into scratch. prepareToPlay sizes scratch_ to the host's
     // declared upper bound; a larger block here would mean a host bug or a
     // missed prepare call, not something to silently allocate around.
     jassert((int) monoScratch_.size() >= n);
     std::fill(monoScratch_.begin(), monoScratch_.begin() + n, 0.0f);
-    voiceManager_.renderBlock(monoScratch_.data(), n, midi, snap);
+    voiceManager_.renderBlock(monoScratch_.data(), n, midi);
 
     // Apply master gain (dB -> linear)
     const float gainLin = juce::Decibels::decibelsToGain(snap.masterGainDb);

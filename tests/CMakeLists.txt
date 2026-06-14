@@ -13,6 +13,8 @@ add_executable(k2000_tests
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
+    ../src/Layer.cpp
+    ../src/Program.cpp
     ../src/params/Parameters.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp

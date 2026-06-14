@@ -7,8 +7,9 @@ std::unique_ptr<DSPBlock> makeBlock(BlockTypeId t) {
     switch (t) {
         case BlockTypeId::SvfFilter:  return std::make_unique<SVFFilter>();
         case BlockTypeId::Waveshaper: return std::make_unique<Waveshaper>();
-        default: return nullptr;
+        case BlockTypeId::None:       return nullptr;
     }
+    return nullptr;
 }
 }  // namespace
 

@@ -1,6 +1,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../src/VoiceManager.h"
+#include "../src/Layer.h"
 #include <vector>
 #include <cmath>
 
@@ -19,13 +20,19 @@ public:
         s.ampAttackS = 0.001f; s.ampDecayS = 0.01f;
         s.ampSustain = 1.0f; s.ampReleaseS = 0.05f;
 
+        // Voices read parameters from their bound Layer's snapshot.
+        Layer layer;
+        layer.prepare(SR, BLOCK);
+        layer.updateParameters(s);
+
         VoiceManager vm;
+        vm.setLayer(&layer);
         vm.prepare(SR, BLOCK);
 
         beginTest("no MIDI input → silent output");
         std::vector<float> out(BLOCK, 0.0f);
         juce::MidiBuffer midi;
-        vm.renderBlock(out.data(), BLOCK, midi, s);
+        vm.renderBlock(out.data(), BLOCK, midi);
         double sumAbs = 0;
         for (float v : out) sumAbs += std::abs(v);
         expectWithinAbsoluteError(float(sumAbs), 0.0f, 1e-6f);
@@ -34,10 +41,10 @@ public:
         midi.clear();
         midi.addEvent(juce::MidiMessage::noteOn(1, 60, (juce::uint8) 100), 0);
         std::fill(out.begin(), out.end(), 0.0f);
-        vm.renderBlock(out.data(), BLOCK, midi, s);
+        vm.renderBlock(out.data(), BLOCK, midi);
         std::fill(out.begin(), out.end(), 0.0f);
         midi.clear();
-        vm.renderBlock(out.data(), BLOCK, midi, s);
+        vm.renderBlock(out.data(), BLOCK, midi);
         sumAbs = 0;
         for (float v : out) sumAbs += std::abs(v);
         expect(sumAbs > 1.0, "should produce audible output");
@@ -45,12 +52,12 @@ public:
         beginTest("noteOff releases voice");
         midi.clear();
         midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
-        vm.renderBlock(out.data(), BLOCK, midi, s);
+        vm.renderBlock(out.data(), BLOCK, midi);
         // Run for long enough to drain release
         for (int b = 0; b < 200; ++b) {
             std::fill(out.begin(), out.end(), 0.0f);
             midi.clear();
-            vm.renderBlock(out.data(), BLOCK, midi, s);
+            vm.renderBlock(out.data(), BLOCK, midi);
         }
         sumAbs = 0;
         for (float v : out) sumAbs += std::abs(v);
@@ -61,7 +68,7 @@ public:
         for (int i = 0; i < VoiceManager::kNumVoices + 2; ++i)
             midi.addEvent(juce::MidiMessage::noteOn(1, 60 + i, (juce::uint8) 100), 0);
         std::fill(out.begin(), out.end(), 0.0f);
-        vm.renderBlock(out.data(), BLOCK, midi, s);
+        vm.renderBlock(out.data(), BLOCK, midi);
         // Just verify nothing crashed and we have a finite, bounded output.
         for (float v : out) expect(std::isfinite(v));
     }
