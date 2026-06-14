@@ -37,7 +37,8 @@ target_sources(k2000 PRIVATE
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp
     src/dsp/blocks/SVFFilter.cpp
-    src/dsp/blocks/Waveshaper.cpp)
+    src/dsp/blocks/Waveshaper.cpp
+    src/dsp/AlgorithmLibrary.cpp)
 
 target_compile_definitions(k2000 PUBLIC
     JUCE_WEB_BROWSER=0
