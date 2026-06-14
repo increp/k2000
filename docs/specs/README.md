@@ -9,3 +9,4 @@ Filename convention: `YYYY-MM-DD-<topic>-design.md`. The date is when the spec w
 | Spec | Status |
 |---|---|
 | [v1 — Skeleton end-to-end](2026-05-25-v1-skeleton-design.md) | Implemented (v1.0.0) |
+| [v2 — Layer abstraction](2026-06-11-v2-layer-abstraction-design.md) | Implemented (v2.0.0) |

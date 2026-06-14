@@ -8,7 +8,7 @@ Built with JUCE, in C++. Linux for local development; Windows builds produced by
 
 | Folder | What lives here |
 |---|---|
-| [`specs/`](specs/) | Design specifications for major pieces of work. The v1 design is here. |
+| [`specs/`](specs/) | Design specifications for major pieces of work. The v1 and v2 designs are here. |
 | [`architecture/`](architecture/) | Deep dives into specific architectural pieces. The DSPBlock interface lives here. |
 | [`decisions/`](decisions/) | Architecture Decision Records (ADRs) — short documents capturing each non-obvious choice and *why* it was made. |
 | [`roadmap/`](roadmap/) | What's coming after v1, and roughly in what order. |
@@ -24,7 +24,7 @@ Built with JUCE, in C++. Linux for local development; Windows builds produced by
 
 ## Start here
 
-- **First time reading?** Open [`specs/2026-05-25-v1-skeleton-design.md`](specs/2026-05-25-v1-skeleton-design.md) — the v1 design.
+- **First time reading?** Start with the [v1 design](specs/2026-05-25-v1-skeleton-design.md) for the end-to-end skeleton, then the [v2 design](specs/2026-06-11-v2-layer-abstraction-design.md) for the current Layer/Program abstraction.
 - **Need to know why a decision was made?** Check [`decisions/`](decisions/).
 - **Curious about a specific subsystem?** Check [`architecture/`](architecture/).
 - **Wondering what's next?** Check [`roadmap/`](roadmap/).

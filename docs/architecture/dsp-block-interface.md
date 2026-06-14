@@ -16,18 +16,26 @@ class ParamSnapshot;  // forward decl — see params/ParamSnapshot.h
 
 class DSPBlock {
 public:
+    // Per-voice runtime state lives in a block-defined struct, not on the
+    // block instance. Marker base; each concrete block defines its own.
+    struct VoiceState { virtual ~VoiceState() = default; };
+
     virtual ~DSPBlock() = default;
 
     // Called when sample rate or block size changes. May allocate.
     virtual void prepare(double sampleRate, int maxBlockSize) = 0;
 
-    // Called on note-off / voice steal. Reset internal state.
-    // RT-safe: no allocation, no locks.
-    virtual void reset() = 0;
+    // Allocate a fresh per-voice state for this block. Called once per voice
+    // from prepareToPlay; the Voice owns the returned state. May allocate.
+    virtual std::unique_ptr<VoiceState> makeVoiceState() const = 0;
 
-    // Process one sub-block in-place. RT-safe.
-    // numSamples <= maxBlockSize. Mono in / mono out for v1.
-    virtual void process(float* buffer, int numSamples) = 0;
+    // Called on note-on / voice steal. Clears the supplied voice's state.
+    // RT-safe: no allocation, no locks.
+    virtual void resetVoice(VoiceState& state) = 0;
+
+    // Process one sub-block in-place using the supplied voice state. RT-safe.
+    // numSamples <= maxBlockSize. Mono in / mono out for v2.
+    virtual void process(VoiceState& state, float* buffer, int numSamples) = 0;
 
     // Stable identifier for serialization, e.g. "svf_filter", "waveshaper".
     // Used in preset state to record which block lives in each slot.
@@ -43,21 +51,32 @@ public:
 };
 ```
 
+> **v2 update:** the block instance now holds only *configuration* (sample
+> rate, cached coefficients) and is owned by the `Layer`. *Per-voice* state
+> (filter integrators, etc.) moved into a block-defined `VoiceState`, owned by
+> each `Voice`. This is what lets two Voices share one Layer's block config
+> while keeping independent integrators — the foundation for v4's multi-Layer
+> Programs. See [ADR 0005](../decisions/0005-voice-layer-split.md).
+
 ## Design choices and why
 
-### `prepare` / `reset` are split
+### `prepare` / `makeVoiceState` / `resetVoice` are split
 
-`prepare` is allowed to allocate (changing sample rate is a non-RT event, fired from the message thread when the host calls `prepareToPlay`). `reset` is RT-safe — it's called on the audio thread when a voice is stolen and starts a new note, so it can clear state but cannot allocate, lock, or take other slow paths.
+`prepare` and `makeVoiceState` are allowed to allocate — both are non-RT events fired from the message thread when the host calls `prepareToPlay` (`makeVoiceState` runs once per voice as the Voice sizes its state). `resetVoice` is RT-safe: it's called on the audio thread when a voice is stolen and starts a new note, so it can clear the passed-in `VoiceState` but cannot allocate, lock, or take other slow paths.
+
+### Configuration on the block, runtime state on the voice
+
+As of v2 the block instance is *shared configuration* and lives on the `Layer`; anything that varies per playing note lives in the block's `VoiceState`, which the `Voice` owns and passes into every `process()` call. A stateless block (the waveshaper) defines an empty `VoiceState`; a stateful one (the SVF filter) puts its integrators there. The block never RT-allocates because each Voice pre-allocates its states in `prepare()`.
 
 ### Block-rate parameter updates, not per-sample
 
-Each audio block, the `Voice` calls `updateParameters` on each of its DSP blocks, passing a `ParamSnapshot` it built once for the block. Inside `process()`, the block reads its own cached parameter values — no atomic loads, no `AudioProcessorValueTreeState` lookups in the hot loop.
+Each audio block, the `Layer` calls `updateParameters` once on each of its DSP blocks, passing a `ParamSnapshot` the `PluginProcessor` built once for the block; the Voices then walk the Layer's algorithm and call `process()`. Inside `process()`, the block reads its own cached parameter values — no atomic loads, no `AudioProcessorValueTreeState` lookups in the hot loop.
 
 When per-sample modulation lands (v3, with the mod matrix), we'll add a separate `modulate(int sampleIndex, const ModBus& bus)` hook rather than changing `process`. The mod system will sit beside the per-block parameter cache, modulating it sample-by-sample without changing how blocks consume parameters at block start.
 
 ### Parameters declared by the block, namespaced by slot
 
-A block declares its own parameter list via `getParamSpecs()`. The processor walks every slot in every voice, asks for the specs, prefixes each id with `slotN.`, and registers the full set in `AudioProcessorValueTreeState`. So slot 0's "cutoff" becomes `slot0.cutoff` and is distinct from `slot1.cutoff`.
+A block declares its own parameter list via `getParamSpecs()`. The processor walks every slot, asks for the specs, prefixes each id, and registers the full set in `AudioProcessorValueTreeState`. As of v2 the prefix is `layer.slotN.`, so slot 0's "cutoff" becomes `layer.slot0.cutoff`, distinct from `layer.slot1.cutoff`. (v1 used a flat `slotN.` prefix; a load-time shim rewrites old IDs — see [ADR 0007](../decisions/0007-param-namespace-and-v1-preset-shim.md).) At v4 the prefix becomes `layer[N].slotM.` additively.
 
 This means blocks know nothing about which slot they're in. The same `SVFFilter` class works in any slot.
 
@@ -80,7 +99,8 @@ When a stereo block lands, the likely path is a sibling `StereoDSPBlock` interfa
 
 ## How a new block gets added
 
-1. Create `src/dsp/blocks/MyBlock.{h,cpp}`. Inherit `DSPBlock`. Implement all six virtuals.
-2. Pick a stable `getTypeId()` string. Don't change it later — preset state references it by name.
-3. Register the type in the block registry (introduced in v4 when slot type becomes user-selectable; in v1 the slot type is hardcoded so this step is skipped).
-4. Add a unit test in `tests/MyBlockTests.cpp` covering at minimum: correct response to a known input, parameter changes take effect, `reset()` returns it to a known state.
+1. Create `src/dsp/blocks/MyBlock.{h,cpp}`. Inherit `DSPBlock`. Define a nested `VoiceState` (empty if the block is stateless) and implement all seven virtuals.
+2. Put any per-note runtime state in `VoiceState`, not on the block — `makeVoiceState()` returns a fresh one, `resetVoice()` clears it, `process()` reads/writes the passed reference. Configuration (coefficients, cached param values) stays on the block.
+3. Pick a stable `getTypeId()` string. Don't change it later — preset state references it by name.
+4. Register the type in the block registry (introduced in v4 when slot type becomes user-selectable; through v3 the slot type is hardcoded so this step is skipped).
+5. Add a unit test in `tests/MyBlockTests.cpp` covering at minimum: correct response to a known input, parameter changes take effect, and `resetVoice()` returns a `VoiceState` to a known state.
