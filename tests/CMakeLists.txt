@@ -9,6 +9,7 @@ add_executable(k2000_tests
     VoiceTests.cpp
     VoiceManagerTests.cpp
     PluginLifecycleTests.cpp
+    AlgorithmTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
