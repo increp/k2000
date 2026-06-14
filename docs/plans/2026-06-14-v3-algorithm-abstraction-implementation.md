@@ -126,10 +126,20 @@ struct Algorithm {
     const char* displayName = "";   // shown in the layer.algorithm combo
     std::size_t slotCount   = 0;
     std::array<BlockTypeId, kMaxSlots> blockTypePerSlot {};
+
+    // Retained only so the v2 Layer keeps compiling until Task 3 rewrites it.
+    // Equivalent to AlgorithmLibrary entry 0 (filter_then_shaper). Removed in Task 3.
+    static Algorithm v1Fixed() {
+        Algorithm a;
+        a.id = "filter_then_shaper"; a.displayName = "Filter -> Shaper"; a.slotCount = 2;
+        a.blockTypePerSlot[0] = BlockTypeId::SvfFilter;
+        a.blockTypePerSlot[1] = BlockTypeId::Waveshaper;
+        return a;
+    }
 };
 ```
 
-(Note: `Algorithm::v1Fixed()` is gone; the equivalent is `AlgorithmLibrary` entry 0, `filter_then_shaper`. Layer's reference to `v1Fixed()` is removed in Task 3.)
+(Note: `Algorithm::v1Fixed()` is **kept** in Task 2 so the unchanged `Layer.h` (`= Algorithm::v1Fixed()`) still compiles. Task 3 rewrites `Layer` to use `AlgorithmLibrary` and then deletes `v1Fixed()`.)
 
 - [ ] **Step 2: Write the failing library test**
 
@@ -281,6 +291,8 @@ git commit -m "feat(dsp): Algorithm gains id/displayName; append-only AlgorithmL
 - Modify: `src/Voice.cpp`
 
 This refactor keeps the current params and defaults to algorithm 0, so audio is identical and every test stays green.
+
+**Also in this task:** once `Layer` no longer calls it, delete the now-unused `Algorithm::v1Fixed()` static from `src/dsp/Algorithm.h` (the temporary retained in Task 2). Nothing else references it after Step 1. Include `src/dsp/Algorithm.h` in the Step 6 commit.
 
 - [ ] **Step 1: Rewrite `Layer.h` to own a palette + selected algorithm**
 
@@ -495,7 +507,7 @@ Expected: green. `ParamSnapshot::algorithmId` is read in `Layer::updateParameter
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/Layer.h src/Layer.cpp src/Voice.h src/Voice.cpp src/params/ParamSnapshot.h
+git add src/dsp/Algorithm.h src/Layer.h src/Layer.cpp src/Voice.h src/Voice.cpp src/params/ParamSnapshot.h
 git commit -m "refactor: Layer owns a block palette; Voice walks the active algorithm by block type
 
 Behaviour-preserving: ParamSnapshot.algorithmId defaults to 0 (filter_then_shaper),
