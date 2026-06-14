@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "params/Parameters.h"
+#include "dsp/AlgorithmLibrary.h"
 
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
@@ -19,6 +20,11 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
              juce::StringArray{"Saw", "Square", "Triangle", "Sine"});
     addCombo(svfType, "Filter",     params::id::svfType,
              juce::StringArray{"LP", "HP", "BP", "Notch"});
+
+    juce::StringArray algoItems;
+    for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
+        algoItems.add(AlgorithmLibrary::byIndex(i).displayName);
+    addCombo(algo, "Algo", params::id::algorithm, algoItems);
 
     setSize(720, 360);
 }
@@ -87,5 +93,6 @@ void K2000AudioProcessorEditor::resized() {
                {&ampR.label, &ampR.slider}});
 
     layoutRow(area.removeFromTop(rowH),
-              {{&masterGain.label, &masterGain.slider}});
+              {{&algo.label, &algo.combo},
+               {&masterGain.label, &masterGain.slider}});
 }

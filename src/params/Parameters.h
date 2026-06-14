@@ -28,6 +28,8 @@ namespace id {
     inline constexpr auto ampRelease    = "layer.amp.release";
 
     inline constexpr auto masterGain    = "master.gain";
+
+    inline constexpr auto algorithm     = "layer.algorithm";
 }
 
 // Build the parameter layout. Called from PluginProcessor's APVTS constructor.

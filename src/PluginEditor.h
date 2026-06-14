@@ -34,7 +34,7 @@ private:
                   wsDrive, wsMix,
                   ampA, ampD, ampS, ampR,
                   masterGain;
-    LabeledCombo  oscWave, svfType;
+    LabeledCombo  oscWave, svfType, algo;
 
     void addSlider(LabeledSlider& ls, juce::StringRef label, juce::StringRef paramId);
     void addCombo(LabeledCombo& lc, juce::StringRef label, juce::StringRef paramId,

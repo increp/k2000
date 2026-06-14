@@ -1,4 +1,5 @@
 #include "Parameters.h"
+#include "../dsp/AlgorithmLibrary.h"
 
 namespace params {
 
@@ -65,6 +66,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout() {
         juce::ParameterID{id::masterGain, 1}, "Master Gain",
         juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, 0.0f));
 
+    juce::StringArray algoNames;
+    for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
+        algoNames.add(AlgorithmLibrary::byIndex(i).displayName);
+    layout.add(std::make_unique<ChoiceParam>(
+        juce::ParameterID{id::algorithm, 1}, "Algorithm", algoNames, 0));
+
     return layout;
 }
 
@@ -92,6 +99,7 @@ ParamSnapshot snapshot(const APVTS& apvts) {
     s.ampSustain    = raw(apvts, id::ampSustain);
     s.ampReleaseS   = raw(apvts, id::ampRelease);
     s.masterGainDb  = raw(apvts, id::masterGain);
+    s.algorithmId   = (int) raw(apvts, id::algorithm);
     return s;
 }
 
