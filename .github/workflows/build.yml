@@ -9,33 +9,14 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            short_name: linux
-          - os: windows-2022
-            short_name: windows
-    runs-on: ${{ matrix.os }}
-    # Windows is the trusted artifact for testing (Ableton 12); Linux build
-    # is informational only — OOM/timeout failures don't block the overall run.
-    continue-on-error: ${{ matrix.os == 'ubuntu-22.04' }}
+    name: windows
+    runs-on: windows-2022
+    # Windows is the only trusted artifact for testing (Ableton 12). Linux dev
+    # builds happen locally; CI is Windows-exclusive for now.
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Linux deps
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libjack-jackd2-dev \
-            libcurl4-openssl-dev libfreetype6-dev libx11-dev \
-            libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
-            libxrandr-dev libxrender-dev libwebkit2gtk-4.1-dev \
-            libglu1-mesa-dev mesa-common-dev
 
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
@@ -49,6 +30,6 @@ jobs:
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: k2000-${{ matrix.short_name }}-${{ github.sha }}
+          name: k2000-windows-${{ github.sha }}
           path: build/k2000_artefacts/Release/VST3/k2000.vst3
           if-no-files-found: error
