@@ -1,7 +1,7 @@
 # v2 — Layer abstraction
 
 **Date:** 2026-06-11
-**Status:** Design proposed (this document). Implementation has not started.
+**Status:** Implemented (tagged v2.0.0 on 2026-06-14).
 **Scope:** Structural refactor that introduces the `Layer` abstraction. v1's audio behavior is preserved end-to-end but now expressed through the new abstraction. Foundation for the v3+ work.
 
 ## Goal
