@@ -24,14 +24,4 @@ struct Algorithm {
     const char* displayName = "";   // shown in the layer.algorithm combo
     std::size_t slotCount   = 0;
     std::array<BlockTypeId, kMaxSlots> blockTypePerSlot {};
-
-    // Retained only so the v2 Layer keeps compiling until Task 3 rewrites it.
-    // Equivalent to AlgorithmLibrary entry 0 (filter_then_shaper). Removed in Task 3.
-    static Algorithm v1Fixed() {
-        Algorithm a;
-        a.id = "filter_then_shaper"; a.displayName = "Filter -> Shaper"; a.slotCount = 2;
-        a.blockTypePerSlot[0] = BlockTypeId::SvfFilter;
-        a.blockTypePerSlot[1] = BlockTypeId::Waveshaper;
-        return a;
-    }
 };

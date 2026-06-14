@@ -29,4 +29,7 @@ struct ParamSnapshot {
 
     // Master
     float masterGainDb  = 0.0f;
+
+    // Algorithm selection (index into AlgorithmLibrary)
+    int algorithmId = 0;
 };

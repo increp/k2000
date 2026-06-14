@@ -14,8 +14,8 @@ public:
     Voice();
     ~Voice() = default;
 
-    // Bind this voice to a Layer. Must be called before prepare(), which
-    // sizes per-slot state from the Layer's algorithm.
+    // Bind this voice to a Layer. Must be called before prepare(), which sizes
+    // per-block-type state from the Layer's palette.
     void setLayer(Layer* layer) { layer_ = layer; }
 
     void prepare(double sampleRate, int maxBlockSize);
@@ -26,8 +26,8 @@ public:
     bool isActive() const;
     int  currentNote() const { return note_; }
 
-    // RT-safe. Renders additively into `out` (caller pre-zeroes). Reads its
-    // Layer's algorithm, block instances, and ParamSnapshot.
+    // RT-safe. Renders additively into `out`. Walks the Layer's active
+    // algorithm, processing through the palette block for each block type.
     void render(float* out, int numSamples);
 
 private:
@@ -35,16 +35,13 @@ private:
     Oscillator osc_;
     Envelope amp_;
 
-    // Per-slot voice-local state (filter integrators, etc.). Allocated in
-    // prepare() from the Layer's algorithm; the slot block owns the
-    // rendering logic, the Voice owns the state.
-    std::array<std::unique_ptr<DSPBlock::VoiceState>, Algorithm::kMaxSlots> slotStates_;
+    // Per-block-TYPE voice-local state (indexed by BlockTypeId value).
+    std::array<std::unique_ptr<DSPBlock::VoiceState>, kNumBlockTypes> blockStates_;
 
     int note_ = -1;
     float velocity_ = 0.0f;
     double sampleRate_ = 44100.0;
-
-    std::vector<float> scratch_;  // preallocated in prepare(); used in render()
+    std::vector<float> scratch_;
 
     static float midiToHz(int note);
 };
