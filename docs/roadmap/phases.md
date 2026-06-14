@@ -28,6 +28,10 @@ This is **Path B** ("VAST-first") chosen over **Path A** ("Summit-first, VAST gr
 | **v8** | **FX section** | Chorus, delay, reverb. Per-Program FX rack; routing options (insert vs. send) decided during the v8 spec. |
 | **v9+** | Photoreal UI, sample sources, preset browser, polish | Photo backdrop (Summit + K2000) + JSON layout + transparent JUCE controls (trademark question to be resolved before any public distribution); K2000-side sample/keymap engine; categorized preset library; macOS build target; performance polish. |
 
+## Resolved questions
+
+- **Can a VAST algorithm use the same function block more than once? → Yes.** Confirmed against the K2000 Musician's Guide (p. 253 via the [k2000-kb](https://github.com/increp/k2000) reference KB): algorithms are organized by **block position** (`F1`–`F4`, with pitch always first and amplitude always last), and *"one or more blocks…can have filter functions assigned to them"* — so a single algorithm can hold two filters. The K2000-faithful model is therefore **positional (per-F-block)**, not per-block-type. v3 deliberately ships the simpler **semantic** namespace (`layer.filter.*`, `layer.shaper.*`), which assumes one instance of each block type per algorithm — correct for v3's one-filter/one-shaper palette and keeps params stable across selection. The positional / per-F-block model (with union param registration per position) is required by **v7** (algorithm-library expansion with K2000-style algorithms); budget a **v3→v7 parameter migration** then.
+
 ## What this is *not*
 
 - A commitment. Phase order can shift if a downstream phase reveals that an upstream one was over- or under-scoped.
