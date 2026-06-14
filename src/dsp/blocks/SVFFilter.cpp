@@ -4,12 +4,17 @@
 
 void SVFFilter::prepare(double sr, int) {
     sampleRate_ = sr;
-    reset();
     coefsDirty_ = true;
 }
 
-void SVFFilter::reset() {
-    ic1eq_ = ic2eq_ = 0.0f;
+std::unique_ptr<DSPBlock::VoiceState> SVFFilter::makeVoiceState() const {
+    return std::make_unique<SVFFilter::VoiceState>();
+}
+
+void SVFFilter::resetVoice(DSPBlock::VoiceState& s) {
+    auto& vs = static_cast<SVFFilter::VoiceState&>(s);
+    vs.ic1eq = 0.0f;
+    vs.ic2eq = 0.0f;
 }
 
 void SVFFilter::updateParameters(const ParamSnapshot& s) {
@@ -41,16 +46,17 @@ void SVFFilter::recomputeCoefs() {
     coefsDirty_ = false;
 }
 
-void SVFFilter::process(float* buf, int n) {
+void SVFFilter::process(DSPBlock::VoiceState& s, float* buf, int n) {
     if (coefsDirty_) recomputeCoefs();
+    auto& vs = static_cast<SVFFilter::VoiceState&>(s);
 
     for (int i = 0; i < n; ++i) {
         const float v0 = buf[i];
-        const float v3 = v0 - ic2eq_;
-        const float v1 = a1_ * ic1eq_ + a2_ * v3;
-        const float v2 = ic2eq_ + a2_ * ic1eq_ + a3_ * v3;
-        ic1eq_ = 2.0f * v1 - ic1eq_;
-        ic2eq_ = 2.0f * v2 - ic2eq_;
+        const float v3 = v0 - vs.ic2eq;
+        const float v1 = a1_ * vs.ic1eq + a2_ * v3;
+        const float v2 = vs.ic2eq + a2_ * vs.ic1eq + a3_ * v3;
+        vs.ic1eq = 2.0f * v1 - vs.ic1eq;
+        vs.ic2eq = 2.0f * v2 - vs.ic2eq;
 
         float out = 0.0f;
         switch (type_) {

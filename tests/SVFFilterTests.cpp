@@ -16,12 +16,13 @@ public:
         {
             SVFFilter f;
             f.prepare(SR, BLOCK);
-            f.reset();
+            auto vs = f.makeVoiceState();
+            f.resetVoice(*vs);
             ParamSnapshot s;
             s.svfType = 0; s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK, 1.0f);  // DC = 1
-            f.process(buf.data(), BLOCK);
+            f.process(*vs, buf.data(), BLOCK);
             // After settling, output should be ~1
             expectWithinAbsoluteError(buf.back(), 1.0f, 0.05f);
         }
@@ -30,7 +31,8 @@ public:
         {
             SVFFilter f;
             f.prepare(SR, BLOCK);
-            f.reset();
+            auto vs = f.makeVoiceState();
+            f.resetVoice(*vs);
             ParamSnapshot s;
             s.svfType = 0; s.svfCutoffHz = 200.0f; s.svfResonance = 0.0f;
             f.updateParameters(s);
@@ -43,7 +45,7 @@ public:
                 phase += 2.0 * juce::MathConstants<double>::pi * 5000.0 / SR;
             }
             // Skip the first block (transient) and process; measure RMS of last half.
-            f.process(buf.data(), N);
+            f.process(*vs, buf.data(), N);
             double s2 = 0;
             int from = N / 2;
             for (int i = from; i < N; ++i) s2 += double(buf[i]) * buf[i];
@@ -55,12 +57,13 @@ public:
         {
             SVFFilter f;
             f.prepare(SR, BLOCK);
-            f.reset();
+            auto vs = f.makeVoiceState();
+            f.resetVoice(*vs);
             ParamSnapshot s;
             s.svfType = 1; s.svfCutoffHz = 200.0f; s.svfResonance = 0.0f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK * 8, 1.0f);
-            f.process(buf.data(), int(buf.size()));
+            f.process(*vs, buf.data(), int(buf.size()));
             // Output near the end should be ~0
             expectWithinAbsoluteError(buf.back(), 0.0f, 0.05f);
         }
@@ -69,30 +72,33 @@ public:
         {
             SVFFilter f;
             f.prepare(SR, BLOCK);
-            f.reset();
+            auto vs = f.makeVoiceState();
+            f.resetVoice(*vs);
             ParamSnapshot s;
             s.svfType = 0; s.svfCutoffHz = 1000.0f; s.svfResonance = 0.99f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK);
             for (int i = 0; i < BLOCK; ++i)
                 buf[i] = float(std::sin(2.0 * juce::MathConstants<double>::pi * 1000.0 * i / SR));
-            f.process(buf.data(), BLOCK);
+            f.process(*vs, buf.data(), BLOCK);
             for (float v : buf)
                 expect(std::abs(v) < 10.0f, "high-resonance output must not blow up");
         }
 
-        beginTest("reset returns state to zero");
+        beginTest("resetVoice returns state to zero");
         {
             SVFFilter f;
             f.prepare(SR, BLOCK);
+            auto vs = f.makeVoiceState();
+            f.resetVoice(*vs);
             ParamSnapshot s;
             s.svfType = 0; s.svfCutoffHz = 1000.0f; s.svfResonance = 0.5f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK, 1.0f);
-            f.process(buf.data(), BLOCK);
-            f.reset();
+            f.process(*vs, buf.data(), BLOCK);
+            f.resetVoice(*vs);
             std::vector<float> buf2(BLOCK, 0.0f);
-            f.process(buf2.data(), BLOCK);
+            f.process(*vs, buf2.data(), BLOCK);
             // With zero input after reset, output should be zero
             for (float v : buf2)
                 expectWithinAbsoluteError(v, 0.0f, 1e-6f);

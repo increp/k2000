@@ -26,6 +26,10 @@ public:
 private:
     Oscillator osc_;
     std::array<std::unique_ptr<DSPBlock>, 2> slots_;
+    // Per-slot voice-local state (filter integrators, etc.). Allocated in
+    // prepare(); the slot block owns the rendering logic, the Voice owns
+    // the state.
+    std::array<std::unique_ptr<DSPBlock::VoiceState>, 2> slotStates_;
     Envelope amp_;
 
     int note_ = -1;

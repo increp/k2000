@@ -12,7 +12,10 @@ void Voice::prepare(double sr, int maxBlock) {
     sampleRate_ = sr;
     osc_.prepare(sr);
     amp_.prepare(sr);
-    for (auto& s : slots_) s->prepare(sr, maxBlock);
+    for (size_t i = 0; i < slots_.size(); ++i) {
+        slots_[i]->prepare(sr, maxBlock);
+        slotStates_[i] = slots_[i]->makeVoiceState();
+    }
     scratch_.assign(maxBlock, 0.0f);  // allocate once, RT-safe henceforth
     reset();
 }
@@ -20,7 +23,8 @@ void Voice::prepare(double sr, int maxBlock) {
 void Voice::reset() {
     osc_.reset();
     amp_.reset();
-    for (auto& s : slots_) s->reset();
+    for (size_t i = 0; i < slots_.size(); ++i)
+        if (slotStates_[i]) slots_[i]->resetVoice(*slotStates_[i]);
     note_ = -1;
     velocity_ = 0.0f;
 }
@@ -30,7 +34,8 @@ void Voice::noteOn(int midiNote, float velocity) {
     velocity_ = velocity;
     osc_.reset();
     amp_.reset();
-    for (auto& s : slots_) s->reset();
+    for (size_t i = 0; i < slots_.size(); ++i)
+        if (slotStates_[i]) slots_[i]->resetVoice(*slotStates_[i]);
     amp_.noteOn();
 }
 
@@ -60,7 +65,8 @@ void Voice::render(float* out, int numSamples, const ParamSnapshot& s) {
     jassert(numSamples <= (int) scratch_.size());
     float* tmp = scratch_.data();
     osc_.processBlock(tmp, numSamples);
-    for (auto& slot : slots_) slot->process(tmp, numSamples);
+    for (size_t i = 0; i < slots_.size(); ++i)
+        slots_[i]->process(*slotStates_[i], tmp, numSamples);
 
     for (int i = 0; i < numSamples; ++i) {
         out[i] += tmp[i] * amp_.nextSample() * velocity_;
