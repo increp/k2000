@@ -31,6 +31,8 @@ target_sources(k2000 PRIVATE
     src/PluginEditor.cpp
     src/Voice.cpp
     src/VoiceManager.cpp
+    src/Layer.cpp
+    src/Program.cpp
     src/params/Parameters.cpp
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp
