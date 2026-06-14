@@ -11,6 +11,7 @@ add_executable(k2000_tests
     PluginLifecycleTests.cpp
     AlgorithmTests.cpp
     PresetMigrationTests.cpp
+    LayerTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
