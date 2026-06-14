@@ -5,6 +5,40 @@
   #include "PluginEditor.h"
 #endif
 
+namespace {
+// v1 flat param IDs → v2 layer.* IDs. One row per renamed param; master.gain
+// stays top-level and is intentionally absent. Add rows here as future renames
+// land. See ADR 0007.
+constexpr struct { const char* from; const char* to; } kV1ToV2Renames[] = {
+    {"osc.waveform",    "layer.osc.waveform"},
+    {"osc.coarse",      "layer.osc.coarse"},
+    {"osc.fine",        "layer.osc.fine"},
+    {"slot0.type",      "layer.slot0.type"},
+    {"slot0.cutoff",    "layer.slot0.cutoff"},
+    {"slot0.resonance", "layer.slot0.resonance"},
+    {"slot1.drive",     "layer.slot1.drive"},
+    {"slot1.mix",       "layer.slot1.mix"},
+    {"amp.attack",      "layer.amp.attack"},
+    {"amp.decay",       "layer.amp.decay"},
+    {"amp.sustain",     "layer.amp.sustain"},
+    {"amp.release",     "layer.amp.release"},
+};
+
+// Rewrites old flat PARAM ids to their layer.* names in place. `paramsRoot` is
+// the APVTS state element (tag "PARAMS") holding <PARAM id=.. value=../> kids.
+void migrateV1ToV2(juce::XmlElement& paramsRoot) {
+    for (auto* p : paramsRoot.getChildWithTagNameIterator("PARAM")) {
+        const juce::String id = p->getStringAttribute("id");
+        for (const auto& r : kV1ToV2Renames) {
+            if (id == r.from) {
+                p->setAttribute("id", r.to);
+                break;
+            }
+        }
+    }
+}
+}  // namespace
+
 K2000AudioProcessor::K2000AudioProcessor()
     : juce::AudioProcessor(BusesProperties()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
@@ -78,6 +112,7 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 // slot types.
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
+    root->setAttribute("v", 2);  // schema version; gates the v1→v2 load shim
 
     auto* slots = root->createNewChildElement("Slots");
     auto* s0 = slots->createNewChildElement("Slot");
@@ -105,6 +140,9 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
 
     if (auto* params = xml->getChildByName("Params")) {
         if (auto* paramsRoot = params->getFirstChildElement()) {
+            // Pre-v2 presets carry flat IDs; rewrite them before APVTS reads.
+            if (xml->getIntAttribute("v", 1) < 2)
+                migrateV1ToV2(*paramsRoot);
             apvts_.replaceState(juce::ValueTree::fromXml(*paramsRoot));
         }
     }
