@@ -12,12 +12,12 @@ struct ParamSnapshot {
     float oscCoarse     = 0.0f; // semitones
     float oscFine       = 0.0f; // cents
 
-    // Slot 0 — SVF filter
+    // Filter block (layer.filter.*)
     int   svfType       = 0;   // 0=LP 1=HP 2=BP 3=Notch
     float svfCutoffHz   = 1000.0f;
     float svfResonance  = 0.2f;
 
-    // Slot 1 — Waveshaper
+    // Shaper block (layer.shaper.*)
     float wsDrive       = 0.0f;
     float wsMix         = 1.0f;
 

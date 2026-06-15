@@ -81,7 +81,7 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     buffer.clear();
 
     // Build the snapshot once for this block and push it to the Layer, which
-    // configures its slot blocks. Voices read the snapshot back via the Layer.
+    // configures its palette blocks. Voices read the snapshot back via the Layer.
     auto snap = params::snapshot(apvts_);
     program_.layer().updateParameters(snap);
 
