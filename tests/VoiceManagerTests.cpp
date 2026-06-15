@@ -1,7 +1,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../src/VoiceManager.h"
-#include "../src/Layer.h"
+#include "../src/Program.h"
 #include <vector>
 #include <cmath>
 
@@ -21,13 +21,10 @@ public:
         s.ampSustain = 1.0f; s.ampReleaseS = 0.05f;
 
         // Voices read parameters from their bound Layer's snapshot.
-        Layer layer;
-        layer.prepare(SR, BLOCK);
-        layer.updateParameters(s);
-
-        VoiceManager vm;
-        vm.setLayer(&layer);
-        vm.prepare(SR, BLOCK);
+        Program prog; prog.prepare(SR, BLOCK);
+        prog.slot(0).layer.updateParameters(s);
+        prog.slot(0).routing = LayerRouting{true, 0, 127, 1, 127, 0};
+        VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, BLOCK);
 
         beginTest("no MIDI input → silent output");
         std::vector<float> out(BLOCK, 0.0f);

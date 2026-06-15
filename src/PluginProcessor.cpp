@@ -70,7 +70,7 @@ K2000AudioProcessor::K2000AudioProcessor()
 
 void K2000AudioProcessor::prepareToPlay(double sr, int samplesPerBlock) {
     program_.prepare(sr, samplesPerBlock);
-    voiceManager_.setLayer(&program_.layer());  // bind before voices size state
+    voiceManager_.setProgram(&program_);  // bind before voices size state
     voiceManager_.prepare(sr, samplesPerBlock);
     monoScratch_.assign(samplesPerBlock, 0.0f);
 }
@@ -92,7 +92,7 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     buffer.clear();
 
     // Build a snapshot per layer and push parameters + routing to each slot.
-    // Rendering is still single-layer (VoiceManager unchanged) — only layer0 plays.
+    // The VoiceManager allocates voices per matched layer from the shared pool.
     float masterDb = 0.0f;  // master.gain is layer-independent; captured from layer 0
     for (std::size_t i = 0; i < program_.numLayers(); ++i) {
         auto snap = params::snapshot(apvts_, (int) i);

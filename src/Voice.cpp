@@ -71,6 +71,7 @@ void Voice::render(float* out, int numSamples) {
         layer_->block(t).process(*blockStates_[(int) t], tmp, numSamples);
     }
 
+    const float lvl = layer_->level();
     for (int i = 0; i < numSamples; ++i)
-        out[i] += tmp[i] * amp_.nextSample() * velocity_;
+        out[i] += tmp[i] * amp_.nextSample() * velocity_ * lvl;
 }
