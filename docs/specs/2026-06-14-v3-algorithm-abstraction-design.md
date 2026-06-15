@@ -1,6 +1,6 @@
 # v3 — Algorithm abstraction
 
-**Status:** Design proposed, 2026-06-14.
+**Status:** Implemented (tagged v3.0.0 on 2026-06-15).
 
 **Scope:** Turn the fixed slot chain into a *selectable algorithm*. An algorithm is a routing of DSP blocks; v3 ships a small library of them, all built from the existing `{filter, shaper}` palette, plus the selection mechanism, a per-block-type parameter namespace, and the taxonomy documentation. No new block types (v5), no non-linear routing (v4+), no modulation/smoothing (v6).
 
