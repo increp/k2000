@@ -15,12 +15,12 @@ namespace id {
     inline constexpr auto oscCoarse     = "layer.osc.coarse";
     inline constexpr auto oscFine       = "layer.osc.fine";
 
-    inline constexpr auto svfType       = "layer.slot0.type";
-    inline constexpr auto svfCutoff     = "layer.slot0.cutoff";
-    inline constexpr auto svfResonance  = "layer.slot0.resonance";
+    inline constexpr auto svfType       = "layer.filter.type";
+    inline constexpr auto svfCutoff     = "layer.filter.cutoff";
+    inline constexpr auto svfResonance  = "layer.filter.resonance";
 
-    inline constexpr auto wsDrive       = "layer.slot1.drive";
-    inline constexpr auto wsMix         = "layer.slot1.mix";
+    inline constexpr auto wsDrive       = "layer.shaper.drive";
+    inline constexpr auto wsMix         = "layer.shaper.mix";
 
     inline constexpr auto ampAttack     = "layer.amp.attack";
     inline constexpr auto ampDecay      = "layer.amp.decay";

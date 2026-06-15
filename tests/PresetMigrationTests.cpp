@@ -56,7 +56,7 @@ public:
             proc.setStateInformation(v1.getData(), (int) v1.getSize());
 
             auto& tree = proc.apvts();
-            auto* cutoff = tree.getRawParameterValue("layer.slot0.cutoff");
+            auto* cutoff = tree.getRawParameterValue("layer.filter.cutoff");
             expect(cutoff != nullptr, "migrated cutoff id should resolve");
             expectWithinAbsoluteError(cutoff->load(), 1000.0f, 0.5f);
 
@@ -65,7 +65,33 @@ public:
             expectWithinAbsoluteError(attack->load(), 0.01f, 0.001f);
         }
 
-        beginTest("Saving from v2 sets v=2 attribute and round-trips");
+        beginTest("Loading a v2 preset migrates slot* IDs to filter/shaper");
+        {
+            K2000AudioProcessor proc;
+            proc.prepareToPlay(48000.0, 256);
+
+            juce::XmlElement root("K2000Root");
+            root.setAttribute("v", 2);
+            auto* wrapper = root.createNewChildElement("Params");
+            auto* pr = wrapper->createNewChildElement("PARAMS");
+            auto add = [&](const char* id, double val) {
+                auto* p = pr->createNewChildElement("PARAM");
+                p->setAttribute("id", id); p->setAttribute("value", val);
+            };
+            add("layer.slot0.cutoff", 2500.0);
+            add("layer.slot1.drive", 0.4);
+            juce::MemoryBlock mb;
+            juce::AudioProcessor::copyXmlToBinary(root, mb);
+            proc.setStateInformation(mb.getData(), (int) mb.getSize());
+
+            auto& tree = proc.apvts();
+            expectWithinAbsoluteError(
+                tree.getRawParameterValue("layer.filter.cutoff")->load(), 2500.0f, 0.5f);
+            expectWithinAbsoluteError(
+                tree.getRawParameterValue("layer.shaper.drive")->load(), 0.4f, 0.001f);
+        }
+
+        beginTest("Saving from v3 sets v=3 attribute and round-trips");
         {
             K2000AudioProcessor proc;
             proc.prepareToPlay(48000.0, 256);
@@ -77,9 +103,9 @@ public:
                 juce::AudioProcessor::getXmlFromBinary(saved.getData(),
                                                        (int) saved.getSize()));
             expect(xml != nullptr, "saved state should decode");
-            expectEquals(xml->getIntAttribute("v", 1), 2);
+            expectEquals(xml->getIntAttribute("v", 1), 3);
 
-            // A v2 blob skips the shim and still loads cleanly.
+            // A v3 blob skips the shim and still loads cleanly.
             K2000AudioProcessor proc2;
             proc2.prepareToPlay(48000.0, 256);
             proc2.setStateInformation(saved.getData(), (int) saved.getSize());

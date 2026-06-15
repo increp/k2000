@@ -24,19 +24,32 @@ constexpr struct { const char* from; const char* to; } kV1ToV2Renames[] = {
     {"amp.release",     "layer.amp.release"},
 };
 
-// Rewrites old flat PARAM ids to their layer.* names in place. `paramsRoot` is
-// the APVTS state element (tag "PARAMS") holding <PARAM id=.. value=../> kids.
-void migrateV1ToV2(juce::XmlElement& paramsRoot) {
+// v2 layer.slot* IDs → v3 block-type IDs. master.gain, layer.osc.*, layer.amp.*,
+// layer.algorithm are unchanged across v2→v3.
+constexpr struct { const char* from; const char* to; } kV2ToV3Renames[] = {
+    {"layer.slot0.type",      "layer.filter.type"},
+    {"layer.slot0.cutoff",    "layer.filter.cutoff"},
+    {"layer.slot0.resonance", "layer.filter.resonance"},
+    {"layer.slot1.drive",     "layer.shaper.drive"},
+    {"layer.slot1.mix",       "layer.shaper.mix"},
+};
+
+// Applies a rename table to the APVTS state element (tag "PARAMS") in place.
+template <typename Table>
+void applyRenames(juce::XmlElement& paramsRoot, const Table& table) {
     for (auto* p : paramsRoot.getChildWithTagNameIterator("PARAM")) {
-        const juce::String id = p->getStringAttribute("id");
-        for (const auto& r : kV1ToV2Renames) {
-            if (id == r.from) {
-                p->setAttribute("id", r.to);
-                break;
-            }
-        }
+        const juce::String pid = p->getStringAttribute("id");
+        for (const auto& r : table)
+            if (pid == r.from) { p->setAttribute("id", r.to); break; }
     }
 }
+
+// Rewrites old flat PARAM ids to their layer.* names in place. `paramsRoot` is
+// the APVTS state element (tag "PARAMS") holding <PARAM id=.. value=../> kids.
+void migrateV1ToV2(juce::XmlElement& paramsRoot) { applyRenames(paramsRoot, kV1ToV2Renames); }
+
+// Rewrites v2 layer.slot* IDs to their block-type names in place.
+void migrateV2ToV3(juce::XmlElement& paramsRoot) { applyRenames(paramsRoot, kV2ToV3Renames); }
 }  // namespace
 
 K2000AudioProcessor::K2000AudioProcessor()
@@ -112,7 +125,7 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 // slot types.
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
-    root->setAttribute("v", 2);  // schema version; gates the v1→v2 load shim
+    root->setAttribute("v", 3);  // schema version; gates the cumulative load shim
 
     auto* slots = root->createNewChildElement("Slots");
     auto* s0 = slots->createNewChildElement("Slot");
@@ -140,9 +153,10 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
 
     if (auto* params = xml->getChildByName("Params")) {
         if (auto* paramsRoot = params->getFirstChildElement()) {
-            // Pre-v2 presets carry flat IDs; rewrite them before APVTS reads.
-            if (xml->getIntAttribute("v", 1) < 2)
-                migrateV1ToV2(*paramsRoot);
+            // Cumulative migration: apply each shim in order based on stored version.
+            const int v = xml->getIntAttribute("v", 1);
+            if (v < 2) migrateV1ToV2(*paramsRoot);
+            if (v < 3) migrateV2ToV3(*paramsRoot);
             apvts_.replaceState(juce::ValueTree::fromXml(*paramsRoot));
         }
     }
