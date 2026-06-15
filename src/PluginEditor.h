@@ -16,6 +16,7 @@ private:
     using APVTS = juce::AudioProcessorValueTreeState;
     using SliderAtt  = APVTS::SliderAttachment;
     using ComboAtt   = APVTS::ComboBoxAttachment;
+    using ButtonAtt  = APVTS::ButtonAttachment;
 
     struct LabeledSlider {
         juce::Label  label;
@@ -29,6 +30,7 @@ private:
         std::unique_ptr<ComboAtt> attach;
     };
 
+    // DSP controls (per-layer, rebound by bindLayer)
     LabeledSlider oscCoarse, oscFine,
                   svfCutoff, svfRes,
                   wsDrive, wsMix,
@@ -36,9 +38,23 @@ private:
                   masterGain;
     LabeledCombo  oscWave, svfType, algo;
 
+    // Routing strip (per-layer, rebound by bindLayer)
+    juce::Label         enableLabel;
+    juce::ToggleButton  enableButton;
+    std::unique_ptr<ButtonAtt> enableAttach;
+
+    LabeledSlider keyLo, keyHi, velLo, velHi, level;
+    LabeledCombo  channel;
+
+    // Edit-layer selector (editor-local, not an APVTS param)
+    juce::Label    editLayerLabel;
+    juce::ComboBox editLayerCombo;
+    int editLayer_ = 0;
+
     void addSlider(LabeledSlider& ls, juce::StringRef label, juce::StringRef paramId);
     void addCombo(LabeledCombo& lc, juce::StringRef label, juce::StringRef paramId,
                   const juce::StringArray& items);
+    void bindLayer(int layer);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)
 };
