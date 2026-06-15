@@ -56,11 +56,11 @@ public:
             proc.setStateInformation(v1.getData(), (int) v1.getSize());
 
             auto& tree = proc.apvts();
-            auto* cutoff = tree.getRawParameterValue("layer.filter.cutoff");
+            auto* cutoff = tree.getRawParameterValue("layer0.filter.cutoff");
             expect(cutoff != nullptr, "migrated cutoff id should resolve");
             expectWithinAbsoluteError(cutoff->load(), 1000.0f, 0.5f);
 
-            auto* attack = tree.getRawParameterValue("layer.amp.attack");
+            auto* attack = tree.getRawParameterValue("layer0.amp.attack");
             expect(attack != nullptr, "migrated attack id should resolve");
             expectWithinAbsoluteError(attack->load(), 0.01f, 0.001f);
         }
@@ -86,12 +86,34 @@ public:
 
             auto& tree = proc.apvts();
             expectWithinAbsoluteError(
-                tree.getRawParameterValue("layer.filter.cutoff")->load(), 2500.0f, 0.5f);
+                tree.getRawParameterValue("layer0.filter.cutoff")->load(), 2500.0f, 0.5f);
             expectWithinAbsoluteError(
-                tree.getRawParameterValue("layer.shaper.drive")->load(), 0.4f, 0.001f);
+                tree.getRawParameterValue("layer0.shaper.drive")->load(), 0.4f, 0.001f);
         }
 
-        beginTest("Saving from v3 sets v=3 attribute and round-trips");
+        beginTest("Loading a v3 preset prefixes layer.* to layer0.*");
+        {
+            K2000AudioProcessor proc;
+            proc.prepareToPlay(48000.0, 256);
+
+            juce::XmlElement root("K2000Root");
+            root.setAttribute("v", 3);
+            auto* wrapper = root.createNewChildElement("Params");
+            auto* pr = wrapper->createNewChildElement("PARAMS");
+            auto add = [&](const char* id, double val) {
+                auto* p = pr->createNewChildElement("PARAM");
+                p->setAttribute("id", id); p->setAttribute("value", val);
+            };
+            add("layer.filter.cutoff", 3200.0);
+            juce::MemoryBlock mb;
+            juce::AudioProcessor::copyXmlToBinary(root, mb);
+            proc.setStateInformation(mb.getData(), (int) mb.getSize());
+
+            expectWithinAbsoluteError(
+                proc.apvts().getRawParameterValue("layer0.filter.cutoff")->load(), 3200.0f, 0.5f);
+        }
+
+        beginTest("Saving sets v=4 attribute and round-trips");
         {
             K2000AudioProcessor proc;
             proc.prepareToPlay(48000.0, 256);
@@ -103,9 +125,9 @@ public:
                 juce::AudioProcessor::getXmlFromBinary(saved.getData(),
                                                        (int) saved.getSize()));
             expect(xml != nullptr, "saved state should decode");
-            expectEquals(xml->getIntAttribute("v", 1), 3);
+            expectEquals(xml->getIntAttribute("v", 1), 4);
 
-            // A v3 blob skips the shim and still loads cleanly.
+            // A v4 blob skips the shim and still loads cleanly.
             K2000AudioProcessor proc2;
             proc2.prepareToPlay(48000.0, 256);
             proc2.setStateInformation(saved.getData(), (int) saved.getSize());

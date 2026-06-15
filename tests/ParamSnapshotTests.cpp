@@ -37,7 +37,7 @@ public:
             proc, nullptr, "PARAMS", params::createLayout());
 
         beginTest("defaults match expected values");
-        auto s = params::snapshot(apvts);
+        auto s = params::snapshot(apvts, 0);
         expectWithinAbsoluteError(s.oscCoarse, 0.0f, 1e-6f);
         expectWithinAbsoluteError(s.svfCutoffHz, 1000.0f, 1e-3f);
         expectWithinAbsoluteError(s.svfResonance, 0.2f, 1e-6f);
@@ -46,9 +46,9 @@ public:
         expect(s.svfType == 0);
 
         beginTest("setting a parameter changes the snapshot");
-        if (auto* p = apvts.getParameter(params::id::svfCutoff))
+        if (auto* p = apvts.getParameter(params::layerIds(0).filterCutoff))
             p->setValueNotifyingHost(p->convertTo0to1(2500.0f));
-        s = params::snapshot(apvts);
+        s = params::snapshot(apvts, 0);
         expectWithinAbsoluteError(s.svfCutoffHz, 2500.0f, 1.0f);
     }
 };

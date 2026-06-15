@@ -4,27 +4,27 @@
 
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
-    addSlider(oscCoarse, "Coarse", params::id::oscCoarse);
-    addSlider(oscFine,   "Fine",   params::id::oscFine);
-    addSlider(svfCutoff, "Cutoff",     params::id::svfCutoff);
-    addSlider(svfRes,    "Resonance",  params::id::svfResonance);
-    addSlider(wsDrive,   "Drive", params::id::wsDrive);
-    addSlider(wsMix,     "Mix",   params::id::wsMix);
-    addSlider(ampA,      "A", params::id::ampAttack);
-    addSlider(ampD,      "D", params::id::ampDecay);
-    addSlider(ampS,      "S", params::id::ampSustain);
-    addSlider(ampR,      "R", params::id::ampRelease);
-    addSlider(masterGain,"Gain", params::id::masterGain);
+    addSlider(oscCoarse, "Coarse", params::layerIds(0).oscCoarse);
+    addSlider(oscFine,   "Fine",   params::layerIds(0).oscFine);
+    addSlider(svfCutoff, "Cutoff",     params::layerIds(0).filterCutoff);
+    addSlider(svfRes,    "Resonance",  params::layerIds(0).filterResonance);
+    addSlider(wsDrive,   "Drive", params::layerIds(0).shaperDrive);
+    addSlider(wsMix,     "Mix",   params::layerIds(0).shaperMix);
+    addSlider(ampA,      "A", params::layerIds(0).ampAttack);
+    addSlider(ampD,      "D", params::layerIds(0).ampDecay);
+    addSlider(ampS,      "S", params::layerIds(0).ampSustain);
+    addSlider(ampR,      "R", params::layerIds(0).ampRelease);
+    addSlider(masterGain,"Gain", params::masterGain);
 
-    addCombo(oscWave, "Wave",       params::id::oscWaveform,
+    addCombo(oscWave, "Wave",       params::layerIds(0).oscWaveform,
              juce::StringArray{"Saw", "Square", "Triangle", "Sine"});
-    addCombo(svfType, "Filter",     params::id::svfType,
+    addCombo(svfType, "Filter",     params::layerIds(0).filterType,
              juce::StringArray{"LP", "HP", "BP", "Notch"});
 
     juce::StringArray algoItems;
     for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
         algoItems.add(AlgorithmLibrary::byIndex(i).displayName);
-    addCombo(algo, "Algo", params::id::algorithm, algoItems);
+    addCombo(algo, "Algo", params::layerIds(0).algorithm, algoItems);
 
     setSize(720, 360);
 }

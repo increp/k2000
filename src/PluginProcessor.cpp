@@ -50,6 +50,17 @@ void migrateV1ToV2(juce::XmlElement& paramsRoot) { applyRenames(paramsRoot, kV1T
 
 // Rewrites v2 layer.slot* IDs to their block-type names in place.
 void migrateV2ToV3(juce::XmlElement& paramsRoot) { applyRenames(paramsRoot, kV2ToV3Renames); }
+
+// v3->v4: every Layer-scoped id moves from the single "layer." prefix to
+// "layer0." (the second layer is new and defaults disabled). This is a prefix
+// rewrite, not a 1:1 table. master.gain is untouched (no "layer." prefix).
+void migrateV3ToV4(juce::XmlElement& paramsRoot) {
+    for (auto* p : paramsRoot.getChildWithTagNameIterator("PARAM")) {
+        const juce::String pid = p->getStringAttribute("id");
+        if (pid.startsWith("layer."))
+            p->setAttribute("id", "layer0." + pid.substring(6));
+    }
+}
 }  // namespace
 
 K2000AudioProcessor::K2000AudioProcessor()
@@ -80,10 +91,18 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     buffer.clear();
 
-    // Build the snapshot once for this block and push it to the Layer, which
-    // configures its palette blocks. Voices read the snapshot back via the Layer.
-    auto snap = params::snapshot(apvts_);
-    program_.layer().updateParameters(snap);
+    // Build a snapshot per layer and push parameters + routing to each slot.
+    // Rendering is still single-layer (VoiceManager unchanged) — only layer0 plays.
+    float masterDb = 0.0f;  // master.gain is layer-independent; captured from layer 0
+    for (std::size_t i = 0; i < program_.numLayers(); ++i) {
+        auto snap = params::snapshot(apvts_, (int) i);
+        if (i == 0) masterDb = snap.masterGainDb;
+        auto& slot = program_.slot(i);
+        slot.layer.updateParameters(snap);
+        float levelGain = 1.0f;
+        slot.routing = params::routing(apvts_, (int) i, levelGain);
+        slot.layer.setLevel(levelGain);
+    }
 
     // Render mono into scratch. prepareToPlay sizes scratch_ to the host's
     // declared upper bound; a larger block here would mean a host bug or a
@@ -93,7 +112,7 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     voiceManager_.renderBlock(monoScratch_.data(), n, midi);
 
     // Apply master gain (dB -> linear)
-    const float gainLin = juce::Decibels::decibelsToGain(snap.masterGainDb);
+    const float gainLin = juce::Decibels::decibelsToGain(masterDb);
 
     // Copy mono scratch to all output channels with master gain.
     for (int c = 0; c < outCh; ++c) {
@@ -125,7 +144,7 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 // slot types.
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
-    root->setAttribute("v", 3);  // schema version; gates the cumulative load shim
+    root->setAttribute("v", 4);  // schema version; gates the cumulative load shim
 
     auto* slots = root->createNewChildElement("Slots");
     auto* s0 = slots->createNewChildElement("Slot");
@@ -157,6 +176,7 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
             const int v = xml->getIntAttribute("v", 1);
             if (v < 2) migrateV1ToV2(*paramsRoot);
             if (v < 3) migrateV2ToV3(*paramsRoot);
+            if (v < 4) migrateV3ToV4(*paramsRoot);
             apvts_.replaceState(juce::ValueTree::fromXml(*paramsRoot));
         }
     }

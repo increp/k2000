@@ -50,7 +50,7 @@ public:
         {
             K2000AudioProcessor p;
             p.prepareToPlay(SR, BLOCK);
-            if (auto* cutoff = p.apvts().getParameter(params::id::svfCutoff))
+            if (auto* cutoff = p.apvts().getParameter(params::layerIds(0).filterCutoff))
                 cutoff->setValueNotifyingHost(cutoff->convertTo0to1(3200.0f));
 
             juce::MemoryBlock mb;
@@ -59,7 +59,7 @@ public:
             K2000AudioProcessor q;
             q.prepareToPlay(SR, BLOCK);
             q.setStateInformation(mb.getData(), (int) mb.getSize());
-            float restored = *q.apvts().getRawParameterValue(params::id::svfCutoff);
+            float restored = *q.apvts().getRawParameterValue(params::layerIds(0).filterCutoff);
             expectWithinAbsoluteError(restored, 3200.0f, 5.0f);
         }
     }
