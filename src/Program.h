@@ -1,22 +1,35 @@
 #pragma once
+#include <array>
+#include <cstddef>
 #include "Layer.h"
+#include "LayerRouting.h"
+#include "params/Parameters.h"  // for params::kNumLayers
 
-// Container for 1..N Layers. v2 always has exactly one. v4 introduces
-// Layer/Split/Dual modes and multiple Layers; for now Program is a thin
-// pass-through so that PluginProcessor talks to a Program rather than
-// directly to a Layer (clean v4 extension point).
+// A Program holds kNumLayers LayerSlots. Each slot = a Layer (DSP config) plus
+// its routing (which notes play it) and is the unit the VoiceManager allocates
+// against. v4 fully parameterizes 2 layers; the structures are generic over the
+// count. See ADR 0009.
+struct LayerSlot {
+    Layer layer;
+    LayerRouting routing;
+};
 
 class Program {
 public:
     Program() = default;
 
     void prepare(double sampleRate, int maxBlockSize) {
-        layer_.prepare(sampleRate, maxBlockSize);
+        for (auto& s : slots_) s.layer.prepare(sampleRate, maxBlockSize);
     }
 
-    Layer& layer() { return layer_; }
-    const Layer& layer() const { return layer_; }
+    static constexpr std::size_t numLayers() { return params::kNumLayers; }
+    LayerSlot&       slot(std::size_t i)       { return slots_[i]; }
+    const LayerSlot& slot(std::size_t i) const { return slots_[i]; }
+
+    // Convenience for not-yet-migrated single-layer call sites (slot 0).
+    Layer& layer() { return slots_[0].layer; }
+    const Layer& layer() const { return slots_[0].layer; }
 
 private:
-    Layer layer_;
+    std::array<LayerSlot, params::kNumLayers> slots_;
 };

@@ -4,6 +4,8 @@
 
 namespace params {
 
+    inline constexpr int kNumLayers = 2;
+
 // Stable string IDs. Used in APVTS, in preset state, and in GUI attachments.
 // v2: Layer-scoped params live under the `layer.*` namespace so v4's
 // multi-Layer Programs can become `layer[0].*`, `layer[1].*` additively.

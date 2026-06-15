@@ -29,9 +29,13 @@ public:
 
     const ParamSnapshot& snapshot() const { return snapshot_; }
 
+    void  setLevel(float linearGain) { level_ = linearGain; }
+    float level() const { return level_; }
+
 private:
     // Indexed by BlockTypeId value; null where the type isn't in the palette.
     std::array<std::unique_ptr<DSPBlock>, kNumBlockTypes> palette_;
     std::size_t activeAlgorithmId_ = 0;
     ParamSnapshot snapshot_;
+    float level_ = 1.0f;  // linear output gain, set each block from layer{i}.level
 };
