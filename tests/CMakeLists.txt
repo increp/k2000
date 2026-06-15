@@ -13,6 +13,7 @@ add_executable(k2000_tests
     PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp
+    LayerRoutingTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
