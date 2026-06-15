@@ -114,7 +114,10 @@ void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour::fromRGB(28, 28, 32));
     g.setColour(juce::Colours::white);
     g.setFont(16.0f);
-    g.drawText("k2000 — v2", 12, 8, 200, 20, juce::Justification::left);
+    // Derived from the build version so it never goes stale (see memory:
+    // release_version_surface — the label was hardcoded-and-stale at v2 and v3).
+    g.drawText(juce::String("k2000 \xE2\x80\x94 v") + JucePlugin_VersionString,
+               12, 8, 200, 20, juce::Justification::left);
 }
 
 void K2000AudioProcessorEditor::resized() {
