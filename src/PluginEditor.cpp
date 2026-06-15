@@ -32,7 +32,7 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     // Bind all per-layer controls to layer 0
     bindLayer(0);
 
-    setSize(720, 520);
+    setSize(720, 600);
 }
 
 // ---------------------------------------------------------------------------
@@ -115,9 +115,9 @@ void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::white);
     g.setFont(16.0f);
     // Derived from the build version so it never goes stale (see memory:
-    // release_version_surface — the label was hardcoded-and-stale at v2 and v3).
-    g.drawText(juce::String("k2000 \xE2\x80\x94 v") + JucePlugin_VersionString,
-               12, 8, 200, 20, juce::Justification::left);
+    // release_version_surface). Plain ASCII to avoid font/encoding issues.
+    g.drawText(juce::String("k2000  v") + JucePlugin_VersionString,
+               12, 8, 240, 20, juce::Justification::left);
 }
 
 void K2000AudioProcessorEditor::resized() {
@@ -171,22 +171,22 @@ void K2000AudioProcessorEditor::resized() {
               {{&algo.label, &algo.combo},
                {&masterGain.label, &masterGain.slider}});
 
-    // Row 5: routing strip
+    // Row 5: routing strip — full-height row so the rotary knobs actually render
+    // (LabeledSlider is a rotary + textbox; a short box draws nothing).
     area.removeFromTop(6); // spacer
     {
-        auto row = area.removeFromTop(30);
-        const int cellW = row.getWidth() / 8;
+        auto row = area.removeFromTop(rowH);
+        const int cellW = row.getWidth() / 7;
         int x = row.getX();
 
-        // Enable toggle
+        // Enable toggle — give it a real, clickable square
         enableLabel.setBounds(x, row.getY(), cellW, 18);
-        enableButton.setBounds(x + cellW / 4, row.getY() + 18, cellW / 2, 12);
+        enableButton.setBounds(x + cellW / 2 - 14, row.getY() + 28, 28, 28);
         x += cellW;
 
-        // Key Lo / Hi, Vel Lo / Hi, Level — use mini sliders (linear) in routing strip
         auto placeSlider = [&](LabeledSlider& ls) {
             ls.label.setBounds(x, row.getY(), cellW, 18);
-            ls.slider.setBounds(x, row.getY() + 18, cellW, 12);
+            ls.slider.setBounds(x, row.getY() + 18, cellW, row.getHeight() - 18);
             x += cellW;
         };
         placeSlider(keyLo);
@@ -197,7 +197,6 @@ void K2000AudioProcessorEditor::resized() {
 
         // Channel combo
         channel.label.setBounds(x, row.getY(), cellW, 18);
-        channel.combo.setBounds(x, row.getY() + 18, cellW, 18);
-        x += cellW;
+        channel.combo.setBounds(x, row.getY() + 18, cellW, 26);
     }
 }
