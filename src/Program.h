@@ -26,10 +26,6 @@ public:
     LayerSlot&       slot(std::size_t i)       { return slots_[i]; }
     const LayerSlot& slot(std::size_t i) const { return slots_[i]; }
 
-    // Convenience for not-yet-migrated single-layer call sites (slot 0).
-    Layer& layer() { return slots_[0].layer; }
-    const Layer& layer() const { return slots_[0].layer; }
-
 private:
     std::array<LayerSlot, params::kNumLayers> slots_;
 };
