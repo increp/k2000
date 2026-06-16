@@ -15,12 +15,14 @@ add_executable(k2000_tests
     AlgorithmRoutingTests.cpp
     LayerRoutingTests.cpp
     MultiLayerTests.cpp
+    ParamBinderTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
     ../src/Layer.cpp
     ../src/Program.cpp
     ../src/params/Parameters.cpp
+    ../src/gui/ParamBinder.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
     ../src/dsp/blocks/SVFFilter.cpp
