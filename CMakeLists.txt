@@ -37,6 +37,7 @@ target_sources(k2000 PRIVATE
     src/gui/ParamBinder.cpp
     src/gui/SummitLookAndFeel.cpp
     src/gui/LabeledKnob.cpp
+    src/gui/Section.cpp
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp
     src/dsp/blocks/SVFFilter.cpp
