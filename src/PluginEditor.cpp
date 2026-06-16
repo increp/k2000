@@ -1,6 +1,5 @@
 #include "PluginEditor.h"
 #include "params/Parameters.h"
-#include "dsp/AlgorithmLibrary.h"
 
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
@@ -49,10 +48,8 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     addToSource(oscCoarse_); addToSource(oscFine_);
     algoLbl_.setText("Algo", juce::dontSendNotification);
     algoLbl_.setJustificationType(juce::Justification::centred);
-    juce::StringArray algoItems;
-    for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
-        algoItems.add(AlgorithmLibrary::byIndex(i).displayName);
-    algo_.addItemList(algoItems, 1);
+    // Same UTF-8-correct names that build the algorithm choice param.
+    algo_.addItemList(params::algoNames(), 1);
     addToSource(algoLbl_); addToSource(algo_);
     addToSource(shaperDrive_); addToSource(shaperMix_);
 
@@ -143,13 +140,22 @@ void K2000AudioProcessorEditor::resized() {
     // Helper: lay a row of {label,control} cells across a rectangle.
     auto layoutCells = [](juce::Rectangle<int> r,
                           std::initializer_list<std::pair<juce::Component*, juce::Component*>> cells) {
+        constexpr int kComboH = 26;   // combos render at a fixed height (see below)
         const int n = (int) cells.size();
         if (n == 0) return;
         const int w = r.getWidth() / n;
         int x = r.getX();
         for (auto& [lbl, ctl] : cells) {
             if (lbl) lbl->setBounds(x, r.getY(), w, 16);
-            ctl->setBounds(x, r.getY() + (lbl ? 16 : 0), w, r.getHeight() - (lbl ? 16 : 0));
+            const int topY  = r.getY() + (lbl ? 16 : 0);
+            const int cellH = r.getHeight() - (lbl ? 16 : 0);
+            if (dynamic_cast<juce::ComboBox*>(ctl) != nullptr)
+                // A combo must NOT fill the cell: JUCE sets the popup's item
+                // height from the box height, so a tall box yields a
+                // screen-filling dropdown. Pin it to a normal height, top-aligned.
+                ctl->setBounds(x + 4, topY, w - 8, juce::jmin(cellH, kComboH));
+            else
+                ctl->setBounds(x, topY, w, cellH);
             x += w;
         }
     };
