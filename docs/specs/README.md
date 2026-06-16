@@ -13,3 +13,4 @@ Filename convention: `YYYY-MM-DD-<topic>-design.md`. The date is when the spec w
 | [v3 — Algorithm abstraction](2026-06-14-v3-algorithm-abstraction-design.md) | Implemented (v3.0.0) |
 | [v4 — Multi-Layer Programs](2026-06-15-v4-multi-layer-programs-design.md) | Implemented (v4.0.0) |
 | [v4.5(C) — K2061 engine re-positioning](2026-06-16-v4.5-k2061-repositioning-design.md) | Accepted (direction-setting) |
+| [v4.5(B) — Summit UI foundation](2026-06-16-v4.5-b-summit-ui-foundation-design.md) | Design proposed |

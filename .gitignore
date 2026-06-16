@@ -32,3 +32,4 @@ Builds/
 
 # Logs
 *.log
+.superpowers/
