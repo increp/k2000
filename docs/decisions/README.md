@@ -12,3 +12,9 @@ Filename convention: `NNNN-<short-slug>.md`, zero-padded sequential.
 | [0002](0002-polymorphic-dsp-slots.md) | Polymorphic DSP slots over hardcoded chain | Accepted |
 | [0003](0003-windows-via-github-actions.md) | Windows builds via GitHub Actions, not local cross-compile | Accepted |
 | [0004](0004-defer-photoreal-ui.md) | Defer photoreal UI to a later phase | Accepted |
+| [0005](0005-voice-layer-split.md) | Voice/Layer split | Accepted (v2) |
+| [0006](0006-algorithm-as-passive-data.md) | Algorithm as passive data | Accepted (v2) |
+| [0007](0007-param-namespace-and-v1-preset-shim.md) | Param namespace + v1 preset shim | Accepted (v2) |
+| [0008](0008-algorithm-selection-and-param-namespace.md) | Algorithm selection: palette + semantic param namespace | Accepted (v3) |
+| [0009](0009-multi-layer-program.md) | Multi-layer Program: shared pool, range routing | Accepted (v4) |
+| [0010](0010-k2061-repositioning-constant-summit-spine.md) | Re-position to K2061/K2088 VAST + constant Summit spine | Accepted (v4.5) |
