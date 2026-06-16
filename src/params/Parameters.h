@@ -24,6 +24,10 @@ inline constexpr auto masterGain = "master.gain";
 
 juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
+// Algorithm display names for the choice param and the UI combo. Decoded as
+// UTF-8 (the library stores names like "Filter \xE2\x86\x92 Shaper").
+juce::StringArray algoNames();
+
 // DSP params for one layer → snapshot (RT-safe: reads cached atomics by id).
 ParamSnapshot snapshot(const juce::AudioProcessorValueTreeState& apvts, int layer);
 

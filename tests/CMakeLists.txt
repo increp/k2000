@@ -10,6 +10,7 @@ add_executable(k2000_tests
     VoiceManagerTests.cpp
     PluginLifecycleTests.cpp
     AlgorithmTests.cpp
+    AlgorithmNameTests.cpp
     PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp

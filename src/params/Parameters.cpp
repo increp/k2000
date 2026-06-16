@@ -1,6 +1,7 @@
 #include <array>
 #include "Parameters.h"
 #include "../dsp/AlgorithmLibrary.h"
+#include "../util/Utf8.h"
 
 namespace params {
 
@@ -53,13 +54,6 @@ juce::StringArray channelChoices() {
     return s;
 }
 
-juce::StringArray algoNames() {
-    juce::StringArray s;
-    for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
-        s.add(AlgorithmLibrary::byIndex(i).displayName);
-    return s;
-}
-
 float raw(const APVTS& apvts, const juce::String& id) {
     auto* p = apvts.getRawParameterValue(id);
     jassert(p != nullptr);
@@ -68,6 +62,13 @@ float raw(const APVTS& apvts, const juce::String& id) {
 }  // namespace
 
 const LayerIds& layerIds(int layer) { return idTable()[(std::size_t) layer]; }
+
+juce::StringArray algoNames() {
+    juce::StringArray s;
+    for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
+        s.add(util::u8(AlgorithmLibrary::byIndex(i).displayName));
+    return s;
+}
 
 APVTS::ParameterLayout createLayout() {
     APVTS::ParameterLayout layout;
