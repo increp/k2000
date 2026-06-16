@@ -15,6 +15,7 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
 }
 
 K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
+    binder_.clear();        // detach all attachments while the controls are still alive
     setLookAndFeel(nullptr);
 }
 

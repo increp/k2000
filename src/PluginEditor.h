@@ -17,7 +17,6 @@ public:
 private:
     K2000AudioProcessor& processorRef;
     SummitLookAndFeel    lnf_;
-    ParamBinder          binder_{ processorRef.apvts() };
 
     // --- Top bar ---
     juce::Label    title_;
@@ -60,6 +59,10 @@ private:
                        velLo_{ "Vel Lo" }, velHi_{ "Vel Hi" }, level_{ "Level" };
     juce::ComboBox     channel_;
     juce::Label        channelLbl_;
+
+    // Declared LAST so it is destroyed FIRST: its APVTS attachments reference the
+    // control members above and must be detached while those controls are still alive.
+    ParamBinder binder_{ processorRef.apvts() };
 
     void buildStaticControls();   // combos' item lists, labels, child attach (once)
     void bindLayer(int layer);    // (re)bind every per-layer control via binder_
