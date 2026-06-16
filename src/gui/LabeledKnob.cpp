@@ -1,7 +1,7 @@
 #include "LabeledKnob.h"
 
 LabeledKnob::LabeledKnob(const juce::String& caption) {
-    slider_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 16);
+    slider_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, captionH_);
     addAndMakeVisible(slider_);
 
     caption_.setText(caption, juce::dontSendNotification);
@@ -16,6 +16,6 @@ void LabeledKnob::setCaption(const juce::String& caption) {
 
 void LabeledKnob::resized() {
     auto area = getLocalBounds();
-    caption_.setBounds(area.removeFromBottom(16));
+    caption_.setBounds(area.removeFromBottom(captionH_));
     slider_.setBounds(area);
 }

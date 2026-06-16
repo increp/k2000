@@ -13,6 +13,8 @@ public:
     void resized() override;
 
 private:
+    static constexpr int captionH_ = 16;
+
     juce::Slider slider_{ juce::Slider::RotaryHorizontalVerticalDrag,
                           juce::Slider::TextBoxBelow };
     juce::Label  caption_;
