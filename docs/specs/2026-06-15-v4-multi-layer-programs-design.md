@@ -1,6 +1,6 @@
 # v4 — Multi-Layer Programs
 
-**Status:** Design proposed, 2026-06-15.
+**Status:** Implemented (tagged v4.0.0 on 2026-06-16).
 
 **Scope:** Make a `Program` hold multiple `Layer`s, routed by per-layer key range, velocity range, and MIDI channel, played from a shared voice pool. v4 fully parameterizes **2 layers** (delivering Summit's dual-engine as a 2-Layer Program) with all structures written generic over the layer count and a **64-voice** shared pool. Layer/Split/Dual behaviors *emerge* from per-layer ranges — no explicit "mode" primitive (a Summit-style mode selector is a v7 convenience).
 
