@@ -18,10 +18,11 @@ public:
             const juce::String idY = params::layerIds(1).filterCutoff;
 
             // Distinct, in-range values (cutoff range is 20..20000 Hz).
-            apvts.getParameter(idX)->setValueNotifyingHost(
-                apvts.getParameter(idX)->convertTo0to1(1000.0f));
-            apvts.getParameter(idY)->setValueNotifyingHost(
-                apvts.getParameter(idY)->convertTo0to1(8000.0f));
+            auto* paramX = apvts.getParameter(idX);
+            auto* paramY = apvts.getParameter(idY);
+            expect(paramX != nullptr && paramY != nullptr, "params must exist");
+            paramX->setValueNotifyingHost(paramX->convertTo0to1(1000.0f));
+            paramY->setValueNotifyingHost(paramY->convertTo0to1(8000.0f));
             const float xBefore = apvts.getRawParameterValue(idX)->load();
 
             juce::Slider s;
@@ -30,7 +31,7 @@ public:
             binder.bind(s, idY);   // slider jumps to Y (~8000) — must NOT write into X
 
             expectWithinAbsoluteError(apvts.getRawParameterValue(idX)->load(), xBefore, 1.0f);
-            expectWithinAbsoluteError(apvts.getRawParameterValue(idY)->load(), 8000.0f, 5.0f);
+            expectWithinAbsoluteError(apvts.getRawParameterValue(idY)->load(), 8000.0f, 1.0f);
         }
 
         beginTest("clear() detaches: moving the control no longer drives the param");
@@ -38,8 +39,9 @@ public:
             K2000AudioProcessor p;
             auto& apvts = p.apvts();
             const juce::String idX = params::layerIds(0).filterCutoff;
-            apvts.getParameter(idX)->setValueNotifyingHost(
-                apvts.getParameter(idX)->convertTo0to1(1000.0f));
+            auto* paramX = apvts.getParameter(idX);
+            expect(paramX != nullptr, "params must exist");
+            paramX->setValueNotifyingHost(paramX->convertTo0to1(1000.0f));
 
             juce::Slider s;
             ParamBinder binder(apvts);

@@ -31,4 +31,6 @@ private:
     std::map<juce::Slider*,   std::unique_ptr<SliderAtt>> sliders_;
     std::map<juce::ComboBox*, std::unique_ptr<ComboAtt>>  combos_;
     std::map<juce::Button*,   std::unique_ptr<ButtonAtt>> buttons_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ParamBinder)
 };
