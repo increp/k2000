@@ -1,60 +1,68 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
+#include "gui/SummitLookAndFeel.h"
+#include "gui/LabeledKnob.h"
+#include "gui/Section.h"
+#include "gui/ParamBinder.h"
 
 class K2000AudioProcessorEditor : public juce::AudioProcessorEditor {
 public:
     explicit K2000AudioProcessorEditor(K2000AudioProcessor& p);
-    ~K2000AudioProcessorEditor() override = default;
+    ~K2000AudioProcessorEditor() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
     K2000AudioProcessor& processorRef;
+    SummitLookAndFeel    lnf_;
+    ParamBinder          binder_{ processorRef.apvts() };
 
-    using APVTS = juce::AudioProcessorValueTreeState;
-    using SliderAtt  = APVTS::SliderAttachment;
-    using ComboAtt   = APVTS::ComboBoxAttachment;
-    using ButtonAtt  = APVTS::ButtonAttachment;
+    // --- Top bar ---
+    juce::Label    title_;
+    juce::Label    editLayerLabel_;
+    juce::ComboBox editLayerCombo_;
+    int            editLayer_ = 0;
+    LabeledKnob    masterGain_{ "Gain" };
 
-    struct LabeledSlider {
-        juce::Label  label;
-        juce::Slider slider{ juce::Slider::RotaryHorizontalVerticalDrag,
-                             juce::Slider::TextBoxBelow };
-        std::unique_ptr<SliderAtt> attach;
-    };
-    struct LabeledCombo {
-        juce::Label    label;
-        juce::ComboBox combo;
-        std::unique_ptr<ComboAtt> attach;
-    };
+    // --- Signal row ---
+    Section sourceSection_{ "VAST Source / DSP", /*spine*/ false };
+    juce::ComboBox oscWave_, algo_;
+    juce::Label    oscWaveLbl_, algoLbl_;
+    LabeledKnob    oscCoarse_{ "Coarse" }, oscFine_{ "Fine" },
+                   shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };
 
-    // DSP controls (per-layer, rebound by bindLayer)
-    LabeledSlider oscCoarse, oscFine,
-                  svfCutoff, svfRes,
-                  wsDrive, wsMix,
-                  ampA, ampD, ampS, ampR,
-                  masterGain;
-    LabeledCombo  oscWave, svfType, algo;
+    Section mixerSection_{ "Mixer", /*spine*/ true, /*reserved*/ true };
 
-    // Routing strip (per-layer, rebound by bindLayer)
-    juce::Label         enableLabel;
-    juce::ToggleButton  enableButton;
-    std::unique_ptr<ButtonAtt> enableAttach;
+    Section filterSection_{ "Filter", /*spine*/ true };
+    juce::ComboBox filterType_;
+    juce::Label    filterTypeLbl_;
+    LabeledKnob    filterCutoff_{ "Cutoff" }, filterRes_{ "Reso" };
 
-    LabeledSlider keyLo, keyHi, velLo, velHi, level;
-    LabeledCombo  channel;
+    Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
+    Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
 
-    // Edit-layer selector (editor-local, not an APVTS param)
-    juce::Label    editLayerLabel;
-    juce::ComboBox editLayerCombo;
-    int editLayer_ = 0;
+    // --- Modulation row ---
+    Section ampEnvSection_{ "Amp Env", /*spine*/ true };
+    LabeledKnob ampA_{ "A" }, ampD_{ "D" }, ampS_{ "S" }, ampR_{ "R" };
 
-    void addSlider(LabeledSlider& ls, juce::StringRef label, juce::StringRef paramId);
-    void addCombo(LabeledCombo& lc, juce::StringRef label, juce::StringRef paramId,
-                  const juce::StringArray& items);
-    void bindLayer(int layer);
+    Section modEnvSection_{ "Mod Envs", /*spine*/ true, /*reserved*/ true };
+    Section lfoSection_{ "LFO 1-4", /*spine*/ true, /*reserved*/ true };
+    Section modMatrixSection_{ "Mod Matrix", /*spine*/ true, /*reserved*/ true };
+    Section fxSection_{ "FX Chains", /*spine*/ false, /*reserved*/ true };
+
+    // --- Routing strip ---
+    Section routingSection_{ "Layer Routing", /*spine*/ false };
+    juce::ToggleButton enable_;
+    juce::Label        enableLbl_;
+    LabeledKnob        keyLo_{ "Key Lo" }, keyHi_{ "Key Hi" },
+                       velLo_{ "Vel Lo" }, velHi_{ "Vel Hi" }, level_{ "Level" };
+    juce::ComboBox     channel_;
+    juce::Label        channelLbl_;
+
+    void buildStaticControls();   // combos' item lists, labels, child attach (once)
+    void bindLayer(int layer);    // (re)bind every per-layer control via binder_
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)
 };

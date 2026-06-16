@@ -4,207 +4,208 @@
 
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
+    setLookAndFeel(&lnf_);
+    buildStaticControls();
 
-    // masterGain is not per-layer — bind it once here
-    addSlider(masterGain, "Gain", params::masterGain);
+    // master gain is not per-layer — bind once.
+    binder_.bind(masterGain_.slider(), params::masterGain);
 
-    // Edit-layer selector (editor-local state, not APVTS)
-    editLayerLabel.setText("Edit Layer", juce::dontSendNotification);
-    editLayerLabel.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(editLayerLabel);
-
-    for (int i = 0; i < params::kNumLayers; ++i)
-        editLayerCombo.addItem("Layer " + juce::String(i), i + 1);
-    editLayerCombo.setSelectedId(1, juce::dontSendNotification);
-    addAndMakeVisible(editLayerCombo);
-
-    editLayerCombo.onChange = [this] {
-        editLayer_ = editLayerCombo.getSelectedId() - 1;
-        bindLayer(editLayer_);
-    };
-
-    // Enable toggle label (visible once; button is added in bindLayer)
-    enableLabel.setText("Enable", juce::dontSendNotification);
-    enableLabel.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(enableLabel);
-    addAndMakeVisible(enableButton);
-
-    // Bind all per-layer controls to layer 0
     bindLayer(0);
-
-    setSize(720, 600);
+    setSize(920, 620);
 }
 
-// ---------------------------------------------------------------------------
-// Bind all per-layer controls (DSP + routing) to the given layer.
-// Recreating an attachment (via unique_ptr assignment) destroys the old one
-// first, which detaches it from the APVTS before the new one is created.
-// ---------------------------------------------------------------------------
-void K2000AudioProcessorEditor::bindLayer(int layer) {
-    const auto& ids = params::layerIds(layer);
+K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
+    setLookAndFeel(nullptr);
+}
 
-    // --- DSP controls ---
-    addSlider(oscCoarse, "Coarse",    ids.oscCoarse);
-    addSlider(oscFine,   "Fine",      ids.oscFine);
-    addSlider(svfCutoff, "Cutoff",    ids.filterCutoff);
-    addSlider(svfRes,    "Resonance", ids.filterResonance);
-    addSlider(wsDrive,   "Drive",     ids.shaperDrive);
-    addSlider(wsMix,     "Mix",       ids.shaperMix);
-    addSlider(ampA,      "A",         ids.ampAttack);
-    addSlider(ampD,      "D",         ids.ampDecay);
-    addSlider(ampS,      "S",         ids.ampSustain);
-    addSlider(ampR,      "R",         ids.ampRelease);
+// One-time setup: section children, combo item lists, captions, edit-layer combo.
+void K2000AudioProcessorEditor::buildStaticControls() {
+    title_.setText(juce::String("k2000  v") + JucePlugin_VersionString,
+                   juce::dontSendNotification);
+    title_.setFont(juce::Font(16.0f, juce::Font::bold));
+    addAndMakeVisible(title_);
 
-    addCombo(oscWave, "Wave",   ids.oscWaveform,
-             juce::StringArray{"Saw", "Square", "Triangle", "Sine"});
-    addCombo(svfType, "Filter", ids.filterType,
-             juce::StringArray{"LP", "HP", "BP", "Notch"});
+    editLayerLabel_.setText("Edit Layer", juce::dontSendNotification);
+    editLayerLabel_.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(editLayerLabel_);
+    for (int i = 0; i < params::kNumLayers; ++i)
+        editLayerCombo_.addItem("Layer " + juce::String(i), i + 1);
+    editLayerCombo_.setSelectedId(1, juce::dontSendNotification);
+    editLayerCombo_.onChange = [this] {
+        editLayer_ = editLayerCombo_.getSelectedId() - 1;
+        bindLayer(editLayer_);
+    };
+    addAndMakeVisible(editLayerCombo_);
+    addAndMakeVisible(masterGain_);
 
+    // Source / DSP section
+    addAndMakeVisible(sourceSection_);
+    auto addToSource = [this](juce::Component& c) { sourceSection_.addAndMakeVisible(c); };
+    oscWaveLbl_.setText("Wave", juce::dontSendNotification);
+    oscWaveLbl_.setJustificationType(juce::Justification::centred);
+    oscWave_.addItemList(juce::StringArray{ "Saw", "Square", "Triangle", "Sine" }, 1);
+    addToSource(oscWaveLbl_); addToSource(oscWave_);
+    addToSource(oscCoarse_); addToSource(oscFine_);
+    algoLbl_.setText("Algo", juce::dontSendNotification);
+    algoLbl_.setJustificationType(juce::Justification::centred);
     juce::StringArray algoItems;
     for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i)
         algoItems.add(AlgorithmLibrary::byIndex(i).displayName);
-    addCombo(algo, "Algo", ids.algorithm, algoItems);
+    algo_.addItemList(algoItems, 1);
+    addToSource(algoLbl_); addToSource(algo_);
+    addToSource(shaperDrive_); addToSource(shaperMix_);
 
-    // --- Routing strip ---
-    // Enable toggle
-    enableAttach.reset();
-    enableAttach = std::make_unique<ButtonAtt>(processorRef.apvts(), ids.enable, enableButton);
+    // Filter section
+    addAndMakeVisible(filterSection_);
+    filterTypeLbl_.setText("Type", juce::dontSendNotification);
+    filterTypeLbl_.setJustificationType(juce::Justification::centred);
+    filterType_.addItemList(juce::StringArray{ "LP", "HP", "BP", "Notch" }, 1);
+    filterSection_.addAndMakeVisible(filterTypeLbl_);
+    filterSection_.addAndMakeVisible(filterType_);
+    filterSection_.addAndMakeVisible(filterCutoff_);
+    filterSection_.addAndMakeVisible(filterRes_);
 
-    // Key / vel / level sliders
-    addSlider(keyLo,  "Key Lo",  ids.keyLo);
-    addSlider(keyHi,  "Key Hi",  ids.keyHi);
-    addSlider(velLo,  "Vel Lo",  ids.velLo);
-    addSlider(velHi,  "Vel Hi",  ids.velHi);
-    addSlider(level,  "Level",   ids.level);
+    // Amp env section
+    addAndMakeVisible(ampEnvSection_);
+    for (auto* k : { &ampA_, &ampD_, &ampS_, &ampR_ })
+        ampEnvSection_.addAndMakeVisible(*k);
 
-    // Channel combo: "Omni", "1" .. "16"
-    juce::StringArray chanItems{"Omni"};
-    for (int ch = 1; ch <= 16; ++ch)
-        chanItems.add(juce::String(ch));
-    addCombo(channel, "Channel", ids.channel, chanItems);
+    // Reserved sections — visible (framed/dimmed) but no children.
+    for (auto* s : { &mixerSection_, &driveSection_, &ampSection_,
+                     &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
+        addAndMakeVisible(*s);
+
+    // Routing section
+    addAndMakeVisible(routingSection_);
+    enableLbl_.setText("Enable", juce::dontSendNotification);
+    enableLbl_.setJustificationType(juce::Justification::centred);
+    routingSection_.addAndMakeVisible(enableLbl_);
+    routingSection_.addAndMakeVisible(enable_);
+    for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ })
+        routingSection_.addAndMakeVisible(*k);
+    channelLbl_.setText("Channel", juce::dontSendNotification);
+    channelLbl_.setJustificationType(juce::Justification::centred);
+    juce::StringArray chanItems{ "Omni" };
+    for (int ch = 1; ch <= 16; ++ch) chanItems.add(juce::String(ch));
+    channel_.addItemList(chanItems, 1);
+    routingSection_.addAndMakeVisible(channelLbl_);
+    routingSection_.addAndMakeVisible(channel_);
 }
 
-// ---------------------------------------------------------------------------
-// Helpers — add a component the first time; subsequent calls just rebind.
-// ---------------------------------------------------------------------------
-void K2000AudioProcessorEditor::addSlider(LabeledSlider& ls,
-                                          juce::StringRef label,
-                                          juce::StringRef paramId) {
-    ls.label.setText(label, juce::dontSendNotification);
-    ls.label.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(ls.label);
-    addAndMakeVisible(ls.slider);
-    // Detach the previous attachment BEFORE creating the new one. Otherwise the
-    // new attachment's initial sync moves the slider, and the still-live old
-    // attachment writes that value back into the previous layer's param.
-    ls.attach.reset();
-    ls.attach = std::make_unique<SliderAtt>(processorRef.apvts(), paramId, ls.slider);
-}
+// (Re)bind every per-layer control to the chosen layer's params. binder_'s
+// detach-before-rebind contract guarantees the layer we leave is untouched.
+void K2000AudioProcessorEditor::bindLayer(int layer) {
+    const auto& ids = params::layerIds(layer);
 
-void K2000AudioProcessorEditor::addCombo(LabeledCombo& lc,
-                                         juce::StringRef label,
-                                         juce::StringRef paramId,
-                                         const juce::StringArray& items) {
-    lc.label.setText(label, juce::dontSendNotification);
-    lc.label.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(lc.label);
-    // Detach the previous attachment BEFORE mutating the combo / creating the new
-    // one — else the old (still-live) attachment writes the new layer's value
-    // back into the previous layer's param when the combo selection changes.
-    lc.attach.reset();
-    lc.combo.clear(juce::dontSendNotification);
-    lc.combo.addItemList(items, 1);
-    addAndMakeVisible(lc.combo);
-    lc.attach = std::make_unique<ComboAtt>(processorRef.apvts(), paramId, lc.combo);
+    binder_.bind(oscWave_,             ids.oscWaveform);
+    binder_.bind(oscCoarse_.slider(),  ids.oscCoarse);
+    binder_.bind(oscFine_.slider(),    ids.oscFine);
+    binder_.bind(algo_,                ids.algorithm);
+    binder_.bind(shaperDrive_.slider(),ids.shaperDrive);
+    binder_.bind(shaperMix_.slider(),  ids.shaperMix);
+
+    binder_.bind(filterType_,          ids.filterType);
+    binder_.bind(filterCutoff_.slider(),ids.filterCutoff);
+    binder_.bind(filterRes_.slider(),  ids.filterResonance);
+
+    binder_.bind(ampA_.slider(), ids.ampAttack);
+    binder_.bind(ampD_.slider(), ids.ampDecay);
+    binder_.bind(ampS_.slider(), ids.ampSustain);
+    binder_.bind(ampR_.slider(), ids.ampRelease);
+
+    binder_.bind(enable_,        ids.enable);
+    binder_.bind(keyLo_.slider(),ids.keyLo);
+    binder_.bind(keyHi_.slider(),ids.keyHi);
+    binder_.bind(velLo_.slider(),ids.velLo);
+    binder_.bind(velHi_.slider(),ids.velHi);
+    binder_.bind(level_.slider(),ids.level);
+    binder_.bind(channel_,       ids.channel);
 }
 
 void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour::fromRGB(28, 28, 32));
-    g.setColour(juce::Colours::white);
-    g.setFont(16.0f);
-    // Derived from the build version so it never goes stale (see memory:
-    // release_version_surface). Plain ASCII to avoid font/encoding issues.
-    g.drawText(juce::String("k2000  v") + JucePlugin_VersionString,
-               12, 8, 240, 20, juce::Justification::left);
+    g.fillAll(SummitLookAndFeel::panelBg);
 }
 
 void K2000AudioProcessorEditor::resized() {
-    auto area = getLocalBounds().reduced(12).withTrimmedTop(28);
-    const int rowH = 90;
+    auto area = getLocalBounds().reduced(10);
 
-    auto layoutRow = [&](juce::Rectangle<int> row,
-                         std::initializer_list<std::pair<juce::Component*, juce::Component*>> cells) {
-        const int n = int(cells.size());
-        const int w = row.getWidth() / n;
-        int x = row.getX();
-        for (auto& [labelC, knobC] : cells) {
-            labelC->setBounds(x, row.getY(), w, 18);
-            knobC->setBounds(x, row.getY() + 18, w, row.getHeight() - 18);
+    // Top bar (h 40): title | spacer | edit-layer | master gain
+    {
+        auto bar = area.removeFromTop(40);
+        title_.setBounds(bar.removeFromLeft(180));
+        masterGain_.setBounds(bar.removeFromRight(70));
+        editLayerCombo_.setBounds(bar.removeFromRight(110).reduced(0, 8));
+        editLayerLabel_.setBounds(bar.removeFromRight(90).reduced(0, 8));
+    }
+    area.removeFromTop(8);
+
+    // Helper: lay a row of {label,control} cells across a rectangle.
+    auto layoutCells = [](juce::Rectangle<int> r,
+                          std::initializer_list<std::pair<juce::Component*, juce::Component*>> cells) {
+        const int n = (int) cells.size();
+        if (n == 0) return;
+        const int w = r.getWidth() / n;
+        int x = r.getX();
+        for (auto& [lbl, ctl] : cells) {
+            if (lbl) lbl->setBounds(x, r.getY(), w, 16);
+            ctl->setBounds(x, r.getY() + (lbl ? 16 : 0), w, r.getHeight() - (lbl ? 16 : 0));
             x += w;
         }
     };
 
-    // Row 0: edit-layer selector (flat strip, 30px tall)
+    // Signal row (h 250): source(48%) | mixer | filter | drive | amp
     {
-        auto row = area.removeFromTop(30);
-        const int w = 120;
-        editLayerLabel.setBounds(row.getX(), row.getY(), w, row.getHeight());
-        editLayerCombo.setBounds(row.getX() + w, row.getY(), w, row.getHeight());
+        auto row = area.removeFromTop(250);
+        auto source = row.removeFromLeft((int) (row.getWidth() * 0.48f));
+        sourceSection_.setBounds(source.reduced(2));
+        const int rest = row.getWidth();
+        mixerSection_.setBounds(row.removeFromLeft((int) (rest * 0.10f)).reduced(2));
+        filterSection_.setBounds(row.removeFromLeft((int) (rest * 0.46f)).reduced(2));
+        driveSection_.setBounds(row.removeFromLeft((int) (rest * 0.10f)).reduced(2));
+        ampSection_.setBounds(row.reduced(2));
+
+        // Source children: two stacked cell-rows inside contentBounds.
+        auto sc = sourceSection_.contentBounds();
+        auto top = sc.removeFromTop(sc.getHeight() / 2);
+        layoutCells(top, { { &oscWaveLbl_, &oscWave_ }, { nullptr, &oscCoarse_ }, { nullptr, &oscFine_ } });
+        layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
+
+        // Filter children.
+        layoutCells(filterSection_.contentBounds(),
+                    { { &filterTypeLbl_, &filterType_ }, { nullptr, &filterCutoff_ }, { nullptr, &filterRes_ } });
     }
-    area.removeFromTop(4); // spacer
+    area.removeFromTop(8);
 
-    // Row 1: oscillator
-    layoutRow(area.removeFromTop(rowH),
-              {{&oscWave.label, &oscWave.combo},
-               {&oscCoarse.label, &oscCoarse.slider},
-               {&oscFine.label, &oscFine.slider}});
-
-    // Row 2: filter + shaper
-    layoutRow(area.removeFromTop(rowH),
-              {{&svfType.label, &svfType.combo},
-               {&svfCutoff.label, &svfCutoff.slider},
-               {&svfRes.label, &svfRes.slider},
-               {&wsDrive.label, &wsDrive.slider},
-               {&wsMix.label, &wsMix.slider}});
-
-    // Row 3: envelope
-    layoutRow(area.removeFromTop(rowH),
-              {{&ampA.label, &ampA.slider},
-               {&ampD.label, &ampD.slider},
-               {&ampS.label, &ampS.slider},
-               {&ampR.label, &ampR.slider}});
-
-    // Row 4: algo + master gain
-    layoutRow(area.removeFromTop(rowH),
-              {{&algo.label, &algo.combo},
-               {&masterGain.label, &masterGain.slider}});
-
-    // Row 5: routing strip — full-height row so the rotary knobs actually render
-    // (LabeledSlider is a rotary + textbox; a short box draws nothing).
-    area.removeFromTop(6); // spacer
+    // Modulation row (h 150): amp env | mod envs | lfo | mod matrix | fx
     {
-        auto row = area.removeFromTop(rowH);
-        const int cellW = row.getWidth() / 7;
-        int x = row.getX();
+        auto row = area.removeFromTop(150);
+        const int w = row.getWidth() / 5;
+        ampEnvSection_.setBounds(row.removeFromLeft(w).reduced(2));
+        modEnvSection_.setBounds(row.removeFromLeft(w).reduced(2));
+        lfoSection_.setBounds(row.removeFromLeft(w).reduced(2));
+        modMatrixSection_.setBounds(row.removeFromLeft(w).reduced(2));
+        fxSection_.setBounds(row.reduced(2));
 
-        // Enable toggle — give it a real, clickable square
-        enableLabel.setBounds(x, row.getY(), cellW, 18);
-        enableButton.setBounds(x + cellW / 2 - 14, row.getY() + 28, 28, 28);
-        x += cellW;
+        layoutCells(ampEnvSection_.contentBounds(),
+                    { { nullptr, &ampA_ }, { nullptr, &ampD_ }, { nullptr, &ampS_ }, { nullptr, &ampR_ } });
+    }
+    area.removeFromTop(8);
 
-        auto placeSlider = [&](LabeledSlider& ls) {
-            ls.label.setBounds(x, row.getY(), cellW, 18);
-            ls.slider.setBounds(x, row.getY() + 18, cellW, row.getHeight() - 18);
-            x += cellW;
-        };
-        placeSlider(keyLo);
-        placeSlider(keyHi);
-        placeSlider(velLo);
-        placeSlider(velHi);
-        placeSlider(level);
-
-        // Channel combo
-        channel.label.setBounds(x, row.getY(), cellW, 18);
-        channel.combo.setBounds(x, row.getY() + 18, cellW, 26);
+    // Routing strip (remaining): enable | key/vel/level | channel
+    {
+        routingSection_.setBounds(area.reduced(2));
+        auto rc = routingSection_.contentBounds();
+        const int n = 7;
+        const int w = rc.getWidth() / n;
+        int x = rc.getX();
+        enableLbl_.setBounds(x, rc.getY(), w, 16);
+        enable_.setBounds(x + w / 2 - 14, rc.getY() + 20, 28, 28);
+        x += w;
+        for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ }) {
+            k->setBounds(x, rc.getY(), w, rc.getHeight());
+            x += w;
+        }
+        channelLbl_.setBounds(x, rc.getY(), w, 16);
+        channel_.setBounds(x, rc.getY() + 16, w, 26);
     }
 }
