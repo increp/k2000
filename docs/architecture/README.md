@@ -9,3 +9,6 @@ A subsystem earns its own architecture doc when it's load-bearing and non-trivia
 | Doc | What it covers |
 |---|---|
 | [DSPBlock interface](dsp-block-interface.md) | The polymorphic abstraction every VAST processing block conforms to — the core of the VAST architecture. |
+| [Engine register](engine-questions.md) | Living register of locked decisions + open questions for the K2061/Summit engine. |
+| [Algorithm taxonomy](algorithm-taxonomy.md) | The VAST algorithm space and how our library samples it. |
+| [Huggett filter](huggett-filter.md) | Deep research on the Summit/Peak/OSCar (Chris Huggett) filter lineage — the load-bearing reference for the v5 constant-spine filter. |
