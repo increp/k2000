@@ -17,6 +17,7 @@ public:
 
     void paint(juce::Graphics&) override;
 
+    // spine is structural (constructor-only); reserved may be toggled at runtime.
 private:
     static constexpr int titleH_ = 18;
     juce::String title_;

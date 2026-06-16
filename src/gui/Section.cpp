@@ -30,7 +30,6 @@ void Section::paint(juce::Graphics& g) {
     g.setColour((reserved_ ? SummitLookAndFeel::textDim
                            : SummitLookAndFeel::textBright).withMultipliedAlpha(alpha));
     g.setFont(juce::Font(11.0f, juce::Font::bold));
-    g.drawText(title_.toUpperCase(),
-               getLocalBounds().reduced(6).removeFromTop(titleH_),
-               juce::Justification::topLeft);
+    auto titleStrip = getLocalBounds().reduced(6).removeFromTop(titleH_);
+    g.drawText(title_.toUpperCase(), titleStrip, juce::Justification::topLeft);
 }
