@@ -26,6 +26,8 @@ void SummitLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
                                          juce::Slider&) {
     const auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(4.0f);
     const float radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
+    if (radius < 2.0f)
+        return;  // too small to draw anything meaningful (avoids negative-size fillEllipse)
     const auto centre = bounds.getCentre();
     const float angle = startAngle + sliderPos * (endAngle - startAngle);
 

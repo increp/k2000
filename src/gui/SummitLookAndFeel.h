@@ -9,7 +9,7 @@ public:
     SummitLookAndFeel();
 
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
-                          float sliderPosProportional,
+                          float sliderPos,
                           float rotaryStartAngle, float rotaryEndAngle,
                           juce::Slider&) override;
 
@@ -19,7 +19,7 @@ public:
     static const juce::Colour moduleEdge;  // section border (live)
     static const juce::Colour spineEdge;   // section border (constant-spine accent)
     static const juce::Colour knobBody;    // knob fill
-    static const juce::Colour knobRing;    // knob track / pointer
+    static const juce::Colour knobRing;    // value arc + pointer (lit)
     static const juce::Colour textBright;  // captions / titles
     static const juce::Colour textDim;     // reserved/dimmed text
 };
