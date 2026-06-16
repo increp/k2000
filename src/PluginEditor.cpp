@@ -94,6 +94,10 @@ void K2000AudioProcessorEditor::addSlider(LabeledSlider& ls,
     ls.label.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(ls.label);
     addAndMakeVisible(ls.slider);
+    // Detach the previous attachment BEFORE creating the new one. Otherwise the
+    // new attachment's initial sync moves the slider, and the still-live old
+    // attachment writes that value back into the previous layer's param.
+    ls.attach.reset();
     ls.attach = std::make_unique<SliderAtt>(processorRef.apvts(), paramId, ls.slider);
 }
 
@@ -104,6 +108,10 @@ void K2000AudioProcessorEditor::addCombo(LabeledCombo& lc,
     lc.label.setText(label, juce::dontSendNotification);
     lc.label.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(lc.label);
+    // Detach the previous attachment BEFORE mutating the combo / creating the new
+    // one — else the old (still-live) attachment writes the new layer's value
+    // back into the previous layer's param when the combo selection changes.
+    lc.attach.reset();
     lc.combo.clear(juce::dontSendNotification);
     lc.combo.addItemList(items, 1);
     addAndMakeVisible(lc.combo);
