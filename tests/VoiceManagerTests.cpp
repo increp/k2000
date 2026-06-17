@@ -27,47 +27,51 @@ public:
         VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, BLOCK);
 
         beginTest("no MIDI input → silent output");
-        std::vector<float> out(BLOCK, 0.0f);
+        std::vector<float> outL(BLOCK, 0.0f), outR(BLOCK, 0.0f);
         juce::MidiBuffer midi;
-        vm.renderBlock(out.data(), BLOCK, midi);
+        vm.renderBlock(outL.data(), outR.data(), BLOCK, midi);
         double sumAbs = 0;
-        for (float v : out) sumAbs += std::abs(v);
+        for (float v : outL) sumAbs += std::abs(v);
         expectWithinAbsoluteError(float(sumAbs), 0.0f, 1e-6f);
 
         beginTest("noteOn produces non-silent output");
         midi.clear();
         midi.addEvent(juce::MidiMessage::noteOn(1, 60, (juce::uint8) 100), 0);
-        std::fill(out.begin(), out.end(), 0.0f);
-        vm.renderBlock(out.data(), BLOCK, midi);
-        std::fill(out.begin(), out.end(), 0.0f);
+        std::fill(outL.begin(), outL.end(), 0.0f);
+        std::fill(outR.begin(), outR.end(), 0.0f);
+        vm.renderBlock(outL.data(), outR.data(), BLOCK, midi);
+        std::fill(outL.begin(), outL.end(), 0.0f);
+        std::fill(outR.begin(), outR.end(), 0.0f);
         midi.clear();
-        vm.renderBlock(out.data(), BLOCK, midi);
+        vm.renderBlock(outL.data(), outR.data(), BLOCK, midi);
         sumAbs = 0;
-        for (float v : out) sumAbs += std::abs(v);
+        for (float v : outL) sumAbs += std::abs(v);
         expect(sumAbs > 1.0, "should produce audible output");
 
         beginTest("noteOff releases voice");
         midi.clear();
         midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
-        vm.renderBlock(out.data(), BLOCK, midi);
+        vm.renderBlock(outL.data(), outR.data(), BLOCK, midi);
         // Run for long enough to drain release
         for (int b = 0; b < 200; ++b) {
-            std::fill(out.begin(), out.end(), 0.0f);
+            std::fill(outL.begin(), outL.end(), 0.0f);
+            std::fill(outR.begin(), outR.end(), 0.0f);
             midi.clear();
-            vm.renderBlock(out.data(), BLOCK, midi);
+            vm.renderBlock(outL.data(), outR.data(), BLOCK, midi);
         }
         sumAbs = 0;
-        for (float v : out) sumAbs += std::abs(v);
+        for (float v : outL) sumAbs += std::abs(v);
         expectLessThan(float(sumAbs), 1e-3f);
 
         beginTest("more notes than polyphony triggers voice stealing");
         midi.clear();
         for (int i = 0; i < VoiceManager::kNumVoices + 2; ++i)
             midi.addEvent(juce::MidiMessage::noteOn(1, 60 + i, (juce::uint8) 100), 0);
-        std::fill(out.begin(), out.end(), 0.0f);
-        vm.renderBlock(out.data(), BLOCK, midi);
+        std::fill(outL.begin(), outL.end(), 0.0f);
+        std::fill(outR.begin(), outR.end(), 0.0f);
+        vm.renderBlock(outL.data(), outR.data(), BLOCK, midi);
         // Just verify nothing crashed and we have a finite, bounded output.
-        for (float v : out) expect(std::isfinite(v));
+        for (float v : outL) expect(std::isfinite(v));
     }
 };
 

@@ -39,6 +39,6 @@ private:
     juce::AudioProcessorValueTreeState apvts_;
     Program program_;
     VoiceManager voiceManager_;
-    std::vector<float> monoScratch_;
+    std::vector<float> scratchL_, scratchR_;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessor)
 };

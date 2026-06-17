@@ -72,7 +72,8 @@ void K2000AudioProcessor::prepareToPlay(double sr, int samplesPerBlock) {
     program_.prepare(sr, samplesPerBlock);
     voiceManager_.setProgram(&program_);  // bind before voices size state
     voiceManager_.prepare(sr, samplesPerBlock);
-    monoScratch_.assign(samplesPerBlock, 0.0f);
+    scratchL_.assign(samplesPerBlock, 0.0f);
+    scratchR_.assign(samplesPerBlock, 0.0f);
 }
 
 void K2000AudioProcessor::releaseResources() {}
@@ -104,21 +105,19 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         slot.layer.setLevel(levelGain);
     }
 
-    // Render mono into scratch. prepareToPlay sizes scratch_ to the host's
+    // Render stereo into scratch. prepareToPlay sizes scratch_ to the host's
     // declared upper bound; a larger block here would mean a host bug or a
     // missed prepare call, not something to silently allocate around.
-    jassert((int) monoScratch_.size() >= n);
-    std::fill(monoScratch_.begin(), monoScratch_.begin() + n, 0.0f);
-    voiceManager_.renderBlock(monoScratch_.data(), n, midi);
+    jassert((int) scratchL_.size() >= n);
+    std::fill(scratchL_.begin(), scratchL_.begin() + n, 0.0f);
+    std::fill(scratchR_.begin(), scratchR_.begin() + n, 0.0f);
+    voiceManager_.renderBlock(scratchL_.data(), scratchR_.data(), n, midi);
 
-    // Apply master gain (dB -> linear)
     const float gainLin = juce::Decibels::decibelsToGain(masterDb);
-
-    // Copy mono scratch to all output channels with master gain.
     for (int c = 0; c < outCh; ++c) {
         float* ch = buffer.getWritePointer(c);
-        for (int i = 0; i < n; ++i)
-            ch[i] = monoScratch_[i] * gainLin;
+        const float* src = (c == 1 && outCh > 1) ? scratchR_.data() : scratchL_.data();
+        for (int i = 0; i < n; ++i) ch[i] = src[i] * gainLin;
     }
 }
 

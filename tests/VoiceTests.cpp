@@ -30,26 +30,29 @@ public:
         v.prepare(SR, BLOCK);
 
         beginTest("idle voice renders nothing");
-        std::vector<float> out(BLOCK, 0.0f);
-        v.render(out.data(), BLOCK);
-        for (float x : out) expectWithinAbsoluteError(x, 0.0f, 1e-6f);
+        std::vector<float> outL(BLOCK, 0.0f), outR(BLOCK, 0.0f);
+        v.render(outL.data(), outR.data(), BLOCK);
+        for (float x : outL) expectWithinAbsoluteError(x, 0.0f, 1e-6f);
 
         beginTest("noteOn produces non-zero output");
         v.noteOn(69, 1.0f);  // A4
-        std::fill(out.begin(), out.end(), 0.0f);
+        std::fill(outL.begin(), outL.end(), 0.0f);
+        std::fill(outR.begin(), outR.end(), 0.0f);
         // Render two blocks to let envelope ramp past attack.
-        v.render(out.data(), BLOCK);
-        std::fill(out.begin(), out.end(), 0.0f);
-        v.render(out.data(), BLOCK);
+        v.render(outL.data(), outR.data(), BLOCK);
+        std::fill(outL.begin(), outL.end(), 0.0f);
+        std::fill(outR.begin(), outR.end(), 0.0f);
+        v.render(outL.data(), outR.data(), BLOCK);
         double sumAbs = 0;
-        for (float x : out) sumAbs += std::abs(x);
+        for (float x : outL) sumAbs += std::abs(x);
         expect(sumAbs > 1.0, "voice should produce audible output after noteOn");
 
         beginTest("noteOff eventually silences voice");
         v.noteOff();
         for (int i = 0; i < 200; ++i) {
-            std::fill(out.begin(), out.end(), 0.0f);
-            v.render(out.data(), BLOCK);
+            std::fill(outL.begin(), outL.end(), 0.0f);
+            std::fill(outR.begin(), outR.end(), 0.0f);
+            v.render(outL.data(), outR.data(), BLOCK);
             if (!v.isActive()) break;
         }
         expect(!v.isActive(), "voice should become inactive after release completes");

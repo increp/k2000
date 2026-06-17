@@ -34,11 +34,11 @@ public:
             v.prepare(sr, N);
             v.noteOn(69, 1.0f);    // A4
 
-            std::vector<float> out(N, 0.0f);
-            v.render(out.data(), N);
+            std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+            v.render(outL.data(), outR.data(), N);
 
             float energy = 0.0f;
-            for (float x : out) energy += x * x;
+            for (float x : outL) energy += x * x;
             expectGreaterThan(energy, 1e-4f, "Layer-driven Voice should produce audio");
         }
 
@@ -59,19 +59,19 @@ public:
             s.svfCutoffHz = 100.0f;
             layer.updateParameters(s);
             Voice vLow; vLow.setLayer(&layer); vLow.prepare(sr, N); vLow.noteOn(108, 1.0f);
-            std::vector<float> outLow(N, 0.0f);
-            vLow.render(outLow.data(), N);
+            std::vector<float> outLowL(N, 0.0f), outLowR(N, 0.0f);
+            vLow.render(outLowL.data(), outLowR.data(), N);
 
             s.svfCutoffHz = 20000.0f;
             layer.updateParameters(s);
             Voice vHigh; vHigh.setLayer(&layer); vHigh.prepare(sr, N); vHigh.noteOn(108, 1.0f);
-            std::vector<float> outHigh(N, 0.0f);
-            vHigh.render(outHigh.data(), N);
+            std::vector<float> outHighL(N, 0.0f), outHighR(N, 0.0f);
+            vHigh.render(outHighL.data(), outHighR.data(), N);
 
             float eLow = 0.0f, eHigh = 0.0f;
             for (int i = 0; i < N; ++i) {
-                eLow  += outLow[i]  * outLow[i];
-                eHigh += outHigh[i] * outHigh[i];
+                eLow  += outLowL[i]  * outLowL[i];
+                eHigh += outHighL[i] * outHighL[i];
             }
             expectGreaterThan(eHigh, eLow * 2.0f,
                 "High cutoff should yield substantially more energy than low cutoff for a high note");

@@ -13,8 +13,8 @@ public:
 
     void prepare(double sampleRate, int maxBlockSize);
 
-    // RT-safe. Process MIDI at sample positions and mix voices into `out` (mono).
-    void renderBlock(float* out, int numSamples, const juce::MidiBuffer& midi);
+    // RT-safe. Process MIDI at sample positions and mix voices into outL/outR (stereo).
+    void renderBlock(float* outL, float* outR, int numSamples, const juce::MidiBuffer& midi);
 
     void allNotesOff();
 

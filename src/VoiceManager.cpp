@@ -55,12 +55,12 @@ void VoiceManager::noteOff(int note, int channel) {
     }
 }
 
-void VoiceManager::renderBlock(float* out, int numSamples, const juce::MidiBuffer& midi) {
+void VoiceManager::renderBlock(float* outL, float* outR, int numSamples, const juce::MidiBuffer& midi) {
     int cursor = 0;
     auto renderRange = [&](int from, int to) {
         if (to <= from) return;
         const int len = to - from;
-        for (auto& v : voices_) v.render(out + from, len);
+        for (auto& v : voices_) v.render(outL + from, outR + from, len);
     };
 
     for (const auto meta : midi) {

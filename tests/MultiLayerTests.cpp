@@ -41,9 +41,9 @@ public:
                 VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
                 juce::MidiBuffer midi;
                 midi.addEvent(juce::MidiMessage::noteOn(1, note, (juce::uint8) 100), 0);
-                std::vector<float> out(N, 0.0f);
-                vm.renderBlock(out.data(), N, midi);
-                return energy(out);
+                std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+                vm.renderBlock(outL.data(), outR.data(), N, midi);
+                return energy(outL);
             };
             expect(render(48) > 1e-5, "low note routes to audible layer0");
             expectWithinAbsoluteError((float) render(70), 0.0f, 1e-9f);  // high → silent layer1 only
@@ -62,9 +62,9 @@ public:
                 VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
                 juce::MidiBuffer midi;
                 midi.addEvent(juce::MidiMessage::noteOn(1, 69, (juce::uint8) 100), 0);
-                std::vector<float> out(N, 0.0f);
-                vm.renderBlock(out.data(), N, midi);
-                return energy(out);
+                std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+                vm.renderBlock(outL.data(), outR.data(), N, midi);
+                return energy(outL);
             };
             // Two identical, phase-coherent voices ≈ 2x amplitude ≈ 4x energy.
             expect(render(true) > render(false) * 2.0, "stacking both layers adds a voice");
@@ -82,9 +82,9 @@ public:
                 VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
                 juce::MidiBuffer midi;
                 midi.addEvent(juce::MidiMessage::noteOn(1, 69, (juce::uint8) 100), 0);
-                std::vector<float> out(N, 0.0f);
-                vm.renderBlock(out.data(), N, midi);
-                return energy(out);
+                std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+                vm.renderBlock(outL.data(), outR.data(), N, midi);
+                return energy(outL);
             };
             expect(render(1.0f) > render(0.25f) * 2.0, "higher level → more energy");
         }
@@ -98,9 +98,9 @@ public:
             VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
             juce::MidiBuffer midi;
             midi.addEvent(juce::MidiMessage::noteOn(1, 69, (juce::uint8) 100), 0);
-            std::vector<float> out(N, 0.0f);
-            vm.renderBlock(out.data(), N, midi);
-            expectWithinAbsoluteError((float) energy(out), 0.0f, 1e-9f);
+            std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+            vm.renderBlock(outL.data(), outR.data(), N, midi);
+            expectWithinAbsoluteError((float) energy(outL), 0.0f, 1e-9f);
         }
     }
 };

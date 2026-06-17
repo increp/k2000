@@ -15,9 +15,9 @@ public:
     static std::vector<float> renderOnce(const ParamSnapshot& s) {
         Layer layer; layer.prepare(SR, N); layer.updateParameters(s);
         Voice v; v.setLayer(&layer); v.prepare(SR, N); v.noteOn(60, 1.0f);
-        std::vector<float> out(N, 0.0f);
-        v.render(out.data(), N);
-        return out;
+        std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+        v.render(outL.data(), outR.data(), N);
+        return outL;
     }
 
     static ParamSnapshot base() {
@@ -46,10 +46,10 @@ public:
         double d = 0.0; for (int i = 0; i < N; ++i) d += std::abs(c0[i] - c1[i]);
         expectWithinAbsoluteError((float) d, 0.0f, 1e-5f);
 
-        beginTest("thru: filter cutoff has no effect");
+        beginTest("thru: waveshaper drive has no effect (shaper block not in graph)");
         ParamSnapshot t = base(); t.algorithmId = (int) AlgorithmLibrary::indexOfId("thru");
-        t.svfCutoffHz = 200.0f;   auto t0 = renderOnce(t);
-        t.svfCutoffHz = 18000.0f; auto t1 = renderOnce(t);
+        t.wsDrive = 0.0f; auto t0 = renderOnce(t);
+        t.wsDrive = 1.0f; auto t1 = renderOnce(t);
         double dt = 0.0; for (int i = 0; i < N; ++i) dt += std::abs(t0[i] - t1[i]);
         expectWithinAbsoluteError((float) dt, 0.0f, 1e-5f);
     }
