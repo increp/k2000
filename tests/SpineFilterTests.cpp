@@ -1,6 +1,7 @@
 #include <juce_core/juce_core.h>
 #include "../src/dsp/spine/TptSvfCell.h"
 #include "../src/dsp/spine/HuggettFilter.h"
+#include "../src/dsp/spine/SpineFilterSlot.h"
 #include <cmath>
 #include <memory>
 
@@ -56,6 +57,22 @@ public:
             const float m12 = magAtSlope(HuggettFilter::Slope::db12);
             const float m24 = magAtSlope(HuggettFilter::Slope::db24);
             expect(m24 < m12, "24 dB steeper: 12=" + juce::String(m12) + " 24=" + juce::String(m24));
+        }
+
+        beginTest("SpineFilterSlot filters using the active model");
+        {
+            HuggettFilter h; h.prepare(48000.0); h.setMode(HuggettFilter::Mode::LP);
+            h.setSlope(HuggettFilter::Slope::db24); h.setCommon(500.0f, 0.0f, 0.0f);
+            SpineFilterSlot slot;
+            slot.prepare(48000.0, &h);
+            const int N = 8192; float peak = 0.0f;
+            for (int i = 0; i < N; ++i) {
+                float x = std::sin(2.0 * juce::MathConstants<double>::pi * 8000.0 * i / 48000.0);
+                float l = x, r = x;
+                slot.processStereo(&l, &r, 1);
+                if (i > N / 2) peak = std::max(peak, std::abs(l));
+            }
+            expect(peak < 0.1f, "high freq cut by spine: " + juce::String(peak));
         }
     }
 };
