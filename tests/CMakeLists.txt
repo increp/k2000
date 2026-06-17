@@ -12,6 +12,7 @@ add_executable(k2000_tests
     AlgorithmTests.cpp
     AlgorithmNameTests.cpp
     SpineFilterTests.cpp
+    FilterModelLibraryTests.cpp
     PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp
@@ -30,7 +31,8 @@ add_executable(k2000_tests
     ../src/dsp/blocks/SVFFilter.cpp
     ../src/dsp/blocks/Waveshaper.cpp
     ../src/dsp/AlgorithmLibrary.cpp
-    ../src/dsp/spine/HuggettFilter.cpp)
+    ../src/dsp/spine/HuggettFilter.cpp
+    ../src/dsp/spine/FilterModelLibrary.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core
