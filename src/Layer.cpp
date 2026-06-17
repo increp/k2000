@@ -23,6 +23,12 @@ void Layer::updateParameters(const ParamSnapshot& s) {
     for (auto& b : palette_)
         if (b) b->updateParameters(s);
 
+    // DANGER (Plan 3 / hot-swap): rebuilding spineModel_ destroys the object that
+    // every Voice's SpineFilterSlot::model_ + state_ point at — a use-after-free the
+    // next render. This branch is DEAD today (FilterModelLibrary has one entry, so
+    // snapshot_.spineModel is always 0). Before a second model is appended, the live
+    // hot-swap plan MUST re-bind every active Voice (crossfade old→new) here, not
+    // free-and-forget. See register Q17/Q18.
     if (snapshot_.spineModel != (int) spineModelId_) {
         spineModelId_ = (std::size_t) snapshot_.spineModel;
         spineModel_ = FilterModelLibrary::create(spineModelId_);
