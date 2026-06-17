@@ -22,7 +22,7 @@ Status: 🔴 open · 🟡 in discussion · 🟢 resolved (answer recorded).
 
 | # | Question | Why it matters | Resolve at | Status |
 |---|---|---|---|---|
-| Q1 | **Stereo vs mono signal path.** **Resolved: full stereo throughout** — every block (sources, DSP graph, spine) is stereo from v5. | Touches every block, filter, voice mix, CPU. | v5 | 🟢 |
+| Q1 | **Stereo vs mono signal path.** **Resolved: full stereo throughout** — every block (sources, DSP graph, spine) is stereo from v5. *Deliberate modernization, confirmed against the hardware:* the real Summit is **mono through the dual filter + both drive stages, splitting to L/R only at the VCA** (Summit User Guide pp. 21–22 block diagram), and K2000 VAST is **mono-per-layer + pan to stereo outputs** (Musician's Guide p. 366). We knowingly depart from that to be stereo end-to-end, accepting the ~2× per-voice filter cost (gated by Q11/Q12). | Touches every block, filter, voice mix, CPU. | v5 | 🟢 |
 | Q2 | **Voice-count target.** **Resolved: target the full 256 voices** (with full stereo) — fidelity over a reduced budget. Makes Q11 (CPU) critical. | Feasibility + allocation design. | v9 (intent set) | 🟢 |
 | Q3 | **Spine / modulation scope.** **Resolved: per-Layer** — each Layer has its own spine (filter/VCA) + modulation. No program-level tier for now. | Where filter/env/LFO/mod live; instance count. | v5 | 🟢 |
 | Q4 | **Sample/keymap sources.** **Resolved: synth-only now** — sources = oscillators/FM/DSP; sample/keymap playback deferred to v12+. | Avoids pulling a sampler subsystem in early. | v12+ | 🟢 |
