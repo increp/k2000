@@ -62,6 +62,17 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(filterType_);
     filterSection_.addAndMakeVisible(filterCutoff_);
     filterSection_.addAndMakeVisible(filterRes_);
+    spineModelLbl_.setText("Filter", juce::dontSendNotification);
+    spineModelLbl_.setJustificationType(juce::Justification::centred);
+    spineModel_.addItemList(params::algoNamesSpine(), 1);
+    filterSection_.addAndMakeVisible(spineModelLbl_);
+    filterSection_.addAndMakeVisible(spineModel_);
+    spineSlopeLbl_.setText("Slope", juce::dontSendNotification);
+    spineSlopeLbl_.setJustificationType(juce::Justification::centred);
+    spineSlope_.addItemList(juce::StringArray{ "12 dB", "24 dB" }, 1);
+    filterSection_.addAndMakeVisible(spineSlopeLbl_);
+    filterSection_.addAndMakeVisible(spineSlope_);
+    filterSection_.addAndMakeVisible(spineSeparation_);
 
     // Amp env section
     addAndMakeVisible(ampEnvSection_);
@@ -105,6 +116,10 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(filterType_,          ids.filterType);
     binder_.bind(filterCutoff_.slider(),ids.filterCutoff);
     binder_.bind(filterRes_.slider(),  ids.filterResonance);
+
+    binder_.bind(spineModel_,               ids.spineModel);
+    binder_.bind(spineSlope_,               ids.spineSlope);
+    binder_.bind(spineSeparation_.slider(), ids.spineSeparation);
 
     binder_.bind(ampA_.slider(), ids.ampAttack);
     binder_.bind(ampD_.slider(), ids.ampDecay);
@@ -177,9 +192,19 @@ void K2000AudioProcessorEditor::resized() {
         layoutCells(top, { { &oscWaveLbl_, &oscWave_ }, { nullptr, &oscCoarse_ }, { nullptr, &oscFine_ } });
         layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
 
-        // Filter children.
-        layoutCells(filterSection_.contentBounds(),
-                    { { &filterTypeLbl_, &filterType_ }, { nullptr, &filterCutoff_ }, { nullptr, &filterRes_ } });
+        // Filter children: two sub-rows.
+        // Top row: spine-mode combo, filter type, cutoff, reso.
+        // Bottom row: spine model selector, slope combo, separation knob.
+        {
+            auto fc = filterSection_.contentBounds();
+            auto top = fc.removeFromTop(fc.getHeight() / 2);
+            layoutCells(top, { { &filterTypeLbl_, &filterType_ },
+                                { nullptr,         &filterCutoff_ },
+                                { nullptr,         &filterRes_ } });
+            layoutCells(fc,  { { &spineModelLbl_, &spineModel_ },
+                                { &spineSlopeLbl_, &spineSlope_ },
+                                { nullptr,         &spineSeparation_ } });
+        }
     }
     area.removeFromTop(8);
 

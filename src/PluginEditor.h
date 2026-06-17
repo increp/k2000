@@ -38,6 +38,9 @@ private:
     juce::ComboBox filterType_;
     juce::Label    filterTypeLbl_;
     LabeledKnob    filterCutoff_{ "Cutoff" }, filterRes_{ "Reso" };
+    juce::ComboBox spineModel_, spineSlope_;
+    juce::Label    spineModelLbl_, spineSlopeLbl_;
+    LabeledKnob    spineSeparation_{ "Sep" };
 
     Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
     Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
