@@ -1,6 +1,7 @@
 #include <array>
 #include "Parameters.h"
 #include "../dsp/AlgorithmLibrary.h"
+#include "../dsp/spine/FilterModelLibrary.h"
 #include "../util/Utf8.h"
 
 namespace params {
@@ -36,6 +37,11 @@ LayerIds buildIds(int layer) {
     id.velHi           = p + "velHi";
     id.channel         = p + "channel";
     id.level           = p + "level";
+    id.spineModel      = p + "spine.filterModel";
+    id.spineSeparation = p + "spine.separation";
+    id.spineSlope      = p + "spine.slope";
+    id.spineDrive      = p + "spine.drive";
+    id.spineOutput     = p + "spine.output";
     return id;
 }
 
@@ -69,6 +75,8 @@ juce::StringArray algoNames() {
         s.add(util::u8(AlgorithmLibrary::byIndex(i).displayName));
     return s;
 }
+
+juce::StringArray algoNamesSpine() { return FilterModelLibrary::names(); }
 
 APVTS::ParameterLayout createLayout() {
     APVTS::ParameterLayout layout;
@@ -135,6 +143,20 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.level, 1},
             "Level " + juce::String(i),
             juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, 0.0f));
+
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineModel, 1},
+            "Spine Filter " + juce::String(i), algoNamesSpine(), 0));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineSlope, 1},
+            "Spine Slope " + juce::String(i), juce::StringArray{"12 dB", "24 dB"}, 1));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineSeparation, 1},
+            "Spine Separation " + juce::String(i),
+            juce::NormalisableRange<float>{-2.0f, 2.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineDrive, 1},
+            "Spine Drive " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineOutput, 1},
+            "Spine Output " + juce::String(i),
+            juce::NormalisableRange<float>{-24.0f, 24.0f, 0.0f}, 0.0f));
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
@@ -158,8 +180,13 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.ampDecayS    = raw(apvts, id.ampDecay);
     s.ampSustain   = raw(apvts, id.ampSustain);
     s.ampReleaseS  = raw(apvts, id.ampRelease);
-    s.algorithmId  = (int) raw(apvts, id.algorithm);
-    s.masterGainDb = raw(apvts, masterGain);
+    s.algorithmId        = (int) raw(apvts, id.algorithm);
+    s.masterGainDb       = raw(apvts, masterGain);
+    s.spineModel         = (int) raw(apvts, id.spineModel);
+    s.spineSeparationOct = raw(apvts, id.spineSeparation);
+    s.spineSlope         = (int) raw(apvts, id.spineSlope);
+    s.spineDrive         = raw(apvts, id.spineDrive);
+    s.spineOutputDb      = raw(apvts, id.spineOutput);
     return s;
 }
 

@@ -32,4 +32,11 @@ struct ParamSnapshot {
 
     // Algorithm selection (index into AlgorithmLibrary)
     int algorithmId = 0;
+
+    // Spine filter (layer.spine.*)
+    int   spineModel         = 0;
+    float spineSeparationOct = 0.0f;
+    int   spineSlope         = 1;   // 0=12 dB, 1=24 dB
+    float spineDrive         = 0.0f;
+    float spineOutputDb      = 0.0f;
 };

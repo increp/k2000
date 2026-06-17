@@ -1,5 +1,6 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
+#include "../src/PluginProcessor.h"
 #include "../src/params/Parameters.h"
 #include "../src/params/ParamSnapshot.h"
 
@@ -50,6 +51,18 @@ public:
             p->setValueNotifyingHost(p->convertTo0to1(2500.0f));
         s = params::snapshot(apvts, 0);
         expectWithinAbsoluteError(s.svfCutoffHz, 2500.0f, 1.0f);
+
+        beginTest("snapshot carries spine model + separation");
+        {
+            K2000AudioProcessor p;
+            auto& apvts = p.apvts();
+            const auto& id = params::layerIds(0);
+            apvts.getParameter(id.spineSeparation)->setValueNotifyingHost(
+                apvts.getParameter(id.spineSeparation)->convertTo0to1(0.5f));
+            auto s = params::snapshot(apvts, 0);
+            expectWithinAbsoluteError(s.spineSeparationOct, 0.5f, 0.01f);
+            expectEquals(s.spineModel, 0);
+        }
     }
 };
 

@@ -14,7 +14,8 @@ struct LayerIds {
                  filterType, filterCutoff, filterResonance,
                  shaperDrive, shaperMix,
                  ampAttack, ampDecay, ampSustain, ampRelease,
-                 enable, keyLo, keyHi, velLo, velHi, channel, level;
+                 enable, keyLo, keyHi, velLo, velHi, channel, level,
+                 spineModel, spineSeparation, spineSlope, spineDrive, spineOutput;
 };
 
 // Returns a reference to the (statically built) ids for the given layer.
@@ -27,6 +28,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 // Algorithm display names for the choice param and the UI combo. Decoded as
 // UTF-8 (the library stores names like "Filter \xE2\x86\x92 Shaper").
 juce::StringArray algoNames();
+
+// Spine filter model display names (from FilterModelLibrary).
+juce::StringArray algoNamesSpine();
 
 // DSP params for one layer → snapshot (RT-safe: reads cached atomics by id).
 ParamSnapshot snapshot(const juce::AudioProcessorValueTreeState& apvts, int layer);
