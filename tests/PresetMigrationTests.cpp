@@ -1,6 +1,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../src/PluginProcessor.h"
+#include "../src/params/Parameters.h"
 
 // Verifies the v1→v2 preset migration shim (ADR 0007).
 //
@@ -113,7 +114,30 @@ public:
                 proc.apvts().getRawParameterValue("layer0.filter.cutoff")->load(), 3200.0f, 0.5f);
         }
 
-        beginTest("Saving sets v=4 attribute and round-trips");
+        beginTest("Loading a v4 preset: filter.cutoff preserved; spine defaults applied");
+        {
+            K2000AudioProcessor proc;
+            proc.prepareToPlay(48000.0, 256);
+
+            juce::XmlElement root("K2000Root");
+            root.setAttribute("v", 4);
+            auto* wrapper = root.createNewChildElement("Params");
+            auto* pr = wrapper->createNewChildElement("PARAMS");
+            auto add = [&](const char* id, double val) {
+                auto* p = pr->createNewChildElement("PARAM");
+                p->setAttribute("id", id); p->setAttribute("value", val);
+            };
+            add("layer0.filter.cutoff", 500.0);
+            juce::MemoryBlock mb;
+            juce::AudioProcessor::copyXmlToBinary(root, mb);
+            proc.setStateInformation(mb.getData(), (int) mb.getSize());
+
+            const auto snap = params::snapshot(proc.apvts(), 0);
+            expectWithinAbsoluteError(snap.svfCutoffHz, 500.0f, 0.5f);
+            expectEquals(snap.spineModel, 0);
+        }
+
+        beginTest("Saving sets v=5 attribute and round-trips");
         {
             K2000AudioProcessor proc;
             proc.prepareToPlay(48000.0, 256);
@@ -125,9 +149,9 @@ public:
                 juce::AudioProcessor::getXmlFromBinary(saved.getData(),
                                                        (int) saved.getSize()));
             expect(xml != nullptr, "saved state should decode");
-            expectEquals(xml->getIntAttribute("v", 1), 4);
+            expectEquals(xml->getIntAttribute("v", 1), 5);
 
-            // A v4 blob skips the shim and still loads cleanly.
+            // A v5 blob skips all shims and still loads cleanly.
             K2000AudioProcessor proc2;
             proc2.prepareToPlay(48000.0, 256);
             proc2.setStateInformation(saved.getData(), (int) saved.getSize());

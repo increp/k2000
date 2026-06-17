@@ -11,18 +11,15 @@ public:
     AlgorithmNameTests() : juce::UnitTest("AlgorithmName") {}
 
     void runTest() override {
-        const juce::juce_wchar rightArrow = 0x2192;  // →
-
         beginTest("algoNames() count matches the library");
         const juce::StringArray names = params::algoNames();
         expectEquals(names.size(), (int) AlgorithmLibrary::count());
 
-        beginTest("the arrow in 'Filter -> Shaper' is decoded as UTF-8 U+2192");
-        // Library entry 0 is filter_then_shaper (see AlgorithmLibraryTests).
-        expect(names[0].containsChar(rightArrow),
-               "names[0] should contain U+2192, got: " + names[0]);
-        expect(names[0] == juce::String(juce::CharPointer_UTF8("Filter \xE2\x86\x92 Shaper")),
-               "names[0] mismatch, got: " + names[0]);
+        beginTest("entry 0 (filter_then_shaper) is now 'Shaper' — filter retired to spine");
+        // Library entry 0 is filter_then_shaper; in v5 the filter moved to the
+        // always-on spine, so the graph block is just "Shaper".
+        expect(names[0] == "Shaper",
+               "names[0] should be 'Shaper', got: " + names[0]);
 
         beginTest("no name contains a lone 0xE2 byte (the ASCII-decode artefact)");
         for (const auto& n : names)

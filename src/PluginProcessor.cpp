@@ -61,6 +61,12 @@ void migrateV3ToV4(juce::XmlElement& paramsRoot) {
             p->setAttribute("id", "layer0." + pid.substring(6));
     }
 }
+
+// v4->v5: filtering moves from the graph SvfFilter into the always-on spine.
+// The reused filter.* ids keep their names (no rename); new spine.* params take
+// their layout defaults. This shim is a marker for the version bump — the
+// algorithm semantics changed in code, and presets keep their stored values.
+void migrateV4ToV5(juce::XmlElement&) { /* no id rewrites needed */ }
 }  // namespace
 
 K2000AudioProcessor::K2000AudioProcessor()
@@ -143,7 +149,7 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 // slot types.
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
-    root->setAttribute("v", 4);  // schema version; gates the cumulative load shim
+    root->setAttribute("v", 5);  // schema version; gates the cumulative load shim
 
     auto* slots = root->createNewChildElement("Slots");
     auto* s0 = slots->createNewChildElement("Slot");
@@ -176,6 +182,7 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
             if (v < 2) migrateV1ToV2(*paramsRoot);
             if (v < 3) migrateV2ToV3(*paramsRoot);
             if (v < 4) migrateV3ToV4(*paramsRoot);
+            if (v < 5) migrateV4ToV5(*paramsRoot);
             apvts_.replaceState(juce::ValueTree::fromXml(*paramsRoot));
         }
     }

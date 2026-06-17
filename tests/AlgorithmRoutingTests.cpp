@@ -31,13 +31,16 @@ public:
     }
 
     void runTest() override {
-        beginTest("ordering matters: filter_then_shaper differs from shaper_then_filter");
+        beginTest("filter_then_shaper and shaper_then_filter both shaper-only in v5 (filter in spine)");
+        // In v5 the graph SvfFilter was retired to the always-on spine; both
+        // legacy algorithm ids now contain only a Waveshaper block, so their
+        // outputs are identical.
         ParamSnapshot a = base(); a.algorithmId = (int) AlgorithmLibrary::indexOfId("filter_then_shaper");
         ParamSnapshot b = base(); b.algorithmId = (int) AlgorithmLibrary::indexOfId("shaper_then_filter");
         auto oa = renderOnce(a), ob = renderOnce(b);
         double diff = 0.0;
         for (int i = 0; i < N; ++i) diff += std::abs(oa[i] - ob[i]);
-        expect(diff > 1e-3, "block order should change the output");
+        expectWithinAbsoluteError((float) diff, 0.0f, 1e-5f);
 
         beginTest("filter_only: shaper drive has no effect");
         ParamSnapshot c = base(); c.algorithmId = (int) AlgorithmLibrary::indexOfId("filter_only");

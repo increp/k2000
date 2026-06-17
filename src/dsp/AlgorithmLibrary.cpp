@@ -12,11 +12,13 @@ constexpr Algorithm make(const char* id, const char* name,
 }
 
 // APPEND-ONLY. Do not reorder existing entries (choice index is serialised).
+// v5: SvfFilter retired from graph to always-on spine. Former filter-bearing
+// entries become shaper-only (or empty); ids/order preserved for ADR-0008.
 const std::array<Algorithm, 4> kAlgorithms = {{
-    make("filter_then_shaper", "Filter \xE2\x86\x92 Shaper", 2, BlockTypeId::SvfFilter,  BlockTypeId::Waveshaper),
-    make("shaper_then_filter", "Shaper \xE2\x86\x92 Filter", 2, BlockTypeId::Waveshaper, BlockTypeId::SvfFilter),
-    make("filter_only",        "Filter only",      1, BlockTypeId::SvfFilter,  BlockTypeId::None),
-    make("thru",               "Thru",             0, BlockTypeId::None,       BlockTypeId::None),
+    make("filter_then_shaper", "Shaper",   1, BlockTypeId::Waveshaper, BlockTypeId::None),
+    make("shaper_then_filter", "Shaper",   1, BlockTypeId::Waveshaper, BlockTypeId::None),
+    make("filter_only",        "Passthru", 0, BlockTypeId::None,       BlockTypeId::None),
+    make("thru",               "Thru",     0, BlockTypeId::None,       BlockTypeId::None),
 }};
 }  // namespace
 
