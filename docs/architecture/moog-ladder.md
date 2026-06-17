@@ -1,5 +1,7 @@
 # AI Coding Agent Specification Research for Huggett and Moog Filters in JUCE VST3
 
+> **Second Moog dossier (2026-06-17, v5.01):** [filter-dossiers-sem-moog.md](filter-dossiers-sem-moog.md) corroborates and sharpens this report — adds D'Angelo-Välimäki (ICASSP 2013 / TASLP 2014), the `ddiakopoulos/MoogLadders` C++ comparison repo, the `juce::dsp::LadderFilter` API (a ready Moog-style multimode baseline), and Pirkle's output peak-limiter trick for clean self-oscillation without oversampling. This is the **Moog (v5.1)** library entry's source; Moog's patent (US 3,475,623) expired 1986.
+
 ## Executive summary
 
 Two different implementation strategies are warranted because the public source situation is asymmetric. For the **Moog ladder**, there is a well-defined analog primary source in Robert Moog’s 1966 patent, plus a strong body of seminal digital work by Stilson and Smith, Huovilainen, and Zavalishin. That makes a rigorous, agent-ready implementation brief feasible for a genuinely research-grounded JUCE/VST3 plugin. The analog filter in Moog’s patent is a four-stage transistor-ladder low-pass built from bipolar transistor base-emitter resistances; the patent is long expired, and later digital literature gives multiple workable discretizations with explicit trade-offs. citeturn30view0turn31view0turn31view1turn27view0

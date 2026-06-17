@@ -18,3 +18,4 @@ Filename convention: `NNNN-<short-slug>.md`, zero-padded sequential.
 | [0008](0008-algorithm-selection-and-param-namespace.md) | Algorithm selection: palette + semantic param namespace | Accepted (v3) |
 | [0009](0009-multi-layer-program.md) | Multi-layer Program: shared pool, range routing | Accepted (v4) |
 | [0010](0010-k2061-repositioning-constant-summit-spine.md) | Re-position to K2061/K2088 VAST + constant Summit spine | Accepted (v4.5) |
+| [0011](0011-selectable-spine-filter-library.md) | Selectable spine filter: a curated library of analog filter models | Accepted (v5, 5.01) |

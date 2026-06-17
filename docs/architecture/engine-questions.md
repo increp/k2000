@@ -14,7 +14,7 @@ Source of the model: [v4.5(C) re-positioning spec](../specs/2026-06-16-v4.5-k206
 | L4 | **Dynamic VAST graph** (variable-I/O blocks, serial + parallel) is the variable source/DSP stage feeding the spine. v3's fixed `AlgorithmLibrary` = "factory" presets (the floor). | C spec |
 | L5 | **GUI grows with the engine** — B (v4.5) is the load-bearing UI foundation (before v5); each phase ships its feature UI; constant spine = permanent panel, source/DSP region = dynamic knob-clusters. | C spec |
 | L6 | Repo codename stays **k2000**. Tuning deferred to **v11**. | C spec |
-| L7 | **Spine filter is a `FilterModel` library** — append-only, stable-ID registry (Huggett v5, Moog v5.1, Oberheim+ later), selected per-Layer by an **automatable** `spine.filterModel`. **Live click-free switching** via a per-voice equal-power **crossfade** of two **heap-free, in-place** model instances. Param shape: a **common core** (cutoff/res/drive/output, always front-panel + mod-targetable) + **per-model namespaced banks** `spine.<modelId>.<param>` (the ADR-0008 idiom). | v5 |
+| L7 | **Spine filter is a `FilterModel` library** ([ADR-0011](0011-selectable-spine-filter-library.md)) — append-only, stable-ID registry (Huggett v5 · Moog v5.1 · Oberheim SEM v5.2 · others later), selected per-Layer by an **automatable** `spine.filterModel`. **Live click-free switching** via a per-voice equal-power **crossfade** of two **heap-free, in-place** model instances. Param shape: a **common core** (cutoff/res/drive/output, always front-panel + mod-targetable) + **per-model namespaced banks** `spine.<modelId>.<param>` (the ADR-0008 idiom). | v5 |
 
 ## Open questions
 
