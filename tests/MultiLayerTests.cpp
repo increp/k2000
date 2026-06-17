@@ -130,6 +130,34 @@ public:
                    "layer 1 cutoff must shape a layer-1 note: open=" + juce::String(openE)
                    + " closed=" + juce::String(closedE));
         }
+
+        beginTest("Drive (waveshaper) audibly changes the sound with the filter open");
+        {
+            Program prog; prog.prepare(SR, N);
+            prog.slot(0).routing = LayerRouting{true,  0, 127, 1, 127, 0};
+            prog.slot(1).routing = LayerRouting{false, 0, 127, 1, 127, 0};
+            prog.slot(0).layer.setLevel(1.0f);
+
+            auto renderDrive = [&](float drive) {
+                auto s = dspBase();
+                s.algorithmId = 0;          // "Shaper" algorithm: waveshaper is in the graph
+                s.svfCutoffHz = 20000.0f;   // filter open so drive's harmonics survive
+                s.wsMix = 1.0f;             // full-wet shaper (dspBase defaults mix to 0!)
+                s.wsDrive = drive;
+                prog.slot(0).layer.updateParameters(s);
+                VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
+                juce::MidiBuffer midi;
+                midi.addEvent(juce::MidiMessage::noteOn(1, 45, (juce::uint8) 100), 0);  // A2, harmonic-rich
+                std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+                vm.renderBlock(outL.data(), outR.data(), N, midi);
+                return outL;
+            };
+            const auto clean  = renderDrive(0.0f);
+            const auto driven = renderDrive(1.0f);
+            double diff = 0.0;
+            for (int i = 0; i < N; ++i) diff += std::abs(driven[i] - clean[i]);
+            expect(diff > 1.0, "drive reaches the output (sum|driven-clean|): " + juce::String(diff));
+        }
     }
 };
 
