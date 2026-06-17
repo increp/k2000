@@ -6,6 +6,7 @@
 #include "dsp/Envelope.h"
 #include "dsp/DSPBlock.h"
 #include "dsp/Algorithm.h"
+#include "dsp/spine/SpineFilterSlot.h"
 
 class Layer;  // forward
 
@@ -26,9 +27,10 @@ public:
     bool isActive() const;
     int  currentNote() const { return note_; }
 
-    // RT-safe. Renders additively into `out`. Walks the Layer's active
-    // algorithm, processing through the palette block for each block type.
-    void render(float* out, int numSamples);
+    // RT-safe. Renders additively into outL and outR. Walks the Layer's active
+    // algorithm, processing through the palette block for each block type,
+    // then routes through the Layer's spine filter (dual-mono to stereo).
+    void render(float* outL, float* outR, int numSamples);
 
 private:
     Layer* layer_ = nullptr;  // non-owning
@@ -42,6 +44,8 @@ private:
     float velocity_ = 0.0f;
     double sampleRate_ = 44100.0;
     std::vector<float> scratch_;
+    std::vector<float> scratchR_;
+    SpineFilterSlot spine_;
 
     static float midiToHz(int note);
 };

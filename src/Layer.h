@@ -1,9 +1,14 @@
 #pragma once
 #include <array>
 #include <memory>
+#include <cstddef>
 #include "dsp/Algorithm.h"
 #include "dsp/AlgorithmLibrary.h"
 #include "dsp/DSPBlock.h"
+#include "dsp/spine/FilterModel.h"
+#include "dsp/spine/SpineFilterSlot.h"
+#include "dsp/spine/HuggettFilter.h"
+#include "dsp/spine/FilterModelLibrary.h"
 #include "params/ParamSnapshot.h"
 
 // Configuration container. Owns a PALETTE — one DSP block instance per block
@@ -32,10 +37,17 @@ public:
     void  setLevel(float linearGain) { level_ = linearGain; }
     float level() const { return level_; }
 
+    const FilterModel* spineModel() const { return spineModel_.get(); }
+
 private:
     // Indexed by BlockTypeId value; null where the type isn't in the palette.
     std::array<std::unique_ptr<DSPBlock>, kNumBlockTypes> palette_;
     std::size_t activeAlgorithmId_ = 0;
     ParamSnapshot snapshot_;
     float level_ = 1.0f;  // linear output gain, set each block from layer{i}.level
+
+    std::unique_ptr<FilterModel> spineModel_;
+    std::size_t spineModelId_ = SIZE_MAX;   // forces first build
+    HuggettFilter* huggett_ = nullptr;      // non-owning view when model 0 is active
+    double sampleRate_ = 44100.0;
 };

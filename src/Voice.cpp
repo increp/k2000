@@ -1,5 +1,7 @@
 #include "Voice.h"
 #include "Layer.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <algorithm>
 #include <cmath>
 
 // The per-block-type loops below start at t=1 to skip BlockTypeId::None.
@@ -12,6 +14,8 @@ void Voice::prepare(double sr, int maxBlock) {
     osc_.prepare(sr);
     amp_.prepare(sr);
     scratch_.assign(maxBlock, 0.0f);
+    scratchR_.assign(maxBlock, 0.0f);
+    spine_.prepare(sr, layer_ ? layer_->spineModel() : nullptr);
 
     // One VoiceState per palette block type.
     if (layer_) {
@@ -25,6 +29,7 @@ void Voice::prepare(double sr, int maxBlock) {
 void Voice::reset() {
     osc_.reset();
     amp_.reset();
+    spine_.reset();
     if (layer_)
         for (int t = 1; t < (int) kNumBlockTypes; ++t)
             if (blockStates_[t]) layer_->block((BlockTypeId) t).resetVoice(*blockStates_[t]);
@@ -37,6 +42,7 @@ void Voice::noteOn(int midiNote, float velocity) {
     velocity_ = velocity;
     osc_.reset();
     amp_.reset();
+    spine_.reset();
     if (layer_)
         for (int t = 1; t < (int) kNumBlockTypes; ++t)
             if (blockStates_[t]) layer_->block((BlockTypeId) t).resetVoice(*blockStates_[t]);
@@ -50,7 +56,7 @@ float Voice::midiToHz(int note) {
     return 440.0f * std::pow(2.0f, (note - 69) / 12.0f);
 }
 
-void Voice::render(float* out, int numSamples) {
+void Voice::render(float* outL, float* outR, int numSamples) {
     if (!isActive() || !layer_) return;
 
     const auto& s   = layer_->snapshot();
@@ -63,15 +69,23 @@ void Voice::render(float* out, int numSamples) {
     amp_.setParameters(s.ampAttackS, s.ampDecayS, s.ampSustain, s.ampReleaseS);
 
     jassert(numSamples <= (int) scratch_.size());
-    float* tmp = scratch_.data();
-    osc_.processBlock(tmp, numSamples);
+    float* tmpL = scratch_.data();
+    float* tmpR = scratchR_.data();
+    osc_.processBlock(tmpL, numSamples);
 
     for (std::size_t i = 0; i < alg.slotCount; ++i) {
         const BlockTypeId t = alg.blockTypePerSlot[i];
-        layer_->block(t).process(*blockStates_[(int) t], tmp, numSamples);
+        layer_->block(t).process(*blockStates_[(int) t], tmpL, numSamples);
     }
+    // Mono graph -> stereo spine input (dual mono; L/R diverge in later phases).
+    std::copy(tmpL, tmpL + numSamples, tmpR);
+    spine_.processStereo(tmpL, tmpR, numSamples);
 
     const float lvl = layer_->level();
-    for (int i = 0; i < numSamples; ++i)
-        out[i] += tmp[i] * amp_.nextSample() * velocity_ * lvl;
+    const float spineOut = juce::Decibels::decibelsToGain(s.spineOutputDb);
+    for (int i = 0; i < numSamples; ++i) {
+        const float env = amp_.nextSample() * velocity_ * lvl * spineOut;
+        outL[i] += tmpL[i] * env;
+        outR[i] += tmpR[i] * env;
+    }
 }
