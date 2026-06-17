@@ -11,6 +11,7 @@ add_executable(k2000_tests
     PluginLifecycleTests.cpp
     AlgorithmTests.cpp
     AlgorithmNameTests.cpp
+    SpineFilterTests.cpp
     PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp
