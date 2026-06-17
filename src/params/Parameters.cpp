@@ -160,7 +160,7 @@ APVTS::ParameterLayout createLayout() {
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
-        "Master Gain", juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, 0.0f));
+        "Master Gain", juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, -3.5f));
 
     return layout;
 }
