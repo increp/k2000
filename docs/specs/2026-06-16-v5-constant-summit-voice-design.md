@@ -70,9 +70,10 @@ Static APVTS (a curated library keeps the count bounded): the **common core** pl
 ## The Huggett model at v5 (resolved: Q13/Q14/Q15)
 
 - **Q13 — dual from v5.** Two linked 12 dB **TPT state-variable** cells + a **separation** offset; *not* a ladder, *not* direct-form biquads. Internal milestones de-risk: linear single cell → dual + separation → nonlinear → calibrate.
-- **Q14 — Summit dual modes first.** LP/BP/HP, 12/24 dB (cascade), series/parallel dual combinations with filter-frequency separation. OSCar separation-law modes are a marked **stretch**.
-- **Q15 — gray-box.** Three tanh-class nonlinear stages: pre-filter **input drive**, a **resonance-loop saturator** (self-oscillation self-limits instead of blowing up), and **post-filter drive**. White-box OTA modeling is future work, no committed phase.
+- **Q14 — single LP/BP/HP + slope first.** The full Summit set is **nine dual routings** (series LP→HP/LP→BP/HP→BP; parallel LP+HP/LP+BP/HP+BP/LP+LP/BP+BP/HP+HP) each with separation — see the [dossier](../architecture/huggett-filter-dossier.md). Single modes + 12/24 dB ship first; the nine dual routings + separation law are the **stretch**.
+- **Q15 — gray-box, asymmetric.** Three **asymmetric** tanh-class nonlinear stages: pre-filter **input drive**, a **resonance-loop saturator** (self-oscillation self-limits instead of blowing up), and **post-filter drive**. Asymmetry is load-bearing (Huggett = "dirty"/edgy, not warm) and the tanh is grounded in the DAFx-2022 Wasp OTA measurement. White-box OTA modeling is future work.
 - Controls: cutoff (exp ≈16 Hz–20 kHz, multiplicative smoothing), resonance (tapered toward self-oscillation), separation, slope, input drive, post drive, key-track, output trim. Per-parameter smoothing.
+- **Plan 2 source + calibration:** the nonlinear stages are detailed in the [Huggett dossier](../architecture/huggett-filter-dossier.md) (DSP refs: Zavalishin, Cytomic/Simper, ADAA), with a Stage-3 method of **A/B calibration against the user's own Summit** (self-osc pitch-vs-note, 12/24 dB resonance sweeps, drive levels, separation sweeps).
 
 ## Performance (resolved: Q12)
 
