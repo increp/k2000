@@ -42,7 +42,8 @@ target_sources(k2000 PRIVATE
     src/dsp/Envelope.cpp
     src/dsp/blocks/SVFFilter.cpp
     src/dsp/blocks/Waveshaper.cpp
-    src/dsp/AlgorithmLibrary.cpp)
+    src/dsp/AlgorithmLibrary.cpp
+    src/dsp/spine/HuggettFilter.cpp)
 
 target_compile_definitions(k2000 PUBLIC
     JUCE_WEB_BROWSER=0

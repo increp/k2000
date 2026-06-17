@@ -29,7 +29,8 @@ add_executable(k2000_tests
     ../src/dsp/Envelope.cpp
     ../src/dsp/blocks/SVFFilter.cpp
     ../src/dsp/blocks/Waveshaper.cpp
-    ../src/dsp/AlgorithmLibrary.cpp)
+    ../src/dsp/AlgorithmLibrary.cpp
+    ../src/dsp/spine/HuggettFilter.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core
