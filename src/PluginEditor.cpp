@@ -10,7 +10,7 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     binder_.bind(masterGain_.slider(), params::masterGain);
 
     bindLayer(0);
-    setSize(920, 620);
+    setSize(1040, 680);
 }
 
 K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
@@ -177,13 +177,15 @@ void K2000AudioProcessorEditor::resized() {
 
     // Signal row (h 250): source(48%) | mixer | filter | drive | amp
     {
-        auto row = area.removeFromTop(250);
-        auto source = row.removeFromLeft((int) (row.getWidth() * 0.48f));
+        auto row = area.removeFromTop(270);
+        auto source = row.removeFromLeft((int) (row.getWidth() * 0.40f));
         sourceSection_.setBounds(source.reduced(2));
+        // FILTER is now a primary 6-control section, so it gets the lion's share
+        // of the remaining width; the still-empty reserved placeholders are slim.
         const int rest = row.getWidth();
-        mixerSection_.setBounds(row.removeFromLeft((int) (rest * 0.10f)).reduced(2));
-        filterSection_.setBounds(row.removeFromLeft((int) (rest * 0.46f)).reduced(2));
-        driveSection_.setBounds(row.removeFromLeft((int) (rest * 0.10f)).reduced(2));
+        mixerSection_.setBounds(row.removeFromLeft((int) (rest * 0.09f)).reduced(2));
+        filterSection_.setBounds(row.removeFromLeft((int) (rest * 0.55f)).reduced(2));
+        driveSection_.setBounds(row.removeFromLeft((int) (rest * 0.09f)).reduced(2));
         ampSection_.setBounds(row.reduced(2));
 
         // Source children: two stacked cell-rows inside contentBounds.
