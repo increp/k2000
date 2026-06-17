@@ -1,14 +1,13 @@
 #include "SpineFilterSlot.h"
 
-void SpineFilterSlot::prepare(double, const FilterModel* active) {
-    model_ = active;
-    state_.reset(active ? active->makeState() : nullptr);  // prepare-time alloc only
+void SpineFilterSlot::prepare(double, const FilterModel* modelForState) {
+    state_.reset(modelForState ? modelForState->makeState() : nullptr);  // prepare-time alloc only
 }
 
-void SpineFilterSlot::reset() noexcept {
-    if (model_ && state_) model_->reset(*state_);
+void SpineFilterSlot::reset(const FilterModel* model) noexcept {
+    if (model && state_) model->reset(*state_);
 }
 
-void SpineFilterSlot::processStereo(float* left, float* right, int n) noexcept {
-    if (model_ && state_) model_->processStereo(*state_, left, right, n);
+void SpineFilterSlot::processStereo(const FilterModel* model, float* left, float* right, int n) noexcept {
+    if (model && state_) model->processStereo(*state_, left, right, n);
 }

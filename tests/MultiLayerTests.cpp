@@ -102,6 +102,34 @@ public:
             vm.renderBlock(outL.data(), outR.data(), N, midi);
             expectWithinAbsoluteError((float) energy(outL), 0.0f, 1e-9f);
         }
+
+        beginTest("a note on layer 1 uses layer 1's spine filter, not layer 0's");
+        {
+            Program prog; prog.prepare(SR, N);
+            // Layer 0 disabled but its filter is wide open; layer 1 takes the note.
+            // If a layer-1 voice wrongly used layer 0's (open) filter, closing
+            // layer 1's cutoff would not darken the note.
+            prog.slot(0).layer.updateParameters(dspBase());  // layer 0: cutoff 20 kHz (open)
+            prog.slot(0).routing = LayerRouting{false, 0, 127, 1, 127, 0};
+            prog.slot(1).routing = LayerRouting{true,  0, 127, 1, 127, 0};
+            prog.slot(1).layer.setLevel(1.0f);
+
+            auto renderLayer1 = [&](float cutoffHz) {
+                auto s = dspBase(); s.svfCutoffHz = cutoffHz;  // saw, 24 dB LP
+                prog.slot(1).layer.updateParameters(s);
+                VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
+                juce::MidiBuffer midi;
+                midi.addEvent(juce::MidiMessage::noteOn(1, 81, (juce::uint8) 100), 0);  // A5 (880 Hz)
+                std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+                vm.renderBlock(outL.data(), outR.data(), N, midi);
+                return energy(outL);
+            };
+            const double openE   = renderLayer1(20000.0f);  // bright
+            const double closedE = renderLayer1(200.0f);     // 880 Hz well above a 200 Hz LP → dark
+            expect(openE > closedE * 2.0,
+                   "layer 1 cutoff must shape a layer-1 note: open=" + juce::String(openE)
+                   + " closed=" + juce::String(closedE));
+        }
     }
 };
 
