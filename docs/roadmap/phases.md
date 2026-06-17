@@ -7,14 +7,14 @@ Order is suggestive, not binding. Phases can re-order based on what we learn dur
 The plugin is a **K2061/K2088-class VAST engine bracketed by a constant Summit analog voice.** Sound *generation* is fully flexible (K2061 Dynamic VAST); sound *shaping* is always a Summit.
 
 - **Flexibility from K2061/K2088 VAST** — Dynamic VAST: build sound from arbitrary serial/parallel DSP graphs where every source (Summit oscillators, KVA, FM, wavetable, noise — and later samples) is just a block. 32 layers, Multis, KDFX, Cascade.
-- **A constant Summit voice** — the Huggett multimode filter + drive → VCA, and the modulation system (amp/mod envelopes, LFOs, mod matrix, voice modes), are **always present** and always live. You can never reach a dead control or a patch that isn't a real synth.
+- **A constant Summit voice** — a **selectable, live-switchable filter model** (Huggett default; Moog v5.1; Oberheim+ later) + drive → VCA, and the modulation system (amp/mod envelopes, LFOs, mod matrix, voice modes), are **always present** and always live. You can never reach a dead control or a patch that isn't a real synth.
 - **Immediacy from Summit** — the constant spine is the permanent front panel; the variable source/DSP region's knob-clusters swap to match the active blocks. Tiered immediacy: front panel for live params, pages for the long tail.
 
 This evolves the original "Path B / Summit-as-a-preset" framing: the engine stays **VAST-first for generation**, but the **Summit analog voice is now a top-level constant** for shaping — not merely an emergent preset. See the [v4.5(C) re-positioning spec](../specs/2026-06-16-v4.5-k2061-repositioning-design.md) and the living [engine architecture register](../architecture/engine-questions.md).
 
 ## Engine principles (cross-cutting)
 
-- **The model:** `[ K2061 Dynamic VAST source + DSP graph (variable) ] → [ constant Summit spine: Huggett filter + drive → VCA, with envelopes/LFOs/mod matrix/voice modes ]`, **per voice, per Layer**.
+- **The model:** `[ K2061 Dynamic VAST source + DSP graph (variable) ] → [ constant Summit spine: selectable filter model (Huggett default) + drive → VCA, with envelopes/LFOs/mod matrix/voice modes ]`, **per voice, per Layer**.
 - **Locked decisions** (from the register): **full stereo throughout** · **256-voice** target · spine + modulation **per-Layer** · **synth-only** sources now (sample/keymap → v12+).
 - **GUI grows with the engine** — no phase ships a feature you can't drive. The Summit UI foundation (v4.5/B) lands before v5; each phase ships its own feature UI.
 - **Performance is a gate** — at 256 voices × full stereo × graph DSP, every phase meets a per-voice CPU budget with profiling as a release gate, and uses perf-friendly structures from v5 (SIMD-friendly buffers, denormals, efficient graph execution).
@@ -28,7 +28,7 @@ This evolves the original "Path B / Summit-as-a-preset" framing: the engine stay
 | **v3** ✅ | **Algorithm abstraction** | Selectable algorithm = ordered walk through a per-Layer block palette; 4-entry library; block-type param namespace; cumulative migration. [ADR 0008](../decisions/0008-algorithm-selection-and-param-namespace.md). **Shipped 2026-06-15 as v3.0.0.** See [v3 spec](../specs/2026-06-14-v3-algorithm-abstraction-design.md). |
 | **v4** ✅ | **Multi-Layer Programs** | `Program` holds 2 Layers (generic over count), shared 64-voice pool, per-layer key/vel/channel/level routing → Layer/Split/Dual. [ADR 0009](../decisions/0009-multi-layer-program.md). **Shipped 2026-06-16 as v4.0.0.** See [v4 spec](../specs/2026-06-15-v4-multi-layer-programs-design.md). |
 | **v4.5** | **K2061 re-positioning + Summit UI foundation + KB fix** | *(C)* re-position the engine to K2061/K2088 VAST with the constant Summit spine ([spec](../specs/2026-06-16-v4.5-k2061-repositioning-design.md), this rewrite, ADR 0010). *(B)* the Summit-aesthetic, extensible **UI foundation** — load-bearing, lands before v5. *(A)* fix the Pirkle synth-book OCR in `k2000-kb`. |
-| **v5** | **Constant Summit voice** *(keystone)* | Build the always-present spine: **Huggett multimode filter** (see the [deep-dive](#v5-deep-dive--the-huggett-filter) and [filter architecture report](../architecture/huggett-filter.md)) + drive → VCA, with amp/mod envelopes, LFOs, mod matrix, voice modes — **stereo, per-Layer**. Promote the filter out of the optional palette. UI: the permanent Summit front panel. |
+| **v5** | **Constant Summit voice** *(keystone)* | Build the always-present spine as a **selectable `FilterModel` library with live click-free hot-swap** (see the [deep-dive](#v5-deep-dive--the-selectable-summit-spine) and [v5 spec](../specs/2026-06-16-v5-constant-summit-voice-design.md)); ship **Huggett** (dual TPT SVF + separation, gray-box) as the flagship default + drive → VCA, with amp/mod envelopes, LFOs, mod matrix, voice modes — **stereo, per-Layer**. Promote the filter out of the optional palette. UI: the permanent Summit front panel. **v5.1:** Moog ladder ([report](../architecture/moog-ladder.md)) as the second model. |
 | **v6** | **Dynamic VAST graph routing** *(keystone)* | Generalize `Algorithm` from a fixed linear list into a wired **graph**: blocks with configurable inputs/outputs, serial **+ parallel**, splits/joins, feeding the spine. v3's library becomes "factory" presets. Solves the variable-graph parameter model (register Q5). UI: the visual wiring/graph editor. |
 | **v7** | **Source & DSP block library** | Sources as blocks — Summit 3-osc (default, drift/sync/FM), **KVA**, wavetable, noise — + DSP blocks (mixer, ring mod, shaper/drive variants, EQ, timbre filters, hard sync). UI: dynamic per-block knob-clusters. |
 | **v8** | **KDFX effects** | Per-layer insert + common insert + two aux chains; Summit effect types within them. UI: FX-chain editor. |
@@ -37,9 +37,11 @@ This evolves the original "Path B / Summit-as-a-preset" framing: the engine stay
 | **v11** | **Tuning** | Intonation + tuning maps, KSR. |
 | **v12+** | **Polish** | Full photoreal GUI, sample/keymap sources, preset browser, macOS, performance. |
 
-## v5 deep-dive — the Huggett filter
+## v5 deep-dive — the selectable Summit spine
 
-The v5 spine filter is grounded in external deep research on the Chris Huggett lineage (OSCar → Peak → Summit): the full [filter architecture report](../architecture/huggett-filter.md). The load-bearing conclusions, and how we adapt them to k2000:
+v5 builds the spine as a **selectable `FilterModel` library** (append-only, stable-ID — the `AlgorithmLibrary`/[ADR-0008](../decisions/0008-algorithm-selection-and-param-namespace.md) idiom) with **live, click-free hot-swap**: an automatable per-Layer `spine.filterModel` selects the model, and switching crossfades two **heap-free, in-place** per-voice instances (equal-power) so it never clicks. Params are a **common core** (cutoff/res/drive/output — always front-panel + mod-targetable) plus **per-model namespaced banks**. The full architecture (interface, library, `SpineFilterSlot`, hot-swap, migration) is in the [v5 spec](../specs/2026-06-16-v5-constant-summit-voice-design.md); locked as **L7**, with the live-switch constraints recorded in **Q12/Q17–Q19**.
+
+The **flagship model, Huggett**, is grounded in external deep research on the Chris Huggett lineage (OSCar → Peak → Summit): the full [filter architecture report](../architecture/huggett-filter.md), independently corroborated by the [Moog/Huggett research brief](../architecture/moog-ladder.md). The load-bearing conclusions, and how we adapt them to k2000:
 
 **Architecture (what the lineage actually is).** Not a ladder. A **dual state-variable / OTA filter** built as **two linked 12 dB sections** with a **separation** offset between their cutoffs, combined per mode: **LP / BP / HP**, **12 or 24 dB/oct** slope, and **dual-filter combinations** (LP→HP, etc.). The sonic identity comes as much from **gain staging** as from the core — there are **three nonlinear stages**: pre-filter input **drive**, a **resonance-loop** saturator (tanh-class, which makes self-oscillation self-limit instead of blow up), and a **post-filter drive**. Implement the core as a **TPT/ZDF** state-variable structure (modulation-safe, simultaneous multimode outputs), *not* a Chamberlin or direct-form biquad. Public controls: cutoff (exp ≈16 Hz–20 kHz), resonance (tapered toward self-oscillation), separation, slope, input drive, post drive, key-track, divergence, output trim. Per-parameter smoothing, multiplicative for cutoff.
 
@@ -49,14 +51,19 @@ The v5 spine filter is grounded in external deep research on the Chris Huggett l
 - Start **gray-box** (tanh saturators, calibrated control laws); component-accurate **white-box OTA** modeling is explicitly future work, not v5.
 
 **v5 build sub-sequence** (we already have the JUCE/APVTS skeleton + an SVF block, so we start past the report's scaffold step):
-1. Promote the filter to the constant-spine slot; linear **dual TPT SVF** core (LP/BP/HP), per-voice **stereo**.
-2. Mode combiner + 12/24 dB + **separation** law (Summit dual modes first; OSCar modes optional/stretch).
-3. Per-parameter **smoothing** (cutoff multiplicative) — zipper-free under audio-rate modulation.
-4. The **three nonlinear stages**; calibrate self-oscillation onset to be consistent across pitch/sample-rate.
-5. **Anti-aliasing / oversampling policy under the perf gate** — measure per-voice cost at the voice target, then choose.
-6. **Calibration + tests**: split into *linear-reference* tests (TPT math correct) and *musical-behavior* tests (drive/resonance/separation interaction); add the preset-migration test.
+1. **`FilterModel` interface + `FilterModelLibrary`** (append-only, stable IDs) + per-voice **`SpineFilterSlot`** (two heap-free, in-place model slots); promote the filter out of the optional palette into the spine slot.
+2. **Param model**: common core (cutoff/res/drive/output) + per-model namespaced banks; automatable `spine.filterModel` choice.
+3. **Huggett** as the first library entry: linear **dual TPT SVF** core (LP/BP/HP), per-voice **stereo**.
+4. Mode combiner + 12/24 dB + **separation** law (Summit dual modes first; OSCar modes stretch).
+5. Per-parameter **smoothing** (cutoff multiplicative) — zipper-free under audio-rate modulation.
+6. The **three nonlinear stages** (gray-box tanh); calibrate self-oscillation onset across pitch/sample-rate.
+7. **Live hot-swap**: equal-power crossfade on model change; debounce / no-op-reselect policy (Q17); zero audio-thread allocation.
+8. **AA/oversampling policy under the perf gate** (Q12) — cheap fixed per-voice AA, conditional on drive; measure per-voice cost at the voice target, then choose.
+9. **Calibration + tests**: *linear-reference* (TPT math) · *musical-behavior* (drive/resonance/separation) · *hot-swap* (click-free, heap-free) · *preset-migration*.
 
-New open questions this raises are registered as **Q12–Q16** in the [engine register](../architecture/engine-questions.md).
+(**v5.1** appends the **Moog ladder** as the second `FilterModel` entry — staged linear-ZDF → nonlinear → cheap AA per the [report](../architecture/moog-ladder.md) — exercising the library's extensibility.)
+
+New open questions this raises are registered as **Q12–Q19** in the [engine register](../architecture/engine-questions.md).
 
 ## Locked & resolved decisions
 
