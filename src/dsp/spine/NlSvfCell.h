@@ -17,8 +17,8 @@ public:
     void reset() noexcept {
         ic1_[0]=ic2_[0]=ic1_[1]=ic2_[1]=0.0f; bp_[0]=bp_[1]=0.0f;
     }
-    void setCutoff(float hz) noexcept    { if (hz != cutoffHz_) { cutoffHz_ = hz; dirty_ = true; } }
-    void setResonance(float r) noexcept  { if (r != resonance_) { resonance_ = r; dirty_ = true; } }
+    void setCutoff(float hz) noexcept    { if (std::abs(hz - cutoffHz_) > 0.0f) { cutoffHz_ = hz; dirty_ = true; } }
+    void setResonance(float r) noexcept  { if (std::abs(r - resonance_) > 0.0f) { resonance_ = r; dirty_ = true; } }
     void setResSat(float amt) noexcept   { resSat_ = std::clamp(amt, 0.0f, 1.0f); }
 
     void process(float& left, float& right, int tap) noexcept {
@@ -47,9 +47,20 @@ private:
             default:    return v2;
         }
     }
-    static float satRes(float x) noexcept {            // asymmetric, monotonic, bounded
-        constexpr float b = 0.18f;                     // asymmetry // CALIB
-        return padTanh(x + b) - padTanh(b);            // f(0)=0
+    // Asymmetric, monotonic, bounded soft clip for the resonance feedback,
+    // normalized to unit slope at the origin so the correction (satRes(x)-x)
+    // is O(x^2) and vanishes at low level (true low-level linear equivalence).
+    static float satRes(float x) noexcept {
+        constexpr float b = 0.18f;                 // asymmetry (even harmonics) // CALIB
+        const float s = 1.0f / padTanhDeriv(b);    // unit-slope normalization
+        return (padTanh(x + b) - padTanh(b)) * s;  // f(0)=0, f'(0)=1
+    }
+    // d/dx of the UNCLAMPED Padé 3/2 tanh: padTanh(x)=x(27+x^2)/(27+9x^2).
+    static float padTanhDeriv(float x) noexcept {
+        const float x2 = x * x;
+        const float den = 27.0f + 9.0f * x2;
+        const float num = (27.0f + 3.0f * x2) * den - (27.0f * x + x * x2) * (18.0f * x);
+        return num / (den * den);
     }
     static float padTanh(float x) noexcept {           // Padé 3/2 tanh, clamped
         const float x2 = x * x;
