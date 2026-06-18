@@ -1,8 +1,10 @@
 #include <juce_core/juce_core.h>
+#include <memory>
 #include <vector>
 #include "../src/Layer.h"
 #include "../src/Voice.h"
 #include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/spine/HuggettHpStage.h"
 
 // End-to-end coverage of the Layer-driven audio path: build a Layer, prepare
 // it, drive a Voice through it with a known snapshot, assert audio characteristics.
@@ -40,6 +42,22 @@ public:
             float energy = 0.0f;
             for (float x : outL) energy += x * x;
             expectGreaterThan(energy, 1e-4f, "Layer-driven Voice should produce audio");
+        }
+
+        beginTest("Layer exposes a configured HP stage");
+        {
+            Layer layer; layer.prepare(48000.0, 256);
+            ParamSnapshot s; s.hpEnable = 1; s.hpCutoffHz = 2000.0f; s.hpResonance = 0.0f;
+            s.hpSlope = 1; s.hpDrive = 0.0f;
+            layer.updateParameters(s);
+            expect(layer.hpStage() != nullptr, "hp stage present");
+            // Filter a low tone through the exposed HP stage -> attenuated.
+            std::unique_ptr<HuggettHpStage::State> st(layer.hpStage()->makeState());
+            layer.hpStage()->reset(*st);
+            const int Nhp=8192; float peak=0;
+            for (int i=0;i<Nhp;++i){ float x=std::sin(2.0*juce::MathConstants<double>::pi*200.0*i/48000.0);
+                float l=x,r=x; layer.hpStage()->processStereo(*st,&l,&r,1); if(i>Nhp/2) peak=std::max(peak,std::abs(l)); }
+            expect(peak < 0.6f, "HP attenuates 200 Hz: " + juce::String(peak));
         }
 
         beginTest("Lowering the cutoff drops high-note energy");

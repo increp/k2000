@@ -15,6 +15,7 @@ void Layer::prepare(double sr, int maxBlock) {
     spineModel_ = FilterModelLibrary::create(0);
     spineModel_->prepare(sampleRate_);
     huggett_ = dynamic_cast<HuggettFilter*>(spineModel_.get());
+    hpStage_.prepare(sr);
 }
 
 void Layer::updateParameters(const ParamSnapshot& s) {
@@ -42,4 +43,9 @@ void Layer::updateParameters(const ParamSnapshot& s) {
         huggett_->setSlope(snapshot_.spineSlope == 0 ? HuggettFilter::Slope::db12 : HuggettFilter::Slope::db24);
         huggett_->setSeparation(snapshot_.spineSeparationOct);
     }
+    hpStage_.setParams(snapshot_.hpCutoffHz, snapshot_.hpResonance,
+                       snapshot_.hpSlope == 0 ? HuggettHpStage::Slope::db12
+                                              : HuggettHpStage::Slope::db24,
+                       snapshot_.hpDrive);
+    if (huggett_) huggett_->setPostDrive(snapshot_.huggettPostDrive);
 }
