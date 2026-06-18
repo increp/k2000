@@ -1,6 +1,7 @@
 #include <juce_core/juce_core.h>
 #include "../src/dsp/spine/AsymSaturator.h"
 #include "../src/dsp/spine/DcBlocker.h"
+#include "../src/dsp/spine/NlSvfCell.h"
 #include <cmath>
 
 class HuggettNonlinearTests : public juce::UnitTest {
@@ -67,6 +68,33 @@ public:
             expect(std::abs(lastR) < 0.05f, "R DC removed: " + juce::String(lastR));
             // If state were shared, the opposite-sign inputs would cross-contaminate
             // and at least one would NOT converge near zero.
+        }
+
+        beginTest("NlSvfCell ~= linear at low resonance (no saturation drift)");
+        {
+            NlSvfCell c; c.prepare(48000.0); c.setCutoff(1000.0f); c.setResonance(0.1f); c.setResSat(0.1f);
+            float peakLow = 0, peakHigh = 0;
+            auto sweep = [&](double f, float& peak){ c.reset(); const int N=8192;
+                for (int i=0;i<N;++i){ float x=std::sin(2.0*juce::MathConstants<double>::pi*f*i/48000.0);
+                    float l=x,r=x; c.process(l,r,NlSvfCell::LP); if(i>N/2) peak=std::max(peak,std::abs(l)); } };
+            sweep(100.0, peakLow); sweep(10000.0, peakHigh);
+            expect(peakLow > 0.7f && peakHigh < 0.1f, "LP shape intact at low res");
+        }
+
+        beginTest("NlSvfCell self-oscillation is bounded at max resonance");
+        {
+            NlSvfCell c; c.prepare(48000.0); c.setCutoff(800.0f); c.setResonance(1.0f); c.setResSat(1.0f);
+            c.reset();
+            float peak = 0; bool nan = false;
+            // tiny impulse to kick it, then run 0.5 s of silence
+            float l = 1.0f, r = 1.0f; c.process(l, r, NlSvfCell::LP);
+            for (int i = 0; i < 24000; ++i) {
+                float a = 0.0f, b = 0.0f; c.process(a, b, NlSvfCell::LP);
+                if (!std::isfinite(a)) nan = true;
+                if (i > 2000) peak = std::max(peak, std::abs(a));
+            }
+            expect(!nan, "no NaN/Inf");
+            expect(peak < 4.0f, "self-osc amplitude bounded: " + juce::String(peak));
         }
     }
 };
