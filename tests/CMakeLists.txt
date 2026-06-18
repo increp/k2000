@@ -12,6 +12,7 @@ add_executable(k2000_tests
     AlgorithmTests.cpp
     AlgorithmNameTests.cpp
     SpineFilterTests.cpp
+    HuggettNonlinearTests.cpp
     FilterModelLibraryTests.cpp
     PresetMigrationTests.cpp
     LayerTests.cpp
