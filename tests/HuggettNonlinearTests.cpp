@@ -1,5 +1,6 @@
 #include <juce_core/juce_core.h>
 #include "../src/dsp/spine/AsymSaturator.h"
+#include "../src/dsp/spine/DcBlocker.h"
 #include <cmath>
 
 class HuggettNonlinearTests : public juce::UnitTest {
@@ -36,6 +37,20 @@ public:
             }
             expect(peak < 2.0f, "output bounded: " + juce::String(peak));
             expect(std::abs(dcAcc) > 1.0e-3, "asymmetry produces DC offset");
+        }
+
+        beginTest("DcBlocker removes a constant offset, keeps audio");
+        {
+            DcBlocker dc; dc.prepare(48000.0); dc.reset();
+            std::vector<float> out;
+            for (int i = 0; i < 8192; ++i) {
+                float x = 0.5f + std::sin(2.0 * juce::MathConstants<double>::pi * 200.0 * i / 48000.0);
+                out.push_back(dc.process(x, 0));
+            }
+            double tail = 0; for (int i = 6000; i < 8192; ++i) tail += out[(size_t) i];
+            expect(std::abs(tail / 2192.0) < 0.02, "DC removed from tail");
+            std::vector<float> ac(out.begin() + 6000, out.end());
+            expect(rms(ac) > 0.5f, "audio preserved: " + juce::String(rms(ac)));
         }
     }
 };
