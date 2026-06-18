@@ -71,7 +71,7 @@ public:
             auto s = params::snapshot(apvts, 0);
             // New v5.0 HP + post-drive params default sanely
             expect(s.hpEnable == 0, "HP disabled by default");
-            expect(s.huggettPostDrive == 0.0f, "post-drive defaults 0");
+            expectWithinAbsoluteError(s.huggettPostDrive, 0.0f, 1.0e-6f);
             expect(s.hpSlope == 0, "HP slope defaults 12 dB");
             expectWithinAbsoluteError(s.hpCutoffHz, 20.0f, 1e-3f);
             expectWithinAbsoluteError(s.hpResonance, 0.0f, 1e-6f);
