@@ -26,7 +26,7 @@ public:
     void setMode(Mode m) noexcept       { mode_ = m; }
     void setSlope(Slope s) noexcept     { slope_ = s; }
     void setSeparation(float oct) noexcept { separationOct_ = oct; }
-    void setPostDrive(float drive01) noexcept { postDrive_ = drive01; }
+    void setPostDrive(float drive01) noexcept { postDrive_ = drive01; postSat_.setDrive(drive01, kPostBias, kPostDriveDb); }
 
     void processStereo(State& s, float* left, float* right, int numSamples) const noexcept override;
 
@@ -40,6 +40,8 @@ private:
     static constexpr float kPostDriveDb = 24.0f;   // CALIB
     static constexpr float kPreBias  = 0.25f;      // CALIB (pre is the "dirty" end)
     static constexpr float kPostBias = 0.15f;      // CALIB
+
+    AsymSaturator preSat_, postSat_;
 
     double sampleRate_ = 44100.0;
     float  cutoffHz_ = 1000.0f, resonance_ = 0.0f, separationOct_ = 0.0f;

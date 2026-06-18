@@ -100,6 +100,25 @@ public:
             expect(peak < 4.0f, "self-osc amplitude bounded: " + juce::String(peak));
         }
 
+        beginTest("HuggettFilter at zero drive/resonance == bare linear cell");
+        {
+            HuggettFilter h; h.prepare(48000.0); h.setMode(HuggettFilter::Mode::LP);
+            h.setSlope(HuggettFilter::Slope::db12); h.setSeparation(0.0f);
+            h.setCommon(1200.0f, 0.0f, 0.0f); h.setPostDrive(0.0f);
+            std::unique_ptr<FilterModel::State> st(h.makeState()); h.reset(*st);
+
+            NlSvfCell ref; ref.prepare(48000.0); ref.setCutoff(1200.0f); ref.setResonance(0.0f); ref.setResSat(0.0f); ref.reset();
+
+            float maxDiff = 0.0f;
+            for (int i = 0; i < 4096; ++i) {
+                float x = 0.5f * std::sin(2.0 * juce::MathConstants<double>::pi * 300.0 * i / 48000.0);
+                float hl = x, hr = x; h.processStereo(*st, &hl, &hr, 1);
+                float rl = x, rr = x; ref.process(rl, rr, NlSvfCell::LP);
+                maxDiff = std::max(maxDiff, std::abs(hl - rl));
+            }
+            expect(maxDiff < 1.0e-5f, "zero-drive path is bit-for-bit linear: maxDiff=" + juce::String(maxDiff));
+        }
+
         beginTest("HuggettFilter: driving changes harmonic content but stays bounded");
         {
             HuggettFilter h; h.prepare(48000.0); h.setMode(HuggettFilter::Mode::LP);
@@ -110,7 +129,7 @@ public:
                 h.setCommon(2000.0f, 0.3f, drive); h.setPostDrive(drive); h.reset(*st);
                 std::vector<float> out; const int N = 4096;
                 for (int i = 0; i < N; ++i) {
-                    float ph = std::fmod(220.0 * i / 48000.0, 1.0);
+                    float ph = (float) std::fmod(220.0 * i / 48000.0, 1.0);
                     float x = 0.6f * (2.0f * (float) ph - 1.0f);     // saw
                     float l = x, r = x; h.processStereo(*st, &l, &r, 1);
                     out.push_back(l);
@@ -123,7 +142,7 @@ public:
             for (float v : dirty) expect(std::abs(v) < 4.0f, "driven output bounded");
             // crude harmonic-change proxy: driven differs materially from clean
             double diff = 0; for (size_t i = 0; i < clean.size(); ++i) diff += std::abs(dirty[i] - clean[i]);
-            expect(diff / clean.size() > 0.01, "drive changes the signal");
+            expect(diff / (double) clean.size() > 0.01, "drive changes the signal");
         }
     }
 };
