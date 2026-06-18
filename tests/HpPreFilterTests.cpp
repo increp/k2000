@@ -21,8 +21,9 @@ public:
             expect(mag(8000.0, HuggettHpStage::Slope::db12) > 0.7f, "highs pass");
             float low12 = mag(200.0, HuggettHpStage::Slope::db12);
             float low24 = mag(200.0, HuggettHpStage::Slope::db24);
-            expect(low12 < 0.5f, "lows cut (12dB)");
+            expect(low12 < 0.1f, "lows cut (12dB): " + juce::String(low12));
             expect(low24 < low12, "24 dB steeper below corner");
+            expect(low24 < 0.04f, "24 dB strongly cuts lows: " + juce::String(low24));
         }
         beginTest("HP self-oscillation bounded at max resonance");
         {
