@@ -20,6 +20,7 @@ add_executable(k2000_tests
     LayerRoutingTests.cpp
     MultiLayerTests.cpp
     ParamBinderTests.cpp
+    HpPreFilterTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
@@ -34,7 +35,8 @@ add_executable(k2000_tests
     ../src/dsp/AlgorithmLibrary.cpp
     ../src/dsp/spine/HuggettFilter.cpp
     ../src/dsp/spine/FilterModelLibrary.cpp
-    ../src/dsp/spine/SpineFilterSlot.cpp)
+    ../src/dsp/spine/SpineFilterSlot.cpp
+    ../src/dsp/spine/HuggettHpStage.cpp)
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core

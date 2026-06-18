@@ -45,7 +45,8 @@ target_sources(k2000 PRIVATE
     src/dsp/AlgorithmLibrary.cpp
     src/dsp/spine/HuggettFilter.cpp
     src/dsp/spine/FilterModelLibrary.cpp
-    src/dsp/spine/SpineFilterSlot.cpp)
+    src/dsp/spine/SpineFilterSlot.cpp
+    src/dsp/spine/HuggettHpStage.cpp)
 
 target_compile_definitions(k2000 PUBLIC
     JUCE_WEB_BROWSER=0
