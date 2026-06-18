@@ -63,6 +63,20 @@ public:
             expectWithinAbsoluteError(s.spineSeparationOct, 0.5f, 0.01f);
             expectEquals(s.spineModel, 0);
         }
+
+        beginTest("new v5.0 HP pre-filter + post-drive params default sanely");
+        {
+            K2000AudioProcessor p;
+            auto& apvts = p.apvts();
+            auto s = params::snapshot(apvts, 0);
+            // New v5.0 HP + post-drive params default sanely
+            expect(s.hpEnable == 0, "HP disabled by default");
+            expect(s.huggettPostDrive == 0.0f, "post-drive defaults 0");
+            expect(s.hpSlope == 0, "HP slope defaults 12 dB");
+            expectWithinAbsoluteError(s.hpCutoffHz, 20.0f, 1e-3f);
+            expectWithinAbsoluteError(s.hpResonance, 0.0f, 1e-6f);
+            expectWithinAbsoluteError(s.hpDrive, 0.0f, 1e-6f);
+        }
     }
 };
 

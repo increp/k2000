@@ -42,6 +42,12 @@ LayerIds buildIds(int layer) {
     id.spineSlope      = p + "spine.slope";
     id.spineDrive      = p + "spine.drive";
     id.spineOutput     = p + "spine.output";
+    id.spineHpEnable    = p + "spine.hp.enable";
+    id.spineHpCutoff    = p + "spine.hp.cutoff";
+    id.spineHpResonance = p + "spine.hp.resonance";
+    id.spineHpSlope     = p + "spine.hp.slope";
+    id.spineHpDrive     = p + "spine.hp.drive";
+    id.spinePostDrive   = p + "spine.huggett.postDrive";
     return id;
 }
 
@@ -157,6 +163,22 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineOutput, 1},
             "Spine Output " + juce::String(i),
             juce::NormalisableRange<float>{-24.0f, 24.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<BoolParam>(juce::ParameterID{id.spineHpEnable, 1},
+            "Spine HP Enable " + juce::String(i), false));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpCutoff, 1},
+            "Spine HP Cutoff " + juce::String(i),
+            juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 20.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpResonance, 1},
+            "Spine HP Resonance " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineHpSlope, 1},
+            "Spine HP Slope " + juce::String(i), juce::StringArray{"12 dB", "24 dB"}, 0));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpDrive, 1},
+            "Spine HP Drive " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spinePostDrive, 1},
+            "Spine Post Drive " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
@@ -187,6 +209,12 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.spineSlope         = (int) raw(apvts, id.spineSlope);
     s.spineDrive         = raw(apvts, id.spineDrive);
     s.spineOutputDb      = raw(apvts, id.spineOutput);
+    s.hpEnable        = (int) raw(apvts, id.spineHpEnable);
+    s.hpCutoffHz      = raw(apvts, id.spineHpCutoff);
+    s.hpResonance     = raw(apvts, id.spineHpResonance);
+    s.hpSlope         = (int) raw(apvts, id.spineHpSlope);
+    s.hpDrive         = raw(apvts, id.spineHpDrive);
+    s.huggettPostDrive = raw(apvts, id.spinePostDrive);
     return s;
 }
 

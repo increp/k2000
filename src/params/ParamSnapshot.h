@@ -39,4 +39,13 @@ struct ParamSnapshot {
     int   spineSlope         = 1;   // 0=12 dB, 1=24 dB
     float spineDrive         = 0.0f;
     float spineOutputDb      = 0.0f;
+
+    // HP pre-filter (always-available, before the main model)
+    int   hpEnable      = 0;      // 0=off 1=on
+    float hpCutoffHz    = 20.0f;
+    float hpResonance   = 0.0f;
+    int   hpSlope       = 0;      // 0=12 dB, 1=24 dB
+    float hpDrive       = 0.0f;
+    // Main Huggett post-filter drive (Huggett bank)
+    float huggettPostDrive = 0.0f;
 };

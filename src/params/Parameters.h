@@ -15,7 +15,9 @@ struct LayerIds {
                  shaperDrive, shaperMix,
                  ampAttack, ampDecay, ampSustain, ampRelease,
                  enable, keyLo, keyHi, velLo, velHi, channel, level,
-                 spineModel, spineSeparation, spineSlope, spineDrive, spineOutput;
+                 spineModel, spineSeparation, spineSlope, spineDrive, spineOutput,
+                 spineHpEnable, spineHpCutoff, spineHpResonance, spineHpSlope, spineHpDrive,
+                 spinePostDrive;
 };
 
 // Returns a reference to the (statically built) ids for the given layer.
