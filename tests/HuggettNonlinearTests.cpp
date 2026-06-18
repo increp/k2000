@@ -52,6 +52,22 @@ public:
             std::vector<float> ac(out.begin() + 6000, out.end());
             expect(rms(ac) > 0.5f, "audio preserved: " + juce::String(rms(ac)));
         }
+
+        beginTest("DcBlocker keeps L/R state independent");
+        {
+            DcBlocker dc; dc.prepare(48000.0); dc.reset();
+            // Feed ch0 a +0.5 DC offset and ch1 a -0.5 DC offset for many samples.
+            float lastL = 0.0f, lastR = 0.0f;
+            for (int i = 0; i < 8192; ++i) {
+                lastL = dc.process(+0.5f, 0);
+                lastR = dc.process(-0.5f, 1);
+            }
+            // Each channel independently converges toward removing its own DC.
+            expect(std::abs(lastL) < 0.05f, "L DC removed: " + juce::String(lastL));
+            expect(std::abs(lastR) < 0.05f, "R DC removed: " + juce::String(lastR));
+            // If state were shared, the opposite-sign inputs would cross-contaminate
+            // and at least one would NOT converge near zero.
+        }
     }
 };
 static HuggettNonlinearTests huggettNonlinearTestsInstance;
