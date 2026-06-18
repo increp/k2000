@@ -7,7 +7,7 @@ Order is suggestive, not binding. Phases can re-order based on what we learn dur
 The plugin is a **K2061/K2088-class VAST engine bracketed by a constant Summit analog voice.** Sound *generation* is fully flexible (K2061 Dynamic VAST); sound *shaping* is always a Summit.
 
 - **Flexibility from K2061/K2088 VAST** — Dynamic VAST: build sound from arbitrary serial/parallel DSP graphs where every source (Summit oscillators, KVA, FM, wavetable, noise — and later samples) is just a block. 32 layers, Multis, KDFX, Cascade.
-- **A constant Summit voice** — a **selectable, live-switchable filter model** (Huggett default; Moog v5.1; Oberheim+ later) + drive → VCA, and the modulation system (amp/mod envelopes, LFOs, mod matrix, voice modes), are **always present** and always live. You can never reach a dead control or a patch that isn't a real synth.
+- **A constant Summit voice** — a **selectable, live-switchable filter model** (Huggett default; Moog v5.2; Oberheim+ later) + drive → VCA, and the modulation system (amp/mod envelopes, LFOs, mod matrix, voice modes), are **always present** and always live. You can never reach a dead control or a patch that isn't a real synth.
 - **Immediacy from Summit** — the constant spine is the permanent front panel; the variable source/DSP region's knob-clusters swap to match the active blocks. Tiered immediacy: front panel for live params, pages for the long tail.
 
 This evolves the original "Path B / Summit-as-a-preset" framing: the engine stays **VAST-first for generation**, but the **Summit analog voice is now a top-level constant** for shaping — not merely an emergent preset. See the [v4.5(C) re-positioning spec](../specs/2026-06-16-v4.5-k2061-repositioning-design.md) and the living [engine architecture register](../architecture/engine-questions.md).
@@ -28,7 +28,7 @@ This evolves the original "Path B / Summit-as-a-preset" framing: the engine stay
 | **v3** ✅ | **Algorithm abstraction** | Selectable algorithm = ordered walk through a per-Layer block palette; 4-entry library; block-type param namespace; cumulative migration. [ADR 0008](../decisions/0008-algorithm-selection-and-param-namespace.md). **Shipped 2026-06-15 as v3.0.0.** See [v3 spec](../specs/2026-06-14-v3-algorithm-abstraction-design.md). |
 | **v4** ✅ | **Multi-Layer Programs** | `Program` holds 2 Layers (generic over count), shared 64-voice pool, per-layer key/vel/channel/level routing → Layer/Split/Dual. [ADR 0009](../decisions/0009-multi-layer-program.md). **Shipped 2026-06-16 as v4.0.0.** See [v4 spec](../specs/2026-06-15-v4-multi-layer-programs-design.md). |
 | **v4.5** | **K2061 re-positioning + Summit UI foundation + KB fix** | *(C)* re-position the engine to K2061/K2088 VAST with the constant Summit spine ([spec](../specs/2026-06-16-v4.5-k2061-repositioning-design.md), this rewrite, ADR 0010). *(B)* the Summit-aesthetic, extensible **UI foundation** — load-bearing, lands before v5. *(A)* fix the Pirkle synth-book OCR in `k2000-kb`. |
-| **v5** | **Constant Summit voice** *(keystone)* | Build the always-present spine as a **selectable `FilterModel` library with live click-free hot-swap** ([ADR-0011](../decisions/0011-selectable-spine-filter-library.md), [deep-dive](#v5-deep-dive--the-selectable-summit-spine), [v5 spec](../specs/2026-06-16-v5-constant-summit-voice-design.md)); ship **Huggett** (dual TPT SVF + separation, gray-box) as the flagship default + drive → VCA, with amp/mod envelopes, LFOs, mod matrix, voice modes — **stereo, per-Layer**. Promote the filter out of the optional palette. UI: the permanent Summit front panel. **Filter-library lineup: v5.1** Moog ladder · **v5.2** Oberheim SEM · others later (all in the Huggett slot). |
+| **v5** | **Constant Summit voice** *(keystone)* | Build the always-present spine as a **selectable `FilterModel` library with live click-free hot-swap** ([ADR-0011](../decisions/0011-selectable-spine-filter-library.md), [deep-dive](#v5-deep-dive--the-selectable-summit-spine), [v5 spec](../specs/2026-06-16-v5-constant-summit-voice-design.md)); ship **Huggett** (dual TPT SVF + separation, gray-box) as the flagship default + drive → VCA, with amp/mod envelopes, LFOs, mod matrix, voice modes — **stereo, per-Layer**. Promote the filter out of the optional palette. UI: the permanent Summit front panel. Delivered as **v5 point releases** (see the table below). |
 | **v6** | **Dynamic VAST graph routing** *(keystone)* | Generalize `Algorithm` from a fixed linear list into a wired **graph**: blocks with configurable inputs/outputs, serial **+ parallel**, splits/joins, feeding the spine. v3's library becomes "factory" presets. Solves the variable-graph parameter model (register Q5). UI: the visual wiring/graph editor. |
 | **v7** | **Source & DSP block library** | Sources as blocks — Summit 3-osc (default, drift/sync/FM), **KVA**, wavetable, noise — + DSP blocks (mixer, ring mod, shaper/drive variants, EQ, timbre filters, hard sync). UI: dynamic per-block knob-clusters. |
 | **v8** | **KDFX effects** | Per-layer insert + common insert + two aux chains; Summit effect types within them. UI: FX-chain editor. |
@@ -36,6 +36,19 @@ This evolves the original "Path B / Summit-as-a-preset" framing: the engine stay
 | **v10** | **FM layers** | 6-operator FM source. UI: FM operator panel. |
 | **v11** | **Tuning** | Intonation + tuning maps, KSR. |
 | **v12+** | **Polish** | Full photoreal GUI, sample/keymap sources, preset browser, macOS, performance. |
+
+## v5 point releases
+
+The v5 keystone (selectable spine + Huggett foundation) shipped as **v5.0.0** (Plan 1). The remaining v5 work is delivered as point releases:
+
+| Release | Lands |
+|---|---|
+| **v5.0** | **Nonlinear Huggett** (true-to-life: three asymmetric stages — pre-drive, self-limiting resonance saturator, post-drive — antialiased with ADAA) **+ a dedicated, always-available HP pre-filter** before the main multimode filter. Light/ADAA quality. [Spec](../specs/2026-06-17-v5-huggett-nonlinear-hp-prefilter-design.md). |
+| **v5.1** | **HQ oversampling tiers** (Light/Normal/Heavy/Full, with independent **live** and **render** selectors) **+ an on-screen visual keyboard** (playable + incoming-MIDI display). |
+| **v5.2** | **Moog ladder** — second filter model *(was v5.1)*. |
+| **v5.3** | **Oberheim SEM** — third filter model *(was v5.2)*. |
+
+*Cross-cutting in the v5.0 cycle:* a SAST + SCA security-scan CI baseline, and a docs/README/ADR audit & groom. DSP references for v5.0: [tpt-svf-core.md](../architecture/tpt-svf-core.md), [nonlinear-filter-modeling.md](../architecture/nonlinear-filter-modeling.md), [antialiasing-adaa.md](../architecture/antialiasing-adaa.md).
 
 ## v5 deep-dive — the selectable Summit spine
 
@@ -62,8 +75,9 @@ The **flagship model, Huggett**, is grounded in external deep research on the Ch
 9. **Calibration + tests**: *linear-reference* (TPT math) · *musical-behavior* (drive/resonance/separation) · *hot-swap* (click-free, heap-free) · *preset-migration*.
 
 The spine is a **curated, append-only filter-model library** ([ADR-0011](../decisions/0011-selectable-spine-filter-library.md)) — adding a model = one library entry + one class, presets stay stable. Planned lineup, all selectable in the Huggett slot:
-- **v5.1 — Moog ladder** (4-pole, self-oscillating; staged linear-ZDF → per-stage tanh → oversampling). Refs: [moog-ladder.md](../architecture/moog-ladder.md) + [SEM/Moog dossiers](../architecture/filter-dossiers-sem-moog.md).
-- **v5.2 — Oberheim SEM** (2-pole multimode SVF, **non-self-oscillating**, LP→notch→HP morph + BP; feedback-diode limiter). Ref: [SEM dossier](../architecture/filter-dossiers-sem-moog.md).
+- **v5.1 — HQ oversampling tiers + on-screen keyboard** (quality & playability — see the v5 point-releases table above).
+- **v5.2 — Moog ladder** (4-pole, self-oscillating; staged linear-ZDF → per-stage tanh → oversampling). Refs: [moog-ladder.md](../architecture/moog-ladder.md) + [SEM/Moog dossiers](../architecture/filter-dossiers-sem-moog.md).
+- **v5.3 — Oberheim SEM** (2-pole multimode SVF, **non-self-oscillating**, LP→notch→HP morph + BP; feedback-diode limiter). Ref: [SEM dossier](../architecture/filter-dossiers-sem-moog.md).
 - **Later** — diode ladder and other legally-clear analog topologies.
 
 Each model is gray-box, behavior-faithful, and calibrated against reference hardware; topologies are all unpatented or patent-expired (ADR-0011).
