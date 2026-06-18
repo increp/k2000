@@ -2,7 +2,10 @@
 #include "../src/dsp/spine/AsymSaturator.h"
 #include "../src/dsp/spine/DcBlocker.h"
 #include "../src/dsp/spine/NlSvfCell.h"
+#include "../src/dsp/spine/HuggettFilter.h"
 #include <cmath>
+#include <vector>
+#include <memory>
 
 class HuggettNonlinearTests : public juce::UnitTest {
 public:
@@ -95,6 +98,32 @@ public:
             }
             expect(!nan, "no NaN/Inf");
             expect(peak < 4.0f, "self-osc amplitude bounded: " + juce::String(peak));
+        }
+
+        beginTest("HuggettFilter: driving changes harmonic content but stays bounded");
+        {
+            HuggettFilter h; h.prepare(48000.0); h.setMode(HuggettFilter::Mode::LP);
+            h.setSlope(HuggettFilter::Slope::db24); h.setSeparation(0.0f);
+            std::unique_ptr<FilterModel::State> st(h.makeState());
+
+            auto runSaw = [&](float drive){
+                h.setCommon(2000.0f, 0.3f, drive); h.setPostDrive(drive); h.reset(*st);
+                std::vector<float> out; const int N = 4096;
+                for (int i = 0; i < N; ++i) {
+                    float ph = std::fmod(220.0 * i / 48000.0, 1.0);
+                    float x = 0.6f * (2.0f * (float) ph - 1.0f);     // saw
+                    float l = x, r = x; h.processStereo(*st, &l, &r, 1);
+                    out.push_back(l);
+                }
+                return out;
+            };
+            auto clean = runSaw(0.0f);
+            auto dirty = runSaw(1.0f);
+            expect(rms(dirty) > 0.0f, "driven output is non-silent");
+            for (float v : dirty) expect(std::abs(v) < 4.0f, "driven output bounded");
+            // crude harmonic-change proxy: driven differs materially from clean
+            double diff = 0; for (size_t i = 0; i < clean.size(); ++i) diff += std::abs(dirty[i] - clean[i]);
+            expect(diff / clean.size() > 0.01, "drive changes the signal");
         }
     }
 };
