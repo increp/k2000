@@ -23,7 +23,7 @@ public:
         bias_ = biasFixed;
         const float full = (gain_ > 1.0f) ? (1.0f / std::tanh(gain_)) : 1.0f;
         comp_ = 1.0f + 0.75f * (full - 1.0f);          // ~75% RMS compensation // CALIB
-        engaged_ = (gain_ > 1.0001f) || (bias_ != 0.0f);
+        engaged_ = (gain_ > 1.0001f) || (std::abs(bias_) > 1.0e-6f);
     }
 
     bool engaged() const noexcept { return engaged_; }
