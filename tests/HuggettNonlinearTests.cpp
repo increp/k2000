@@ -123,7 +123,8 @@ public:
         {
             auto hfMag = [](float amp){
                 NlSvfCell c; c.prepare(48000.0); c.setCutoff(2000.0f); c.setResonance(0.0f); c.setResSat(0.0f);
-                c.reset(); const int N=16384; float peak=0;
+                c.reset(); c.setDroopActive(true);  // enable droop so loud input sags cutoff
+                const int N=16384; float peak=0;
                 for (int i=0;i<N;++i){
                     // Drive droop through the real per-block mechanism (once per 64-sample block).
                     if (i % 64 == 0) c.updateBlock();

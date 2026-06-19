@@ -13,9 +13,6 @@ void HuggettHpStage::reset(State& s) const noexcept {
 }
 
 void HuggettHpStage::processStereo(State& s, float* left, float* right, int n) const noexcept {
-    s.a.setCutoff(cutoffHz_); s.a.setResonance(resonance_); s.a.setResSat(resonance_); s.a.updateBlock();
-    s.b.setCutoff(cutoffHz_); s.b.setResonance(resonance_); s.b.setResSat(resonance_); s.b.updateBlock();
-
     // Gate on the drive PARAMETER, not AsymSaturator::engaged(), because engaged()
     // returns true whenever bias != 0 (our kHpBias = 0.10f is always non-zero),
     // meaning it can never be the sole gate for a "no drive" bypass path.
@@ -24,6 +21,12 @@ void HuggettHpStage::processStereo(State& s, float* left, float* right, int n) c
     AsymSaturator pre; pre.setDrive(drive_, kHpBias, kHpDriveDb);
     const bool preOn = drive_ > 0.0f;
     const bool dcOn  = drive_ > 0.0f || resonance_ > 0.0f;
+    const bool nl    = preOn || (resonance_ > 0.0f);
+
+    s.a.setCutoff(cutoffHz_); s.a.setResonance(resonance_); s.a.setResSat(resonance_);
+    s.b.setCutoff(cutoffHz_); s.b.setResonance(resonance_); s.b.setResSat(resonance_);
+    s.a.setDroopActive(nl); s.b.setDroopActive(nl);
+    s.a.updateBlock(); s.b.updateBlock();
 
     for (int i = 0; i < n; ++i) {
         float l = left[i], r = right[i];

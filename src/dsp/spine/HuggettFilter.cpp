@@ -28,12 +28,14 @@ void HuggettFilter::processStereo(State& s, float* left, float* right, int n) co
     const int tap = tapForMode(mode_);
     const float cutB = cutoffHz_ * std::pow(2.0f, separationOct_);
 
-    vs.a.setCutoff(cutoffHz_); vs.a.setResonance(resonance_); vs.a.setResSat(resonance_); vs.a.updateBlock();
-    vs.b.setCutoff(cutB);      vs.b.setResonance(resonance_); vs.b.setResSat(resonance_); vs.b.updateBlock();
-
     const bool preOn     = preDrive_  > 0.0f;
     const bool postOn    = postDrive_ > 0.0f;
     const bool nonlinear = preOn || postOn || (resonance_ > 0.0f);
+
+    vs.a.setCutoff(cutoffHz_); vs.a.setResonance(resonance_); vs.a.setResSat(resonance_);
+    vs.b.setCutoff(cutB);      vs.b.setResonance(resonance_); vs.b.setResSat(resonance_);
+    vs.a.setDroopActive(nonlinear); vs.b.setDroopActive(nonlinear);
+    vs.a.updateBlock(); vs.b.updateBlock();
 
     for (int i = 0; i < n; ++i) {
         float l = left[i], r = right[i];
