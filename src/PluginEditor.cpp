@@ -10,7 +10,7 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     binder_.bind(masterGain_.slider(), params::masterGain);
 
     bindLayer(0);
-    setSize(1040, 680);
+    setSize(1040, 740);
 }
 
 K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
@@ -73,6 +73,19 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(spineSlopeLbl_);
     filterSection_.addAndMakeVisible(spineSlope_);
     filterSection_.addAndMakeVisible(spineSeparation_);
+    filterSection_.addAndMakeVisible(spinePostDrive_);
+
+    // HP pre-filter band controls
+    hpSectionLbl_.setText("HP PRE", juce::dontSendNotification);
+    hpSectionLbl_.setJustificationType(juce::Justification::centredLeft);
+    filterSection_.addAndMakeVisible(hpSectionLbl_);
+    hpEnable_.setButtonText("on");
+    filterSection_.addAndMakeVisible(hpEnable_);
+    hpSlope_.addItemList(juce::StringArray{ "12 dB", "24 dB" }, 1);
+    filterSection_.addAndMakeVisible(hpSlope_);
+    filterSection_.addAndMakeVisible(hpCutoff_);
+    filterSection_.addAndMakeVisible(hpReso_);
+    filterSection_.addAndMakeVisible(hpDrive_);
 
     // Amp env section
     addAndMakeVisible(ampEnvSection_);
@@ -120,6 +133,13 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(spineModel_,               ids.spineModel);
     binder_.bind(spineSlope_,               ids.spineSlope);
     binder_.bind(spineSeparation_.slider(), ids.spineSeparation);
+
+    binder_.bind(hpEnable_,               ids.spineHpEnable);
+    binder_.bind(hpCutoff_.slider(),      ids.spineHpCutoff);
+    binder_.bind(hpReso_.slider(),        ids.spineHpResonance);
+    binder_.bind(hpSlope_,               ids.spineHpSlope);
+    binder_.bind(hpDrive_.slider(),       ids.spineHpDrive);
+    binder_.bind(spinePostDrive_.slider(), ids.spinePostDrive);
 
     binder_.bind(ampA_.slider(), ids.ampAttack);
     binder_.bind(ampD_.slider(), ids.ampDecay);
@@ -175,9 +195,9 @@ void K2000AudioProcessorEditor::resized() {
         }
     };
 
-    // Signal row (h 250): source(48%) | mixer | filter | drive | amp
+    // Signal row (h 330): source(48%) | mixer | filter | drive | amp
     {
-        auto row = area.removeFromTop(270);
+        auto row = area.removeFromTop(330);
         auto source = row.removeFromLeft((int) (row.getWidth() * 0.40f));
         sourceSection_.setBounds(source.reduced(2));
         // FILTER is now a primary 6-control section, so it gets the lion's share
@@ -194,18 +214,41 @@ void K2000AudioProcessorEditor::resized() {
         layoutCells(top, { { &oscWaveLbl_, &oscWave_ }, { nullptr, &oscCoarse_ }, { nullptr, &oscFine_ } });
         layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
 
-        // Filter children: two sub-rows.
-        // Top row: spine-mode combo, filter type, cutoff, reso.
-        // Bottom row: spine model selector, slope combo, separation knob.
+        // Filter children: Layout B — HP pre-band + divider + two main rows.
+        // Row 1 (HP band): HP PRE label+enable, HP cutoff, HP reso, HP slope, HP drive.
+        // [4 px divider gap]
+        // Row 2 (main top): filter type, cutoff, reso.
+        // Row 3 (main bot): spine model, slope, separation, post-drive.
         {
             auto fc = filterSection_.contentBounds();
-            auto top = fc.removeFromTop(fc.getHeight() / 2);
-            layoutCells(top, { { &filterTypeLbl_, &filterType_ },
-                                { nullptr,         &filterCutoff_ },
-                                { nullptr,         &filterRes_ } });
+            const int rowH   = fc.getHeight() / 3;
+            const int divGap = 4;
+
+            // HP pre-filter row
+            auto hpRow = fc.removeFromTop(rowH);
+            fc.removeFromTop(divGap);  // visual divider gap
+            // HP section label (narrow left column)
+            const int lblW = 50;
+            const int enW  = 34;
+            hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 16);
+            hpEnable_.setBounds(hpRow.getX() + (lblW - enW) / 2, hpRow.getY() + 18, enW, 22);
+            hpRow.removeFromLeft(lblW);
+            // Remaining cells: HP cut, HP reso, HP slope, HP drive
+            layoutCells(hpRow, { { nullptr,  &hpCutoff_ },
+                                  { nullptr,  &hpReso_   },
+                                  { nullptr,  &hpSlope_  },
+                                  { nullptr,  &hpDrive_  } });
+
+            // Main filter rows — split remaining height equally
+            const int mainH = (fc.getHeight()) / 2;
+            auto mainTop = fc.removeFromTop(mainH);
+            layoutCells(mainTop, { { &filterTypeLbl_, &filterType_ },
+                                    { nullptr,         &filterCutoff_ },
+                                    { nullptr,         &filterRes_ } });
             layoutCells(fc,  { { &spineModelLbl_, &spineModel_ },
                                 { &spineSlopeLbl_, &spineSlope_ },
-                                { nullptr,         &spineSeparation_ } });
+                                { nullptr,         &spineSeparation_ },
+                                { nullptr,         &spinePostDrive_ } });
         }
     }
     area.removeFromTop(8);

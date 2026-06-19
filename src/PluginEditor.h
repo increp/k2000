@@ -41,6 +41,12 @@ private:
     juce::ComboBox spineModel_, spineSlope_;
     juce::Label    spineModelLbl_, spineSlopeLbl_;
     LabeledKnob    spineSeparation_{ "Sep" };
+    // HP pre-filter band (Layout B)
+    juce::Label        hpSectionLbl_;
+    juce::ToggleButton hpEnable_;
+    juce::ComboBox     hpSlope_;
+    LabeledKnob        hpCutoff_{ "HP Cut" }, hpReso_{ "HP Reso" }, hpDrive_{ "HP Drive" };
+    LabeledKnob        spinePostDrive_{ "Post Drv" };
 
     Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
     Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
