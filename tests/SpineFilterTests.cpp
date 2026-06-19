@@ -64,12 +64,12 @@ public:
             HuggettFilter h; h.prepare(48000.0); h.setMode(HuggettFilter::Mode::LP);
             h.setSlope(HuggettFilter::Slope::db24); h.setCommon(500.0f, 0.0f, 0.0f);
             SpineFilterSlot slot;
-            slot.prepare(48000.0, &h);
+            slot.prepare(48000.0, &h, nullptr);
             const int N = 8192; float peak = 0.0f;
             for (int i = 0; i < N; ++i) {
                 float x = std::sin(2.0 * juce::MathConstants<double>::pi * 8000.0 * i / 48000.0);
                 float l = x, r = x;
-                slot.processStereo(&h, &l, &r, 1);
+                slot.processStereo(nullptr, false, &h, &l, &r, 1);
                 if (i > N / 2) peak = std::max(peak, std::abs(l));
             }
             expect(peak < 0.1f, "high freq cut by spine: " + juce::String(peak));

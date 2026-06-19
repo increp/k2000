@@ -131,6 +131,47 @@ public:
                    + " closed=" + juce::String(closedE));
         }
 
+        beginTest("Enabling the HP pre-filter removes low end from layer 0");
+        {
+            // Set up layer 0 with a sine oscillator and the main filter wide open.
+            // Render note 36 (C2, ~65 Hz) — a low note whose fundamental is well below
+            // a 4 kHz HP cutoff.  Compare energy with HP disabled vs. enabled.
+            auto makeSnap = [](int hpEnable, float hpCutoffHz) {
+                ParamSnapshot s = dspBase();
+                s.spineModel  = 0;
+                s.svfCutoffHz = 18000.0f;   // main filter wide open
+                s.svfResonance = 0.0f;
+                s.hpEnable    = hpEnable;
+                s.hpCutoffHz  = hpCutoffHz;
+                s.hpResonance = 0.0f;
+                s.hpSlope     = 0;          // 12 dB — enough to cut low end
+                s.hpDrive     = 0.0f;
+                return s;
+            };
+
+            auto renderNote36 = [&](int hpEnable, float hpCutoffHz) {
+                Program prog; prog.prepare(SR, N);
+                prog.slot(0).layer.updateParameters(makeSnap(hpEnable, hpCutoffHz));
+                prog.slot(0).routing = LayerRouting{true, 0, 127, 1, 127, 0};
+                prog.slot(0).layer.setLevel(1.0f);
+                prog.slot(1).routing = LayerRouting{false, 0, 127, 1, 127, 0};
+                VoiceManager vm; vm.setProgram(&prog); vm.prepare(SR, N);
+                juce::MidiBuffer midi;
+                midi.addEvent(juce::MidiMessage::noteOn(1, 36, (juce::uint8) 100), 0);
+                std::vector<float> outL(N, 0.0f), outR(N, 0.0f);
+                vm.renderBlock(outL.data(), outR.data(), N, midi);
+                return energy(outL);
+            };
+
+            const double eOff = renderNote36(0, 4000.0f);   // HP disabled — full low-end
+            const double eOn  = renderNote36(1, 4000.0f);   // HP at 4 kHz — low end cut
+
+            expect(eOff > 1e-9, "HP-off render must be non-silent: " + juce::String(eOff));
+            expect(eOn < eOff,
+                   "HP at 4 kHz must cut low note energy: off=" + juce::String(eOff)
+                   + " on=" + juce::String(eOn));
+        }
+
         beginTest("Drive (waveshaper) audibly changes the sound with the filter open");
         {
             Program prog; prog.prepare(SR, N);
