@@ -119,6 +119,18 @@ public:
             expect(maxDiff < 1.0e-5f, "zero-drive path is bit-for-bit linear: maxDiff=" + juce::String(maxDiff));
         }
 
+        beginTest("NlSvfCell: loud input droops cutoff (darker) vs quiet");
+        {
+            auto hfMag = [](float amp){
+                NlSvfCell c; c.prepare(48000.0); c.setCutoff(2000.0f); c.setResonance(0.0f); c.setResSat(0.0f);
+                c.reset(); const int N=8192; float peak=0;
+                for (int i=0;i<N;++i){ float x=amp*std::sin(2.0*juce::MathConstants<double>::pi*2000.0*i/48000.0);
+                    float l=x,r=x; c.process(l,r,NlSvfCell::LP); if(i>N/2) peak=std::max(peak,std::abs(l)); }
+                return peak / amp;   // normalized gain at cutoff
+            };
+            expect(hfMag(2.0f) < hfMag(0.05f) * 0.99f, "loud input is darker (droop active)");
+        }
+
         beginTest("HuggettFilter: driving changes harmonic content but stays bounded");
         {
             HuggettFilter h; h.prepare(48000.0); h.setMode(HuggettFilter::Mode::LP);
