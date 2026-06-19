@@ -81,7 +81,10 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(hpSectionLbl_);
     hpEnable_.setButtonText("on");
     filterSection_.addAndMakeVisible(hpEnable_);
+    hpSlopeLbl_.setText("Slope", juce::dontSendNotification);
+    hpSlopeLbl_.setJustificationType(juce::Justification::centred);
     hpSlope_.addItemList(juce::StringArray{ "12 dB", "24 dB" }, 1);
+    filterSection_.addAndMakeVisible(hpSlopeLbl_);
     filterSection_.addAndMakeVisible(hpSlope_);
     filterSection_.addAndMakeVisible(hpCutoff_);
     filterSection_.addAndMakeVisible(hpReso_);
@@ -234,10 +237,10 @@ void K2000AudioProcessorEditor::resized() {
             hpEnable_.setBounds(hpRow.getX() + (lblW - enW) / 2, hpRow.getY() + 18, enW, 22);
             hpRow.removeFromLeft(lblW);
             // Remaining cells: HP cut, HP reso, HP slope, HP drive
-            layoutCells(hpRow, { { nullptr,  &hpCutoff_ },
-                                  { nullptr,  &hpReso_   },
-                                  { nullptr,  &hpSlope_  },
-                                  { nullptr,  &hpDrive_  } });
+            layoutCells(hpRow, { { nullptr,      &hpCutoff_ },
+                                  { nullptr,      &hpReso_   },
+                                  { &hpSlopeLbl_, &hpSlope_  },
+                                  { nullptr,      &hpDrive_  } });
 
             // Main filter rows — split remaining height equally
             const int mainH = (fc.getHeight()) / 2;
