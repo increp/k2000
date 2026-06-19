@@ -35,10 +35,10 @@ public:
 private:
     float step(float v0, int ch, int tap) noexcept {
         // Track a slow per-channel input magnitude envelope for the droop.        // CALIB
-        // Set dirty_ so recompute() re-reads env_ on the next process() call.
+        // env_ is read by recompute(); dirty_ is set by updateBlock() (called once
+        // per block by the owning filter) so recompute() runs per-block, not per-sample.
         // At low level env stays below kDroopThresh → gmScale==1.0 → zero cost.
         env_[ch] += 0.0005f * (std::abs(v0) - env_[ch]);
-        dirty_ = true;
         if (resSat_ > 0.0f) {
             const float bpPrev = bp_[ch];
             v0 -= k_ * resSat_ * (satRes(bpPrev) - bpPrev);   // nonlinear correction only
