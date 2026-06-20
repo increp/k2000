@@ -30,12 +30,11 @@ public:
         beginTest("AsymSaturator: adds even harmonics (asymmetry) and is bounded");
         {
             AsymSaturator sat; sat.setDrive(1.0f, 0.25f, 30.0f);
-            AsymSaturator::State st; st.reset();
             const double sr = 48000.0, f = 220.0;
             float peak = 0.0f; double dcAcc = 0.0; int N = 4096;
             for (int i = 0; i < N; ++i) {
                 float x = 0.7f * std::sin(2.0 * juce::MathConstants<double>::pi * f * i / sr);
-                float y = sat.process(x, 0, st);
+                float y = sat.process(x);
                 peak = std::max(peak, std::abs(y));
                 if (i > N / 2) dcAcc += y;            // asymmetric shaper -> nonzero DC
             }
@@ -117,22 +116,6 @@ public:
                 maxDiff = std::max(maxDiff, std::abs(hl - rl));
             }
             expect(maxDiff < 1.0e-5f, "zero-drive path is bit-for-bit linear: maxDiff=" + juce::String(maxDiff));
-        }
-
-        beginTest("NlSvfCell: loud input droops cutoff (darker) vs quiet");
-        {
-            auto hfMag = [](float amp){
-                NlSvfCell c; c.prepare(48000.0); c.setCutoff(2000.0f); c.setResonance(0.0f); c.setResSat(0.0f);
-                c.reset(); c.setDroopActive(true);  // enable droop so loud input sags cutoff
-                const int N=16384; float peak=0;
-                for (int i=0;i<N;++i){
-                    // Drive droop through the real per-block mechanism (once per 64-sample block).
-                    if (i % 64 == 0) c.updateBlock();
-                    float x=amp*std::sin(2.0*juce::MathConstants<double>::pi*2000.0*i/48000.0);
-                    float l=x,r=x; c.process(l,r,NlSvfCell::LP); if(i>N/2) peak=std::max(peak,std::abs(l)); }
-                return peak / amp;   // normalized gain at cutoff
-            };
-            expect(hfMag(2.0f) < hfMag(0.05f) * 0.99f, "loud input is darker (droop active)");
         }
 
         beginTest("HuggettFilter: driving changes harmonic content but stays bounded");

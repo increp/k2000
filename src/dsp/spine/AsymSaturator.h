@@ -2,19 +2,14 @@
 #include <cmath>
 #include <algorithm>
 
-// Asymmetric tanh drive shaper with 1st-order antiderivative antialiasing (ADAA)
-// and partial RMS level compensation. Config (gain/bias/comp) is shared across
-// voices; the ADAA memory is per-voice (State). g(x) = comp * tanh(gain*x + bias).
-// ADAA is applied on g(x): y[n] = (G(x[n]) - G(x[n-1])) / (x[n] - x[n-1]),
-// G(x) = (comp/gain) * logcosh(gain*x + bias). Midpoint fallback when x ~= x[-1].
+// Asymmetric tanh drive shaper with partial RMS level compensation. Memoryless:
+//   g(x) = comp * tanh(gain*x + bias)
+// Config (gain/bias/comp) is shared across voices; the shaper itself holds no
+// per-voice state. (A 1st-order ADAA variant was tried and measured WORSE than
+// plain tanh across k2000's drive range — see OverdriveDiagnosticTests — so the
+// shaper is plain tanh; oversampling, if ever needed, is a v5.1 HQ-tier concern.)
 class AsymSaturator {
 public:
-    struct State {
-        float x1[2] = {0.0f, 0.0f};   // previous raw input, per channel
-        float G1[2] = {0.0f, 0.0f};   // previous antiderivative value, per channel
-        void reset() noexcept { x1[0]=x1[1]=0.0f; G1[0]=G1[1]=0.0f; }
-    };
-
     // drive01 in [0,1] -> up to maxDriveDb of input gain. biasFixed is the stage's
     // fixed asymmetry (even-harmonic) offset. Call once per block.
     void setDrive(float drive01, float biasFixed, float maxDriveDb) noexcept {
@@ -28,25 +23,11 @@ public:
 
     bool engaged() const noexcept { return engaged_; }
 
-    float process(float x, int ch, State& s) const noexcept {
-        const float u = gain_ * x + bias_;
-        const float G = (comp_ / gain_) * logcosh(u);
-        const float dx = x - s.x1[ch];
-        float y;
-        if (std::abs(dx) > 1.0e-5f)
-            y = (G - s.G1[ch]) / dx;
-        else
-            y = comp_ * std::tanh(gain_ * (0.5f * (x + s.x1[ch])) + bias_); // midpoint
-        s.x1[ch] = x;
-        s.G1[ch] = G;
-        return y;
+    float process(float x) const noexcept {
+        return comp_ * std::tanh(gain_ * x + bias_);
     }
 
 private:
-    static float logcosh(float z) noexcept {
-        const float a = std::abs(z);
-        return a + std::log1p(std::exp(-2.0f * a)) - 0.6931472f; // ln 2
-    }
     float gain_ = 1.0f, bias_ = 0.0f, comp_ = 1.0f;
     bool  engaged_ = false;
 };

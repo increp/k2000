@@ -50,7 +50,7 @@ private:
     juce::ToggleButton hpEnable_;
     juce::ComboBox     hpSlope_;
     juce::Label        hpSlopeLbl_;
-    LabeledKnob        hpCutoff_{ "HP Cut" }, hpReso_{ "HP Reso" }, hpDrive_{ "HP Drive" };
+    LabeledKnob        hpCutoff_{ "HP Cut" }, hpReso_{ "HP Reso" };
     LabeledKnob        spinePostDrive_{ "Post Drv" };
 
     Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };

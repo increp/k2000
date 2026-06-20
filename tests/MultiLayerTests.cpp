@@ -145,7 +145,6 @@ public:
                 s.hpCutoffHz  = hpCutoffHz;
                 s.hpResonance = 0.0f;
                 s.hpSlope     = 0;          // 12 dB — enough to cut low end
-                s.hpDrive     = 0.0f;
                 return s;
             };
 

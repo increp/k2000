@@ -12,7 +12,6 @@ FilterModel::State* HuggettFilter::makeState() const {
 void HuggettFilter::reset(State& s) const noexcept {
     auto& vs = static_cast<VoiceState&>(s);
     vs.a.reset(); vs.b.reset();
-    vs.pre.reset(); vs.post.reset();
     vs.dc.reset();
 }
 
@@ -34,15 +33,13 @@ void HuggettFilter::processStereo(State& s, float* left, float* right, int n) co
 
     vs.a.setCutoff(cutoffHz_); vs.a.setResonance(resonance_); vs.a.setResSat(resonance_);
     vs.b.setCutoff(cutB);      vs.b.setResonance(resonance_); vs.b.setResSat(resonance_);
-    vs.a.setDroopActive(nonlinear); vs.b.setDroopActive(nonlinear);
-    vs.a.updateBlock(); vs.b.updateBlock();
 
     for (int i = 0; i < n; ++i) {
         float l = left[i], r = right[i];
-        if (preOn)  { l = preSat_.process(l, 0, vs.pre);  r = preSat_.process(r, 1, vs.pre); }
+        if (preOn)  { l = preSat_.process(l);  r = preSat_.process(r); }
         vs.a.process(l, r, tap);
         if (slope_ == Slope::db24) vs.b.process(l, r, tap);
-        if (postOn) { l = postSat_.process(l, 0, vs.post); r = postSat_.process(r, 1, vs.post); }
+        if (postOn) { l = postSat_.process(l); r = postSat_.process(r); }
         if (nonlinear) { l = vs.dc.process(l, 0); r = vs.dc.process(r, 1); }
         left[i] = l; right[i] = r;
     }

@@ -14,7 +14,6 @@ public:
 
     struct VoiceState : public FilterModel::State {
         NlSvfCell a, b;
-        AsymSaturator::State pre, post;
         DcBlocker dc;
     };
 

@@ -92,7 +92,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(hpSlope_);
     filterSection_.addAndMakeVisible(hpCutoff_);
     filterSection_.addAndMakeVisible(hpReso_);
-    filterSection_.addAndMakeVisible(hpDrive_);
 
     // Amp env section
     addAndMakeVisible(ampEnvSection_);
@@ -145,7 +144,6 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(hpCutoff_.slider(),      ids.spineHpCutoff);
     binder_.bind(hpReso_.slider(),        ids.spineHpResonance);
     binder_.bind(hpSlope_,               ids.spineHpSlope);
-    binder_.bind(hpDrive_.slider(),       ids.spineHpDrive);
     binder_.bind(spinePostDrive_.slider(), ids.spinePostDrive);
 
     binder_.bind(ampA_.slider(), ids.ampAttack);
@@ -242,11 +240,10 @@ void K2000AudioProcessorEditor::resized() {
             hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 16);
             hpEnable_.setBounds(hpRow.getX() + 2, hpRow.getY() + 18, enW, 22);
             hpRow.removeFromLeft(lblW);
-            // Remaining cells: HP cut, HP reso, HP slope, HP drive
+            // Remaining cells: HP cut, HP reso, HP slope (HP is clean — no drive)
             layoutCells(hpRow, { { nullptr,      &hpCutoff_ },
                                   { nullptr,      &hpReso_   },
-                                  { &hpSlopeLbl_, &hpSlope_  },
-                                  { nullptr,      &hpDrive_  } });
+                                  { &hpSlopeLbl_, &hpSlope_  } });
 
             // Main filter rows — split remaining height equally
             const int mainH = (fc.getHeight()) / 2;

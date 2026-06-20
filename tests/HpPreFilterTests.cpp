@@ -12,7 +12,7 @@ public:
             HuggettHpStage hp; hp.prepare(48000.0);
             std::unique_ptr<HuggettHpStage::State> st(hp.makeState());
             auto mag = [&](double f, HuggettHpStage::Slope slope){
-                hp.setParams(1000.0f, 0.0f, slope, 0.0f); hp.reset(*st);
+                hp.setParams(1000.0f, 0.0f, slope); hp.reset(*st);
                 const int N=8192; float peak=0;
                 for (int i=0;i<N;++i){ float x=std::sin(2.0*juce::MathConstants<double>::pi*f*i/48000.0);
                     float l=x,r=x; hp.processStereo(*st,&l,&r,1); if(i>N/2) peak=std::max(peak,std::abs(l)); }
@@ -29,7 +29,7 @@ public:
         {
             HuggettHpStage hp; hp.prepare(48000.0);
             std::unique_ptr<HuggettHpStage::State> st(hp.makeState());
-            hp.setParams(1200.0f, 1.0f, HuggettHpStage::Slope::db24, 0.0f); hp.reset(*st);
+            hp.setParams(1200.0f, 1.0f, HuggettHpStage::Slope::db24); hp.reset(*st);
             float l=1.0f,r=1.0f; hp.processStereo(*st,&l,&r,1);
             float peak=0; bool nan=false;
             for (int i=0;i<24000;++i){ float a=0,b=0; hp.processStereo(*st,&a,&b,1);

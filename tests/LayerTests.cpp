@@ -48,7 +48,7 @@ public:
         {
             Layer layer; layer.prepare(48000.0, 256);
             ParamSnapshot s; s.hpEnable = 1; s.hpCutoffHz = 2000.0f; s.hpResonance = 0.0f;
-            s.hpSlope = 1; s.hpDrive = 0.0f;
+            s.hpSlope = 1;
             layer.updateParameters(s);
             expect(layer.hpStage() != nullptr, "hp stage present");
             // Filter a low tone through the exposed HP stage -> attenuated.

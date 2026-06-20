@@ -76,7 +76,6 @@ public:
             expect(s.hpSlope == 0, "HP slope defaults 12 dB");
             expectWithinAbsoluteError(s.hpCutoffHz, 20.0f, 1e-3f);
             expectWithinAbsoluteError(s.hpResonance, 0.0f, 1e-6f);
-            expectWithinAbsoluteError(s.hpDrive, 0.0f, 1e-6f);
 
             // HP resonance is capped: the knob's max maps to 0.15 (full-range
             // OTA HP self-oscillates too hot), not 1.0.

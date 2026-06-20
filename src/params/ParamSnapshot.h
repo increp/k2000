@@ -45,7 +45,6 @@ struct ParamSnapshot {
     float hpCutoffHz    = 20.0f;
     float hpResonance   = 0.0f;
     int   hpSlope       = 0;      // 0=12 dB, 1=24 dB
-    float hpDrive       = 0.0f;
     // Main Huggett post-filter drive (Huggett bank)
     float huggettPostDrive = 0.0f;
 };

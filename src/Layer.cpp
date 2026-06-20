@@ -45,7 +45,6 @@ void Layer::updateParameters(const ParamSnapshot& s) {
     }
     hpStage_.setParams(snapshot_.hpCutoffHz, snapshot_.hpResonance,
                        snapshot_.hpSlope == 0 ? HuggettHpStage::Slope::db12
-                                              : HuggettHpStage::Slope::db24,
-                       snapshot_.hpDrive);
+                                              : HuggettHpStage::Slope::db24);
     if (huggett_) huggett_->setPostDrive(snapshot_.huggettPostDrive);
 }
