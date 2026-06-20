@@ -28,11 +28,14 @@ struct Metrics {
         return fund > 0.0 ? 10.0 * std::log10(rest / fund) : 0.0;
     }
     static float maxSampleDelta(const std::vector<float>& y) {
-        float m = 0.0f; for (size_t i = 1; i < y.size(); ++i) m = std::max(m, std::abs(y[i] - y[i-1])); return m;
+        float m = 0.0f;
+        for (size_t i = 1; i < y.size(); ++i) m = std::max(m, std::abs(y[i] - y[i-1]));
+        return m;
     }
     static float maxDiff(const std::vector<float>& a, const std::vector<float>& b) {
         float m = 0.0f; const size_t n = std::min(a.size(), b.size());
-        for (size_t i = 0; i < n; ++i) m = std::max(m, std::abs(a[i] - b[i])); return m;
+        for (size_t i = 0; i < n; ++i) m = std::max(m, std::abs(a[i] - b[i]));
+        return m;
     }
     static double dcOffset(const std::vector<float>& y, int fromIndex) {
         double s = 0.0; int c = 0;
