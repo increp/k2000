@@ -4,6 +4,9 @@
 #include "testdsp/Metrics.h"
 #include "testdsp/Reference.h"
 #include "testdsp/Gate.h"
+#include "testdsp/Response.h"
+#include "testdsp/ProcessAdapter.h"
+#include <cmath>
 
 class TestDspSelfTests : public juce::UnitTest {
 public:
@@ -109,6 +112,57 @@ public:
 
         beginTest("Gate passes within bound");
         testdsp::Gate::check(*this, -70.0, -60.0, testdsp::Gate::Dir::Max, "M4 demo");  // -70 <= -60 -> pass
+
+        // Response::magDb self-test — CellAdapter LP at fc=1000 Hz, res=0.
+        // Compare measured |H(f)| against the Cytomic TPT-SVF analytic passband response.
+        // For the 2-pole LP with damping k=1/Q, the analog |H(f)|^2 = 1 / ((1-(f/fc)^2)^2 + (k*f/fc)^2).
+        // At res=0: NlSvfCell maps res→Q by Q = 0.5 + 0*49.5 = 0.5, so k = 1/0.5 = 2.0 (overdamped).
+        // TPT ≈ analog for f << fs/2.  We test f <= fc and allow ±0.5 dB tolerance.
+        // If TPT vs analytic diverges > 1 dB (even in passband), we report it.
+        beginTest("Response::magDb LP passband matches Cytomic analytic (CellAdapter, fc=1000 Hz)");
+        {
+            const double fc  = 1000.0;
+            const double sr  = 48000.0;
+            // res=0 → Q = 0.5 + 0*49.5 = 0.5, k = 2.0
+            const double k   = 2.0;
+            const float  amp = 0.05f;  // small signal → linear regime, no NL saturation
+
+            testdsp::CellAdapter ca;
+            ca.cutoff = (float) fc;
+            ca.res    = 0.0f;
+            ca.resSat = 0.0f;
+            ca.tap    = NlSvfCell::LP;
+            ca.prepare(sr);
+
+            // Analytic 2-pole LP magnitude (normalized freq u = f/fc, k=damping):
+            // |H(u)|_dB = -10*log10((1-u^2)^2 + (k*u)^2)
+            auto analyticDb = [&](double f) -> double {
+                const double u  = f / fc;
+                const double u2 = u * u;
+                return -10.0 * std::log10((1.0 - u2) * (1.0 - u2) + k * k * u2);
+            };
+
+            const double freqs[] = { 100.0, 300.0, 500.0, 700.0, 1000.0 };
+            double worstErr = 0.0;
+            std::printf("[TestDspSelf] Response::magDb LP analytic self-test (fc=1000 Hz, k=2.0):\n");
+            for (double f : freqs) {
+                const double measured = testdsp::Response::magDb(ca, f, sr, amp);
+                const double analytic = analyticDb(f);
+                const double err      = std::abs(measured - analytic);
+                worstErr = std::max(worstErr, err);
+                std::printf("  f=%.0f: measured=%.2f dB  analytic=%.2f dB  err=%.3f dB\n",
+                            f, measured, analytic, err);
+                // Tolerance: 0.5 dB for passband (f <= fc); report if wider.
+                if (err > 1.0) {
+                    std::printf("  WARNING: err=%.3f dB exceeds 1 dB at f=%.0f — TPT/analog divergence\n",
+                                err, f);
+                }
+                testdsp::Gate::check(*this, err, 0.5,
+                                     testdsp::Gate::Dir::Max,
+                                     "Response::magDb vs analytic @ f=" + juce::String((int) f) + " Hz");
+            }
+            std::printf("  worst err=%.3f dB\n", worstErr);
+        }
     }
 };
 static TestDspSelfTests testDspSelfTestsInstance;
