@@ -3,6 +3,7 @@
 #include "testdsp/Spectrum.h"
 #include "testdsp/Metrics.h"
 #include "testdsp/Reference.h"
+#include "testdsp/Gate.h"
 
 class TestDspSelfTests : public juce::UnitTest {
 public:
@@ -105,6 +106,9 @@ public:
                    "hard clip NSR " + juce::String(nsrHard)
                    + " must exceed soft tanh NSR " + juce::String(nsrSoft) + " by 6 dB");
         }
+
+        beginTest("Gate passes within bound");
+        testdsp::Gate::check(*this, -70.0, -60.0, testdsp::Gate::Dir::Max, "M4 demo");  // -70 <= -60 -> pass
     }
 };
 static TestDspSelfTests testDspSelfTestsInstance;

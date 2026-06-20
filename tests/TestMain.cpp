@@ -1,5 +1,9 @@
 #include <juce_core/juce_core.h>
 #include <cstdio>
+#include <cstdlib>
+
+// BERNIE_TEST_VERBOSE: set to enable verbose test output tables (e.g., metric values per test).
+// Currently unused; future test hooks can wrap verbose tables with `if (std::getenv("BERNIE_TEST_VERBOSE"))`.
 
 int main(int, char**) {
     juce::UnitTestRunner runner;
