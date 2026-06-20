@@ -54,8 +54,7 @@ struct ModelAdapter {
     }
 
     void reset() {
-        model->reset(*state);
-        rscratch.clear();
+        model->reset(*state);   // rscratch is overwritten each process() before use; no need to clear
     }
 
     void process(float* b, int n) {
