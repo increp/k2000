@@ -1,6 +1,6 @@
 # Roadmap
 
-What's coming after v1, and roughly in what order. The roadmap is intentionally loose — each phase will get its own [spec](../specs/) and implementation cycle when its turn comes.
+What's coming, and roughly in what order. The roadmap is intentionally loose — each phase will get its own [spec](../specs/) and implementation cycle when its turn comes.
 
 ## Files
 
