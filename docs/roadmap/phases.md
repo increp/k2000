@@ -48,7 +48,18 @@ The v5 keystone (selectable spine + Huggett foundation) shipped as **v5.0.0** (P
 | **v5.2** | **Moog ladder** — second filter model *(was v5.1)*. |
 | **v5.3** | **Oberheim SEM** — third filter model *(was v5.2)*. |
 
-*Cross-cutting in the v5.0 cycle:* a SAST + SCA security-scan CI baseline, and a docs/README/ADR audit & groom. DSP references for v5.0: [tpt-svf-core.md](../architecture/tpt-svf-core.md), [nonlinear-filter-modeling.md](../architecture/nonlinear-filter-modeling.md), [antialiasing-adaa.md](../architecture/antialiasing-adaa.md).
+*Cross-cutting in the v5.0 cycle:* a docs/README/ADR audit & groom (✅ shipped), and a SAST + SCA security-scan CI baseline (queued — see follow-ups below). DSP references for v5.0: [tpt-svf-core.md](../architecture/tpt-svf-core.md), [nonlinear-filter-modeling.md](../architecture/nonlinear-filter-modeling.md), [antialiasing-adaa.md](../architecture/antialiasing-adaa.md).
+
+### v5.0 follow-ups — queued (not yet scheduled)
+
+Work left on the table after v5.0 shipped, paused for the user to pick the next task. Order here is rough priority, not a commitment.
+
+| # | Item | Type | Status | Where |
+|---|---|---|---|---|
+| 1 | **SAST + SCA security-scan CI baseline** | Cross-cutting CI (user-requested) | Queued — short plan, no spec needed | scanners (cppcheck/clang-tidy/CodeQL + dep/CVE scan; JUCE is a submodule) in `.github/workflows/`; run a baseline, triage |
+| 2 | **HQ oversampling tiers + visual keyboard** | Point release — **v5.1** (already slotted above) | Scoped, not built; brainstorm → spec → plan → subagent execution | hand-rolled heap-free inline 2/8/32× (NOT `juce::dsp::Oversampling`, Q12); `juce::MidiKeyboardComponent` |
+| 3 | **UI cosmetics** (from UAT) | Polish / bugfix | Queued — quick | `src/PluginEditor.cpp` `resized()`/`buildStaticControls`: widen HP-Slope & Filter combos, fix gain-readout overlap, HP-enable toggle clip |
+| 4 | **Summit A/B calibration** of the `// CALIB` constants | Manual tuning (needs hardware) | Queued — gray-box literature defaults, not yet pinned | `HuggettFilter.h`, `HuggettHpStage.h`, `NlSvfCell.h` voicing/droop constants |
 
 ## v5 deep-dive — the selectable Summit spine
 
