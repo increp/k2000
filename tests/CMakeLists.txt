@@ -23,6 +23,8 @@ add_executable(k2000_tests
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
     TestDspSelfTests.cpp
+    fixtures/SpineShaperHarnessTests.cpp
+    fixtures/SpineHuggettHarnessTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
