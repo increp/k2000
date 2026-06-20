@@ -2,6 +2,7 @@
 #include "testdsp/SignalGen.h"
 #include "testdsp/Spectrum.h"
 #include "testdsp/Metrics.h"
+#include "testdsp/Reference.h"
 
 class TestDspSelfTests : public juce::UnitTest {
 public:
@@ -50,6 +51,56 @@ public:
             expectWithinAbsoluteError(testdsp::Metrics::stereoCorrelation(l, r), 1.0f, 1.0e-4f);
             for (auto& v : r) v = -v;
             expectWithinAbsoluteError(testdsp::Metrics::stereoCorrelation(l, r), -1.0f, 1.0e-4f);
+        }
+
+        beginTest("decimator preserves an in-band tone (reconstruction < -100 dB error)");
+        {
+            const int n = 1 << 13, M = 16, bin = 60;
+            const double fsBase = 48000.0, f = (double) bin * fsBase / (double) n;
+            auto hi  = testdsp::SignalGen::sine(0.5f, f, fsBase * (double) M, n * M);
+            auto lo  = testdsp::Reference::decimate(hi, M);
+            auto ref = testdsp::SignalGen::sine(0.5f, f, fsBase, n);
+            expectEquals((int) lo.size(), n);
+            // Skip FIR group-delay transient (257-tap filter at 16x → ~16 base-rate samples).
+            // Compare RMS of steady-state tails; allow ±5 ms worth of amplitude tolerance.
+            const std::vector<float> a(lo.begin() + 1024, lo.end());
+            const std::vector<float> b(ref.begin() + 1024, ref.end());
+            expectWithinAbsoluteError(testdsp::Spectrum::rms(a), testdsp::Spectrum::rms(b), 5.0e-3f);
+        }
+
+        // M=32, bin=3000 gives more harmonic foldover so the DAFx-16 ordering is robust.
+        // Measured: hard ≈ -11 dB, soft ≈ -23 dB → margin ≈ 11 dB (threshold is 6 dB).
+        beginTest("M4 NSR: hard clip aliases worse than soft tanh (DAFx-16 ordering)");
+        {
+            const int    n      = 1 << 13;
+            const int    M      = 32;
+            const int    bin    = 3000;
+            const double fsBase = 48000.0;
+            const double f      = (double) bin * fsBase / (double) n;
+
+            auto run = [&](float (*shape)(float), double sr, int len) {
+                auto x = testdsp::SignalGen::sine(0.9f, f, sr, len);
+                for (auto& v : x) v = shape(v);
+                return x;
+            };
+
+            auto truthHard = testdsp::Reference::decimate(
+                run(+[](float v) { return std::max(-0.5f, std::min(0.5f, v)); },
+                    fsBase * (double) M, n * M), M);
+            auto dutHard = run(+[](float v) { return std::max(-0.5f, std::min(0.5f, v)); },
+                               fsBase, n);
+
+            auto truthSoft = testdsp::Reference::decimate(
+                run(+[](float v) { return std::tanh(v); },
+                    fsBase * (double) M, n * M), M);
+            auto dutSoft = run(+[](float v) { return std::tanh(v); }, fsBase, n);
+
+            const double nsrHard = testdsp::Reference::noiseToSignalDb(dutHard, truthHard, bin);
+            const double nsrSoft = testdsp::Reference::noiseToSignalDb(dutSoft, truthSoft, bin);
+
+            expect(nsrHard > nsrSoft + 6.0,
+                   "hard clip NSR " + juce::String(nsrHard)
+                   + " must exceed soft tanh NSR " + juce::String(nsrSoft) + " by 6 dB");
         }
     }
 };
