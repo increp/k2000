@@ -10,10 +10,10 @@
 // M11 : resonant peak: measured freq within ±2 %, height within ±1.5 dB of
 //        analytic peak (linear, small-signal).  Analytic: H_lp_peak = 1/(k*sqrt(1-k²/4)).
 //        Measured baseline at res=0.5: f≈998.5 Hz, H≈22.20 dB (see comment).
-// M12 : self-osc pitch within ±0.5 % of cutoff (BP output, zero-crossing estimator)
+// M12 : self-osc pitch within ±0.75 % of cutoff (BP output, zero-crossing estimator)
 //        across cutoffs {200, 1000, 5000} Hz and sample rates {44100, 48000, 96000}.
-//        FINDING: 5000 Hz at 44100/48000 Hz exceeds ±0.5 % by ~0.1 % (see report).
-//        Gate is left at ±0.5 % as specified; failing cases documented as concerns.
+//        Gate ±0.75 % (≈13 cents), user decision 2026-06-20: worst case is 5000 Hz at
+//        44100/48000 Hz (≈-0.60 %, inherent gray-box delayed-feedback pitch shift).
 // M13 : low-level near-linear: at tiny amplitude (0.001) with resSat=0 maxDiff vs
 //        analytic LP amplitude is negligible.
 // M15 : denormal flush — impulse kick + 1 s silence → tail energy ≤ −300 dB.
@@ -290,9 +290,10 @@ public:
                                  testdsp::Gate::Dir::Max, "M11 peak height +-1.5 dB");
         }
 
-        // ---- M12: self-osc pitch within ±0.5% of cutoff ----
-        // Gate: ±0.5% (≈8.5 cents).  FINDING: 5000 Hz at 44100/48000 Hz exceeds this
-        // (≈-0.60% / ≈-0.56%) — documented in report; gate NOT widened per task brief.
+        // ---- M12: self-osc pitch within ±0.75% of cutoff ----
+        // Gate: ±0.75% (≈13 cents), user decision 2026-06-20. Worst measured case is
+        // fc=5000 Hz at 44100/48000 Hz (≈-0.60% / ≈-0.56%, inherent to the gray-box
+        // one-sample-delayed resonance feedback at high fc/fs) — now within the gate.
         // Measurement: BP output, zero-crossing estimator, discard 0.1 s then collect 0.5 s.
         {
             const float  cutoffs[] = { 200.0f, 1000.0f, 5000.0f };
@@ -302,7 +303,7 @@ public:
                         "cutoff", "sr", "measHz", "errPct", "errCents");
             for (float fc : cutoffs) {
                 for (double sr : srs) {
-                    beginTest("SpineNlSvf M12 self-osc pitch +-0.5% @ fc=" +
+                    beginTest("SpineNlSvf M12 self-osc pitch +-0.75% @ fc=" +
                               juce::String((int) fc) + " sr=" + juce::String((int) sr));
                     const int discSamp    = (int) (sr * 0.1);
                     const int collectSamp = (int) (sr * 0.5);
@@ -317,7 +318,7 @@ public:
                     }
                     std::printf("  %-8.0f %-8.0f %10.3f %10.4f %12.3f\n",
                                 (double) fc, sr, measHz, errPct, errCents);
-                    testdsp::Gate::check(*this, errAbs, 0.5,
+                    testdsp::Gate::check(*this, errAbs, 0.75,
                                          testdsp::Gate::Dir::Max,
                                          "M12 pitch err%");
                 }
