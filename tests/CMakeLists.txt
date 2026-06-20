@@ -22,6 +22,7 @@ add_executable(k2000_tests
     MultiLayerTests.cpp
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
+    TestDspSelfTests.cpp
     ../src/PluginProcessor.cpp
     ../src/Voice.cpp
     ../src/VoiceManager.cpp
@@ -38,6 +39,8 @@ add_executable(k2000_tests
     ../src/dsp/spine/FilterModelLibrary.cpp
     ../src/dsp/spine/SpineFilterSlot.cpp
     ../src/dsp/spine/HuggettHpStage.cpp)
+
+target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(k2000_tests PRIVATE
     juce::juce_core
