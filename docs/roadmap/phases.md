@@ -87,6 +87,13 @@ A robust, reusable **per-component test harness** for Bernie's DSP (and later Ri
 
 It grows to cover every spine / source / FX component as it lands, and gates releases.
 
+### Harness extensions — grounding gates in real synths (future)
+
+Two linked follow-ons so the harness's gates correspond to **real instruments**, not only our own baseline + literature:
+
+1. **Gate re-evaluation against real synthesizers** — revisit every gate threshold (M3–M15) and re-anchor them to values measured from real hardware / reference synths, not just the committed plain-tanh baseline. Ties into the Summit A/B calibration: the gates shift from "don't regress from ourselves" to "match the real instrument."
+2. **Commercial-VST comparison & reverse-engineering rig** — a harness mode that stress-tests a commercial VST (frequency sweeps, drive, resonance, self-oscillation, modulation), captures its output, and compares it to Bernie's equivalent function blocks through the metric catalog; where they differ, reverse-engineer the target's behaviour and nudge our DSP toward its spec. Possibly **local-LLM-assisted** (analyse the response data, propose coefficient/param adjustments). Needs its own brainstorm → spec: offline VST hosting/automation, capture format, the comparison metrics, the RE/calibration loop, and the **legal/licensing scope** of analysing third-party plugins. Feeds (1).
+
 ## v5 deep-dive — the selectable Summit spine
 
 v5 builds the spine as a **selectable `FilterModel` library** (append-only, stable-ID — the `AlgorithmLibrary`/[ADR-0008](../decisions/0008-algorithm-selection-and-param-namespace.md) idiom) with **live, click-free hot-swap**: an automatable per-Layer `spine.filterModel` selects the model, and switching crossfades two **heap-free, in-place** per-voice instances (equal-power) so it never clicks. Params are a **common core** (cutoff/res/drive/output — always front-panel + mod-targetable) plus **per-model namespaced banks**. The full architecture (interface, library, `SpineFilterSlot`, hot-swap, migration) is in the [v5 spec](../specs/2026-06-16-v5-constant-summit-voice-design.md); locked as **L7**, with the live-switch constraints recorded in **Q12/Q17–Q19**.
