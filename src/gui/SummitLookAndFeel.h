@@ -13,6 +13,15 @@ public:
                           float rotaryStartAngle, float rotaryEndAngle,
                           juce::Slider&) override;
 
+    // Compact combo rendering: the V4 default reserves a 30 px arrow gutter and a
+    // 16 px font, which truncates panel combos ("12 dB"->"1...", "Huggett"->"Hugg...").
+    // We use an 18 px arrow zone and a 13 px font so the text fits at our cell sizes.
+    void drawComboBox(juce::Graphics&, int width, int height, bool isButtonDown,
+                      int buttonX, int buttonY, int buttonW, int buttonH,
+                      juce::ComboBox&) override;
+    juce::Font getComboBoxFont(juce::ComboBox&) override;
+    void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
+
     // Shared palette (also used directly by Section/editor painting).
     static const juce::Colour panelBg;     // window background
     static const juce::Colour moduleBg;    // section fill

@@ -23,7 +23,11 @@ private:
     juce::Label    editLayerLabel_;
     juce::ComboBox editLayerCombo_;
     int            editLayer_ = 0;
-    LabeledKnob    masterGain_{ "Gain" };
+    // Master gain lives in the thin top utility bar, where a rotary LabeledKnob's
+    // stacked value+caption collide; a horizontal slider with a side value reads
+    // cleanly at 40 px tall.
+    juce::Label    masterGainLbl_;
+    juce::Slider   masterGain_{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
 
     // --- Signal row ---
     Section sourceSection_{ "VAST Source / DSP", /*spine*/ false };

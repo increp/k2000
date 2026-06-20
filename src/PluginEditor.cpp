@@ -7,7 +7,7 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     buildStaticControls();
 
     // master gain is not per-layer — bind once.
-    binder_.bind(masterGain_.slider(), params::masterGain);
+    binder_.bind(masterGain_, params::masterGain);
 
     bindLayer(0);
     setSize(1040, 740);
@@ -36,6 +36,10 @@ void K2000AudioProcessorEditor::buildStaticControls() {
         bindLayer(editLayer_);
     };
     addAndMakeVisible(editLayerCombo_);
+    masterGainLbl_.setText("Gain", juce::dontSendNotification);
+    masterGainLbl_.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(masterGainLbl_);
+    masterGain_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 52, 22);
     addAndMakeVisible(masterGain_);
 
     // Source / DSP section
@@ -169,7 +173,8 @@ void K2000AudioProcessorEditor::resized() {
     {
         auto bar = area.removeFromTop(40);
         title_.setBounds(bar.removeFromLeft(180));
-        masterGain_.setBounds(bar.removeFromRight(70));
+        masterGain_.setBounds(bar.removeFromRight(150).reduced(4, 8));
+        masterGainLbl_.setBounds(bar.removeFromRight(40).reduced(0, 8));
         editLayerCombo_.setBounds(bar.removeFromRight(110).reduced(0, 8));
         editLayerLabel_.setBounds(bar.removeFromRight(90).reduced(0, 8));
     }
@@ -230,11 +235,12 @@ void K2000AudioProcessorEditor::resized() {
             // HP pre-filter row
             auto hpRow = fc.removeFromTop(rowH);
             fc.removeFromTop(divGap);  // visual divider gap
-            // HP section label (narrow left column)
-            const int lblW = 50;
-            const int enW  = 34;
+            // HP section label + enable toggle (left column). Width fits the
+            // tick box plus the "on" caption without clipping.
+            const int lblW = 58;
+            const int enW  = 50;
             hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 16);
-            hpEnable_.setBounds(hpRow.getX() + (lblW - enW) / 2, hpRow.getY() + 18, enW, 22);
+            hpEnable_.setBounds(hpRow.getX() + 2, hpRow.getY() + 18, enW, 22);
             hpRow.removeFromLeft(lblW);
             // Remaining cells: HP cut, HP reso, HP slope, HP drive
             layoutCells(hpRow, { { nullptr,      &hpCutoff_ },

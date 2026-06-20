@@ -52,3 +52,33 @@ void SummitLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     g.setColour(textBright);
     g.drawLine({ centre, tip }, juce::jmax(1.5f, radius * 0.08f));
 }
+
+// A combo's arrow gutter, narrower than the V4 default's 30 px so compact cells
+// keep room for their text.
+static constexpr int kComboArrowZone = 18;
+
+juce::Font SummitLookAndFeel::getComboBoxFont(juce::ComboBox& box) {
+    return juce::Font(juce::jmin(13.0f, (float) box.getHeight() * 0.75f));
+}
+
+void SummitLookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label) {
+    label.setBounds(6, 1, box.getWidth() - (kComboArrowZone + 4), box.getHeight() - 2);
+    label.setFont(getComboBoxFont(box));
+}
+
+void SummitLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool,
+                                     int, int, int, int, juce::ComboBox& box) {
+    const auto bounds = juce::Rectangle<int>(0, 0, width, height).toFloat();
+    g.setColour(box.findColour(juce::ComboBox::backgroundColourId));
+    g.fillRoundedRectangle(bounds, 3.0f);
+    g.setColour(box.findColour(juce::ComboBox::outlineColourId));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), 3.0f, 1.0f);
+
+    juce::Rectangle<int> arrow(width - kComboArrowZone, 0, kComboArrowZone - 4, height);
+    juce::Path p;
+    p.startNewSubPath((float) arrow.getX() + 3.0f,    (float) arrow.getCentreY() - 2.0f);
+    p.lineTo         ((float) arrow.getCentreX(),     (float) arrow.getCentreY() + 3.0f);
+    p.lineTo         ((float) arrow.getRight() - 3.0f, (float) arrow.getCentreY() - 2.0f);
+    g.setColour(box.findColour(juce::ComboBox::textColourId).withAlpha(box.isEnabled() ? 0.9f : 0.3f));
+    g.strokePath(p, juce::PathStrokeType(2.0f));
+}
