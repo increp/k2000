@@ -168,9 +168,12 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpCutoff, 1},
             "Spine HP Cutoff " + juce::String(i),
             juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 20.0f));
+        // HP resonance capped at 0.15: the OTA HP self-oscillates too hot across
+        // its full range, so the knob's full travel maps to 0..0.15 (knob max ==
+        // what 15% used to give) for a musically useful range.
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpResonance, 1},
             "Spine HP Resonance " + juce::String(i),
-            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+            juce::NormalisableRange<float>{0.0f, 0.15f, 0.0f}, 0.0f));
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineHpSlope, 1},
             "Spine HP Slope " + juce::String(i), juce::StringArray{"12 dB", "24 dB"}, 0));
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpDrive, 1},
@@ -182,7 +185,7 @@ APVTS::ParameterLayout createLayout() {
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
-        "Master Gain", juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, -3.5f));
+        "Master Gain", juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, -9.0f));
 
     return layout;
 }

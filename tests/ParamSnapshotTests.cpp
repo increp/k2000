@@ -43,6 +43,7 @@ public:
         expectWithinAbsoluteError(s.svfCutoffHz, 1000.0f, 1e-3f);
         expectWithinAbsoluteError(s.svfResonance, 0.2f, 1e-6f);
         expectWithinAbsoluteError(s.ampSustain, 0.8f, 1e-6f);
+        expectWithinAbsoluteError(s.masterGainDb, -9.0f, 1e-3f);
         expect(s.oscWaveform == 0);
         expect(s.svfType == 0);
 
@@ -76,6 +77,13 @@ public:
             expectWithinAbsoluteError(s.hpCutoffHz, 20.0f, 1e-3f);
             expectWithinAbsoluteError(s.hpResonance, 0.0f, 1e-6f);
             expectWithinAbsoluteError(s.hpDrive, 0.0f, 1e-6f);
+
+            // HP resonance is capped: the knob's max maps to 0.15 (full-range
+            // OTA HP self-oscillates too hot), not 1.0.
+            apvts.getParameter(params::layerIds(0).spineHpResonance)
+                ->setValueNotifyingHost(1.0f);
+            s = params::snapshot(apvts, 0);
+            expectWithinAbsoluteError(s.hpResonance, 0.15f, 1e-4f);
         }
     }
 };
