@@ -54,6 +54,17 @@ The v5 keystone (selectable spine + Huggett foundation) shipped as **v5.0.0** (P
 
 *Cross-cutting in the v5.0 cycle:* a docs/README/ADR audit & groom (✅ shipped), and a SAST + SCA security-scan CI baseline (queued — see follow-ups below). DSP references for v5.0: [tpt-svf-core.md](../architecture/tpt-svf-core.md), [nonlinear-filter-modeling.md](../architecture/nonlinear-filter-modeling.md). ([antialiasing-adaa.md](../architecture/antialiasing-adaa.md) is **superseded** — ADAA was removed in the 2026-06-20 remediation; the shapers are plain tanh.)
 
+### v5 build sequence (resolved 2026-06-20)
+
+Execution order — this is what we build; the point-release *numbers* above are labels and no longer track build order:
+
+**harness → Q17 click-free hot-swap → Separation → v5.1 HQ OS tiers → Moog → SEM**
+
+- **Q17 hot-swap is now a prerequisite** (built 2nd), before any second filter model: adding Moog makes a runtime model-*type* switch reachable, which exposes the deferred dangling-per-voice-state hazard. Scope: equal-power click-free crossfade on model change + migrate per-voice `State` from heap to in-place. Resolves register **Q17–Q19**.
+- **Moog is gated on BOTH** the Q17 hot-swap **and** the **v5.1 oversampling tiers** (Moog is oversampled), so **v5.1 lands before Moog** despite the lower number. Moog also: pole-mix BP/HP, a `spine.moog.bassComp` knob, and a DC blocker.
+- **Separation (v5.2)** ships the bipolar Summit law + nine routings, separation widened to **±4 oct**; the OSCar one-sided voicing is deferred.
+- Specs (each carries a "Decisions (resolved 2026-06-20)" section): [test harness](../specs/2026-06-20-test-harness-design.md) · [Separation](../specs/2026-06-20-huggett-separation-design.md) · [Moog](../specs/2026-06-20-moog-ladder-design.md).
+
 ### v5.0 follow-ups — queued (not yet scheduled)
 
 Work left on the table after v5.0 shipped, paused for the user to pick the next task. Order here is rough priority, not a commitment.
