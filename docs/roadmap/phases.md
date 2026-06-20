@@ -88,7 +88,7 @@ New open questions this raises are registered as **Q12–Q19** in the [engine re
 
 Engine-level decisions and open questions live in the living [engine architecture register](../architecture/engine-questions.md) (groomed for consistency before each spec/ADR). Earlier carried note:
 
-- **Can a VAST algorithm use the same function block more than once? → Yes** (K2000 Guide p. 253). v3 shipped the simpler per-block-type namespace; the positional / per-F-block model (and any param migration) is folded into the **v6/v7** Dynamic-VAST + block-library work.
+- **Can a VAST algorithm use the same function block more than once? → Yes** (VAST permits a function block to repeat; per the K2088 lineage). v3 shipped the simpler per-block-type namespace; the positional / per-F-block model (and any param migration) is folded into the **v6/v7** Dynamic-VAST + block-library work.
 
 ## What this is *not*
 

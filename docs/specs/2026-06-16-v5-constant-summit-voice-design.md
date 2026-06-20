@@ -1,6 +1,6 @@
 # v5 — Constant Summit voice (selectable spine filter)
 
-**Status:** Design proposed, 2026-06-16.
+**Status:** Plan 1 (foundation + linear Huggett) shipped v5.0.0; Plan 2 (nonlinear Huggett + dedicated HP pre-filter) shipped as 5.1.0 — see the [companion spec](2026-06-17-v5-huggett-nonlinear-hp-prefilter-design.md). Mod-system companion spec still pending.
 
 **Scope:** The v5 keystone — build the always-present Summit spine as a **selectable, live-switchable `FilterModel` library** with click-free hot-swap, shipping **Huggett** (dual TPT SVF + separation, gray-box) as the flagship default model, promoted out of the optional palette into the constant spine slot — **stereo, per-Layer**, at the 256-voice target. **Decomposition:** v5 is large, so it splits into two specs — **this one is the filter + model-selection architecture**; a **companion v5 spec** covers the rest of the spine (the VCA + amp/mod envelopes, LFOs, mod matrix, voice modes). Moog is a v5.1 fast-follow (one more library entry) and is out of scope here except where the abstraction must accommodate it.
 
@@ -93,7 +93,7 @@ A cumulative shim migrates v1–v4 presets onto the spine with `spine.filterMode
 ## Scope boundaries
 
 - **In (v5):** `FilterModel`/`FilterModelLibrary`/`SpineFilterSlot`, the param model, live crossfade hot-swap, **Huggett (dual, gray-box)**, the permanent Summit front panel for the spine, preset migration.
-- **v5.1:** **Moog ladder** as the second library entry (staged linear-ZDF → nonlinear → cheap AA) — proves extensibility.
+- **v5.2:** **Moog ladder** as the second library entry (staged linear-ZDF → nonlinear → cheap AA) — proves extensibility. (v5.1 = HQ oversampling tiers + visual keyboard.)
 - **Out (later):** Oberheim+ models; OSCar separation modes; white-box OTA; any per-voice oversampling object; mod-matrix on the model selector itself (Q19 to confirm whether it is a destination).
 
 ## Open questions raised

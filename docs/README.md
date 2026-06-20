@@ -1,6 +1,6 @@
 # k2000 documentation
 
-VST3 synth plugin: hybrid of Novation Peak (NCO oscillators + analog-modeled filter character) and Kurzweil K2000 VAST (user-configurable per-voice DSP graph).
+VST3 synth plugin: a **K2061/K2088-class VAST engine** (user-wired per-voice DSP graph) bracketed by a **constant Novation Summit analog voice** (always-present filter + drive → VCA + modulation). See [ADR-0010](decisions/0010-k2061-repositioning-constant-summit-spine.md) and the [roadmap](roadmap/phases.md). (The earlier "Peak + Kurzweil K2000" framing is superseded — the K2000 is no longer a reference; "k2000" stays a repo codename.)
 
 Built with JUCE, in C++. Linux for local development; Windows builds produced by GitHub Actions for testing in Ableton 12.
 
@@ -24,7 +24,7 @@ Built with JUCE, in C++. Linux for local development; Windows builds produced by
 
 ## Start here
 
-- **First time reading?** Start with the [v1 design](specs/2026-05-25-v1-skeleton-design.md) for the end-to-end skeleton, then the [v2 design](specs/2026-06-11-v2-layer-abstraction-design.md) for the current Layer/Program abstraction.
+- **First time reading?** Start with the [v4.5 re-positioning spec](specs/2026-06-16-v4.5-k2061-repositioning-design.md) (the current north star) and the [roadmap](roadmap/phases.md). For history, the [v1 design](specs/2026-05-25-v1-skeleton-design.md) covers the original end-to-end skeleton.
 - **Need to know why a decision was made?** Check [`decisions/`](decisions/).
 - **Curious about a specific subsystem?** Check [`architecture/`](architecture/).
 - **Wondering what's next?** Check [`roadmap/`](roadmap/).

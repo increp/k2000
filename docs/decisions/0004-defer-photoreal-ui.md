@@ -5,7 +5,7 @@
 
 ## Context
 
-The long-term UI vision is photoreal: high-resolution photographs of actual Novation Summit and Kurzweil K2000 hardware composited as a backdrop, with interactive controls (knobs, buttons, combo boxes) overlaid on the photo regions corresponding to the real hardware controls.
+The long-term UI vision is photoreal: high-resolution photographs of actual Novation Summit and K2061/K2088 hardware composited as a backdrop, with interactive controls (knobs, buttons, combo boxes) overlaid on the photo regions corresponding to the real hardware controls.
 
 The question for v1 is whether to build that UI now or use minimal default JUCE controls.
 

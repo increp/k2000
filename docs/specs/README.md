@@ -14,4 +14,5 @@ Filename convention: `YYYY-MM-DD-<topic>-design.md`. The date is when the spec w
 | [v4 — Multi-Layer Programs](2026-06-15-v4-multi-layer-programs-design.md) | Implemented (v4.0.0) |
 | [v4.5(C) — K2061 engine re-positioning](2026-06-16-v4.5-k2061-repositioning-design.md) | Accepted (direction-setting) |
 | [v4.5(B) — Summit UI foundation](2026-06-16-v4.5-b-summit-ui-foundation-design.md) | Implemented (v4.5.0) |
-| [v5 — Constant Summit voice (selectable spine filter)](2026-06-16-v5-constant-summit-voice-design.md) | In progress — Plan 1/3 (foundation + linear Huggett) implemented |
+| [v5 — Constant Summit voice (selectable spine filter)](2026-06-16-v5-constant-summit-voice-design.md) | Plan 1 (foundation + linear Huggett) shipped v5.0.0; mod-system companion spec pending |
+| [v5.0 — Nonlinear Huggett + HP pre-filter](2026-06-17-v5-huggett-nonlinear-hp-prefilter-design.md) | Implemented — merged to main as 5.1.0 |

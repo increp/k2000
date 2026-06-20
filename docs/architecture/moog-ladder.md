@@ -1,6 +1,6 @@
 # AI Coding Agent Specification Research for Huggett and Moog Filters in JUCE VST3
 
-> **Second Moog dossier (2026-06-17, v5.01):** [filter-dossiers-sem-moog.md](filter-dossiers-sem-moog.md) corroborates and sharpens this report — adds D'Angelo-Välimäki (ICASSP 2013 / TASLP 2014), the `ddiakopoulos/MoogLadders` C++ comparison repo, the `juce::dsp::LadderFilter` API (a ready Moog-style multimode baseline), and Pirkle's output peak-limiter trick for clean self-oscillation without oversampling. This is the **Moog (v5.1)** library entry's source; Moog's patent (US 3,475,623) expired 1986.
+> **Second Moog dossier (2026-06-17, v5.01):** [filter-dossiers-sem-moog.md](filter-dossiers-sem-moog.md) corroborates and sharpens this report — adds D'Angelo-Välimäki (ICASSP 2013 / TASLP 2014), the `ddiakopoulos/MoogLadders` C++ comparison repo, the `juce::dsp::LadderFilter` API (a ready Moog-style multimode baseline), and Pirkle's output peak-limiter trick for clean self-oscillation without oversampling. This is the **Moog (v5.2)** library entry's source; Moog's patent (US 3,475,623) expired 1986. **AA policy (overrides this dossier):** k2000 uses **ADAA + hand-rolled inline HQ tiers**, *not* a per-voice `juce::dsp::Oversampling` object — see register **Q12** and [antialiasing-adaa.md](antialiasing-adaa.md); apply that to Moog too.
 
 ## Executive summary
 

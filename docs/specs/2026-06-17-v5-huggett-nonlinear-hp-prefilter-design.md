@@ -1,6 +1,6 @@
 # v5 — Huggett nonlinear stages + dedicated HP pre-filter
 
-**Status:** Design proposed, 2026-06-17.
+**Status:** Implemented — merged to main as plugin 5.1.0 (2026-06-19).
 **Version:** 5.01 (doc track). **Release:** completes the **v5 Huggett phase** (Plan 2, after the shipped Plan 1 foundation); plugin bump is a minor (suggest 5.1.0), exact number TBD.
 
 **Scope:** Turn the spine's flagship **Huggett** model from *linear* (today) into a **true-to-life, nonlinear** filter — three asymmetric tanh-class stages grounded in measured data — and add a **dedicated, always-available HP pre-filter** in front of the main multimode filter. Ships at **Light (ADAA) quality**; the HQ oversampling tiers and the on-screen keyboard are split to the next point release (see Release map). One combined plan, per the user's choice.
