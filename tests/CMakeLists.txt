@@ -61,7 +61,8 @@ target_compile_definitions(k2000_tests PRIVATE
     JUCE_STANDALONE_APPLICATION=1
     JUCE_USE_CURL=0
     JUCE_WEB_BROWSER=0
-    K2000_TESTING=1)
+    K2000_TESTING=1
+    BERNIE_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
 
 set_target_properties(k2000_tests PROPERTIES
     CXX_STANDARD 17

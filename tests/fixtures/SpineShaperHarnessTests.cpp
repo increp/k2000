@@ -16,6 +16,7 @@
 #include "testdsp/Metrics.h"
 #include "testdsp/Reference.h"
 #include "testdsp/Gate.h"
+#include "testdsp/GoldenIO.h"
 #include "../../src/dsp/spine/AsymSaturator.h"
 #include <cmath>
 #include <vector>
@@ -50,6 +51,8 @@ public:
         const int   bin    = 1500;               // fundamental bin index
         const double fsBase = 48000.0;
         const double f     = (double) bin * fsBase / (double) n;  // bin-aligned frequency
+
+        testdsp::GoldenSet golden("shaper_thd");   // M6 THD+N regression anchor (CSV)
 
         for (float drive : { 0.0f, 0.5f, 1.0f }) {
             const juce::String drvStr = juce::String(drive, 1);
@@ -96,7 +99,19 @@ public:
                 testdsp::Gate::check(*this, nsr, gate, testdsp::Gate::Dir::Max,
                                      "M4 NSR (v5.0 regression) drive=" + drvStr);
             }
+
+            // --- M6: THD+N anchored to a committed golden (±1 dB) ---
+            beginTest("SpineShaper M6 THD+N golden @drive=" + drvStr);
+            {
+                auto dut = testdsp::SignalGen::sine(0.9f, f, fsBase, n);
+                for (auto& v : dut) v = shapeRef(v, drive);
+                const double thd = testdsp::Metrics::thdPlusNDb(
+                    testdsp::Spectrum::magnitude(dut), bin);
+                std::printf("[SpineShaperHarness] drive=%.1f  THD+N=%.2f dB\n", drive, thd);
+                golden.check(*this, "thd_drive_" + drvStr, thd, 1.0);
+            }
         }
+        golden.flush();
     }
 };
 static SpineShaperHarnessTests spineShaperHarnessTestsInstance;

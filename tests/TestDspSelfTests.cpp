@@ -4,6 +4,7 @@
 #include "testdsp/Metrics.h"
 #include "testdsp/Reference.h"
 #include "testdsp/Gate.h"
+#include "testdsp/GoldenIO.h"
 #include "testdsp/Response.h"
 #include "testdsp/ProcessAdapter.h"
 #include <cmath>
@@ -162,6 +163,20 @@ public:
                                      "Response::magDb vs analytic @ f=" + juce::String((int) f) + " Hz");
             }
             std::printf("  worst err=%.3f dB\n", worstErr);
+        }
+
+        beginTest("GoldenIO round-trips a key,value map");
+        {
+            auto tmp = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                           .getChildFile("bernie_golden_selftest.csv");
+            std::map<juce::String, double> m { { "a", 1.5 }, { "b", -22.25 }, { "c", 0.0 } };
+            testdsp::GoldenIO::save(tmp, m);
+            const auto back = testdsp::GoldenIO::load(tmp);
+            expect(back.size() == 3, "all keys round-trip");
+            expectWithinAbsoluteError(back.at("a"), 1.5, 1.0e-9);
+            expectWithinAbsoluteError(back.at("b"), -22.25, 1.0e-9);
+            expectWithinAbsoluteError(back.at("c"), 0.0, 1.0e-9);
+            tmp.deleteFile();
         }
     }
 };
