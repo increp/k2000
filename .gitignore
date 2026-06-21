@@ -36,3 +36,8 @@ Builds/
 
 # Raw research inbox — drop files here; ingest + dispatch into docs/, don't commit raw
 docs/incoming_research/
+
+# Roadmap dashboard tool (data file IS committed; build/deps/requests are not)
+tools/roadmap-dashboard/node_modules/
+tools/roadmap-dashboard/dist/
+tools/roadmap-dashboard/requests/
