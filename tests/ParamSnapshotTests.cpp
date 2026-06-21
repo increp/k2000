@@ -87,7 +87,7 @@ public:
 
         beginTest("spine.huggett.routing snapshots and defaults to 0 (LP)");
         {
-            auto s = params::snapshot(apvts, 0);
+            s = params::snapshot(apvts, 0);
             expect(s.huggettRouting == 0, "default routing is 0 (LP)");
 
             if (auto* p = apvts.getParameter(params::layerIds(0).spineHuggettRouting))
