@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "params/Parameters.h"
+#include "util/Utf8.h"
 
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
@@ -78,6 +79,13 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(spineSlope_);
     filterSection_.addAndMakeVisible(spineSeparation_);
     filterSection_.addAndMakeVisible(spinePostDrive_);
+    spineRoutingLbl_.setText("Routing", juce::dontSendNotification);
+    spineRoutingLbl_.setJustificationType(juce::Justification::centred);
+    spineRouting_.addItemList(juce::StringArray{ "LP", "BP", "HP",
+        util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
+        "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 1);
+    filterSection_.addAndMakeVisible(spineRoutingLbl_);
+    filterSection_.addAndMakeVisible(spineRouting_);
 
     // HP pre-filter band controls
     hpSectionLbl_.setText("HP PRE", juce::dontSendNotification);
@@ -138,6 +146,7 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
 
     binder_.bind(spineModel_,               ids.spineModel);
     binder_.bind(spineSlope_,               ids.spineSlope);
+    binder_.bind(spineRouting_,             ids.spineHuggettRouting);
     binder_.bind(spineSeparation_.slider(), ids.spineSeparation);
 
     binder_.bind(hpEnable_,               ids.spineHpEnable);
@@ -251,10 +260,11 @@ void K2000AudioProcessorEditor::resized() {
             layoutCells(mainTop, { { &filterTypeLbl_, &filterType_ },
                                     { nullptr,         &filterCutoff_ },
                                     { nullptr,         &filterRes_ } });
-            layoutCells(fc,  { { &spineModelLbl_, &spineModel_ },
-                                { &spineSlopeLbl_, &spineSlope_ },
-                                { nullptr,         &spineSeparation_ },
-                                { nullptr,         &spinePostDrive_ } });
+            layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
+                                { &spineModelLbl_,  &spineModel_ },
+                                { &spineSlopeLbl_,  &spineSlope_ },
+                                { nullptr,          &spineSeparation_ },
+                                { nullptr,          &spinePostDrive_ } });
         }
     }
     area.removeFromTop(8);
