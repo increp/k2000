@@ -35,9 +35,17 @@ HuggettFilter::Resolved HuggettFilter::resolve() const noexcept {
         case Routing::BP:
             // a@cutA = HP (low edge) -> b@cutB = LP (high edge); separation = bandwidth.
             return { N::HP, N::LP, true, false, 1.0f };
-        default:
-            // Dual routings 3..11 are resolved in Task 2; fall back to LP until then.
-            return { N::LP, N::LP, true, false, 1.0f };
+        // --- Summit dual routings: slope ignored, both sections at cutA/cutB ---
+        case Routing::SeriesLPHP: return { N::LP, N::HP, true,  false, 1.0f };
+        case Routing::SeriesLPBP: return { N::LP, N::BP, true,  false, 1.0f };
+        case Routing::SeriesHPBP: return { N::HP, N::BP, true,  false, 1.0f };
+        case Routing::ParLPHP:    return { N::LP, N::HP, false, false, 0.5f };  // complementary -> sum/halve
+        case Routing::ParLPBP:    return { N::LP, N::BP, false, false, 0.5f };
+        case Routing::ParHPBP:    return { N::HP, N::BP, false, false, 0.5f };
+        case Routing::ParLPLP:    return { N::LP, N::LP, false, false, 1.0f };  // same-tap -> keep +6 dB bump
+        case Routing::ParBPBP:    return { N::BP, N::BP, false, false, 1.0f };
+        case Routing::ParHPHP:    return { N::HP, N::HP, false, false, 1.0f };
+        default:                  return { N::LP, N::LP, true,  false, 1.0f };
     }
 }
 
