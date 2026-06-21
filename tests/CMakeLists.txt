@@ -24,6 +24,7 @@ add_executable(k2000_tests
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
     CmajorSvfAdapterTests.cpp
+    CmajorSvfEquivalenceTests.cpp
     TestDspSelfTests.cpp
     fixtures/SpineShaperHarnessTests.cpp
     fixtures/SpineHuggettHarnessTests.cpp
