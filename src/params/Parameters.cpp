@@ -182,7 +182,7 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineHuggettRouting, 1},
             "Spine Routing " + juce::String(i),
             juce::StringArray{ "LP", "BP", "HP",
-                               util::u8("LP\xE2\x86\x92HP"), util::u8("LP\xE2\x86\x92BP"), util::u8("HP\xE2\x86\x92BP"),
+                               util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
                                "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 0));
     }
 
