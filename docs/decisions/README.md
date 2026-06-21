@@ -19,3 +19,4 @@ Filename convention: `NNNN-<short-slug>.md`, zero-padded sequential.
 | [0009](0009-multi-layer-program.md) | Multi-layer Program: shared pool, range routing | Accepted (v4) |
 | [0010](0010-k2061-repositioning-constant-summit-spine.md) | Re-position to K2061/K2088 VAST + constant Summit spine | Accepted (v4.5) |
 | [0011](0011-selectable-spine-filter-library.md) | Selectable spine filter: a curated library of analog filter models | Accepted (v5, 5.01) |
+| [0012](0012-cmajor-coexistence-evaluation.md) | Cmajor coexistence evaluation (pre-v6 gate) | Proposed (5.02) |
