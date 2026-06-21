@@ -1,0 +1,14 @@
+processor Gain
+{
+    input  stream float in;
+    output stream float out;
+    input  event  float gain [[ name: "Gain", min: 0, max: 4, init: 2 ]];
+
+    float g = 2.0f;
+    event gain (float v) { g = v; }
+
+    void main()
+    {
+        loop { out <- in * g; advance(); }
+    }
+}
