@@ -1,6 +1,7 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
-import { join, normalize, extname } from "node:path";
+import { join, normalize, extname, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { loadRoadmap, saveRoadmap, validateDoc } from "./store.ts";
 
 interface Options { roadmapPath: string; rootDir: string; }
@@ -47,7 +48,8 @@ export function createServer(opts: Options): http.Server {
       const rel = path === "/" ? "index.html" : path.replace(/^\/+/, "");
       const safe = normalize(rel).replace(/^(\.\.[/\\])+/, "");
       const filePath = join(opts.rootDir, safe);
-      if (!filePath.startsWith(opts.rootDir)) return send(res, 403, MIME[".html"], "Forbidden");
+      const rootWithSep = opts.rootDir.endsWith(sep) ? opts.rootDir : opts.rootDir + sep;
+      if (!filePath.startsWith(rootWithSep)) return send(res, 403, MIME[".html"], "Forbidden");
       try {
         const data = await readFile(filePath);
         const type = MIME[extname(filePath)] ?? "application/octet-stream";
@@ -63,7 +65,7 @@ export function createServer(opts: Options): http.Server {
 }
 
 // Auto-listen when run directly (node server/server.ts).
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+const isMain = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const rootDir = join(import.meta.dirname, "..");
   const roadmapPath = join(rootDir, "roadmap.json");
