@@ -39,7 +39,8 @@ async function onClick(ev: MouseEvent): Promise<void> {
 
   if (action === "edit") {
     const title = prompt("Title:", item.title);
-    if (title !== null && title !== item.title) { await commit(updateItem(doc, id, { title })); return; }
+    if (title === null) return; // Escape / cancel — no-op
+    if (title !== item.title) { await commit(updateItem(doc, id, { title })); return; }
     // If the title is unchanged, offer a status cycle instead.
     const cur = STATUS_CYCLE.indexOf(item.status);
     const next = STATUS_CYCLE[(cur + 1) % STATUS_CYCLE.length];
@@ -75,7 +76,8 @@ async function onDecompose(id: string): Promise<void> {
     `Request written to:\n${file}\n\n` +
     `The decomposition prompt has been copied to your clipboard — paste it into Claude Code.\n\n` +
     `Prompt:\n${prompt}\n\n` +
-    `When Claude finishes, reload this page to see the new tasks.`,
+    `When Claude finishes, RELOAD this page before making any further edits — ` +
+    `otherwise an edit from this stale tab could overwrite the tasks Claude just added.`,
   );
 }
 
