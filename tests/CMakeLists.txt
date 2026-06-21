@@ -25,6 +25,7 @@ add_executable(k2000_tests
     HpPreFilterTests.cpp
     CmajorSvfAdapterTests.cpp
     CmajorSvfEquivalenceTests.cpp
+    CmajorFilterModelTests.cpp
     TestDspSelfTests.cpp
     fixtures/SpineShaperHarnessTests.cpp
     fixtures/SpineHuggettHarnessTests.cpp
@@ -47,7 +48,8 @@ add_executable(k2000_tests
     ../src/dsp/spine/FilterModelLibrary.cpp
     ../src/dsp/spine/SpineFilterSlot.cpp
     ../src/dsp/spine/HuggettHpStage.cpp
-    ../src/dsp/spine/cmajor/SvfLinearAdapter.cpp)
+    ../src/dsp/spine/cmajor/SvfLinearAdapter.cpp
+    ../src/dsp/spine/cmajor/CmajorSvfFilter.cpp)
 
 target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
