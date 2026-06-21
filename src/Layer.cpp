@@ -39,7 +39,17 @@ void Layer::updateParameters(const ParamSnapshot& s) {
     }
     if (huggett_) {
         huggett_->setCommon(snapshot_.svfCutoffHz, snapshot_.svfResonance, snapshot_.spineDrive);
-        huggett_->setMode(static_cast<HuggettFilter::Mode>(juce::jlimit(0, 2, snapshot_.svfType)));
+        // OQ3: spine.huggett.routing is the source of truth for spine mode. When it is
+        // still at its default (0) AND a legacy preset selected a non-LP filter.type,
+        // seed the routing once from filter.type (filter.type order LP,HP,BP,Notch ->
+        // routing order LP,BP,HP; Notch->LP). Otherwise use the stored routing.
+        int routingIdx = snapshot_.huggettRouting;
+        if (routingIdx == 0) {
+            switch (snapshot_.svfType) { case 1: routingIdx = 2; break;   // HP
+                                         case 2: routingIdx = 1; break;   // BP
+                                         default: routingIdx = 0; break; } // LP / Notch
+        }
+        huggett_->setRouting(static_cast<HuggettFilter::Routing>(routingIdx));
         huggett_->setSlope(snapshot_.spineSlope == 0 ? HuggettFilter::Slope::db12 : HuggettFilter::Slope::db24);
         huggett_->setSeparation(snapshot_.spineSeparationOct);
     }

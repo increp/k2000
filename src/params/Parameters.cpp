@@ -46,7 +46,8 @@ LayerIds buildIds(int layer) {
     id.spineHpCutoff    = p + "spine.hp.cutoff";
     id.spineHpResonance = p + "spine.hp.resonance";
     id.spineHpSlope     = p + "spine.hp.slope";
-    id.spinePostDrive   = p + "spine.huggett.postDrive";
+    id.spinePostDrive       = p + "spine.huggett.postDrive";
+    id.spineHuggettRouting  = p + "spine.huggett.routing";
     return id;
 }
 
@@ -155,7 +156,7 @@ APVTS::ParameterLayout createLayout() {
             "Spine Slope " + juce::String(i), juce::StringArray{"12 dB", "24 dB"}, 1));
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineSeparation, 1},
             "Spine Separation " + juce::String(i),
-            juce::NormalisableRange<float>{-2.0f, 2.0f, 0.0f}, 0.0f));
+            juce::NormalisableRange<float>{-4.0f, 4.0f, 0.0f}, 0.0f));
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineDrive, 1},
             "Spine Drive " + juce::String(i),
             juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
@@ -178,6 +179,11 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spinePostDrive, 1},
             "Spine Post Drive " + juce::String(i),
             juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineHuggettRouting, 1},
+            "Spine Routing " + juce::String(i),
+            juce::StringArray{ "LP", "BP", "HP",
+                               util::u8("LP\xE2\x86\x92HP"), util::u8("LP\xE2\x86\x92BP"), util::u8("HP\xE2\x86\x92BP"),
+                               "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 0));
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
@@ -213,6 +219,7 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.hpResonance     = raw(apvts, id.spineHpResonance);
     s.hpSlope         = (int) raw(apvts, id.spineHpSlope);
     s.huggettPostDrive = raw(apvts, id.spinePostDrive);
+    s.huggettRouting = (int) raw(apvts, id.spineHuggettRouting);
     return s;
 }
 
