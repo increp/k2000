@@ -41,3 +41,6 @@ docs/incoming_research/
 tools/roadmap-dashboard/node_modules/
 tools/roadmap-dashboard/dist/
 tools/roadmap-dashboard/requests/
+
+# Session handoffs (save-session / PreCompact auto-save) — also in global gitignore
+.handoffs/
