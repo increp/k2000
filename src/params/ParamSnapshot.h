@@ -47,4 +47,8 @@ struct ParamSnapshot {
     int   hpSlope       = 0;      // 0=12 dB, 1=24 dB
     // Main Huggett post-filter drive (Huggett bank)
     float huggettPostDrive = 0.0f;
+    // Main Huggett routing (Huggett bank): index into HuggettFilter::Routing.
+    // 0=LP 1=BP 2=HP, 3..5 series LP->HP/LP->BP/HP->BP, 6..8 parallel LP+HP/LP+BP/HP+BP,
+    // 9..11 parallel LP+LP/BP+BP/HP+HP.
+    int huggettRouting = 0;
 };

@@ -84,6 +84,17 @@ public:
             s = params::snapshot(apvts, 0);
             expectWithinAbsoluteError(s.hpResonance, 0.15f, 1e-4f);
         }
+
+        beginTest("spine.huggett.routing snapshots and defaults to 0 (LP)");
+        {
+            s = params::snapshot(apvts, 0);
+            expect(s.huggettRouting == 0, "default routing is 0 (LP)");
+
+            if (auto* p = apvts.getParameter(params::layerIds(0).spineHuggettRouting))
+                p->setValueNotifyingHost(p->convertTo0to1(6.0f));
+            s = params::snapshot(apvts, 0);
+            expect(s.huggettRouting == 6, "routing param round-trips to 6 (LP+HP)");
+        }
     }
 };
 

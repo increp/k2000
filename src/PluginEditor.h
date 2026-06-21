@@ -44,6 +44,8 @@ private:
     LabeledKnob    filterCutoff_{ "Cutoff" }, filterRes_{ "Reso" };
     juce::ComboBox spineModel_, spineSlope_;
     juce::Label    spineModelLbl_, spineSlopeLbl_;
+    juce::ComboBox spineRouting_;
+    juce::Label    spineRoutingLbl_;
     LabeledKnob    spineSeparation_{ "Sep" };
     // HP pre-filter band (Layout B)
     juce::Label        hpSectionLbl_;
