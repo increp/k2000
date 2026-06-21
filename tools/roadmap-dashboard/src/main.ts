@@ -64,8 +64,20 @@ app().addEventListener("click", (ev) => { void onClick(ev as MouseEvent); });
 
 refresh().catch((e) => { app().textContent = `Failed to load roadmap: ${(e as Error).message}`; });
 
-// Placeholder until Task 7 implements the handoff.
-async function onDecompose(_id: string): Promise<void> { alert("Decompose lands in Task 7."); }
+async function onDecompose(id: string): Promise<void> {
+  const r = await fetch("/api/decompose", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ itemId: id }),
+  });
+  if (!r.ok) { alert(`Decompose failed: ${r.status}`); return; }
+  const { prompt, file } = await r.json() as { prompt: string; file: string };
+  try { await navigator.clipboard.writeText(prompt); } catch { /* clipboard may be blocked; prompt still shown */ }
+  alert(
+    `Request written to:\n${file}\n\n` +
+    `The decomposition prompt has been copied to your clipboard — paste it into Claude Code.\n\n` +
+    `Prompt:\n${prompt}\n\n` +
+    `When Claude finishes, reload this page to see the new tasks.`,
+  );
+}
 
 let draggedId: string | null = null;
 

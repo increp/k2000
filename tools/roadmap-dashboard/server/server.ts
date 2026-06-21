@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join, normalize, extname, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadRoadmap, saveRoadmap, validateDoc } from "./store.ts";
+import { buildDecomposeRequest, writeDecomposeRequest } from "./decompose.ts";
 
 interface Options { roadmapPath: string; rootDir: string; }
 
@@ -42,6 +43,17 @@ export function createServer(opts: Options): http.Server {
         catch (e) { return send(res, 400, MIME[".json"], JSON.stringify({ error: (e as Error).message })); }
         await saveRoadmap(opts.roadmapPath, doc);
         return send(res, 200, MIME[".json"], JSON.stringify({ ok: true }));
+      }
+
+      if (path === "/api/decompose" && req.method === "POST") {
+        const raw = await readBody(req);
+        const { itemId } = JSON.parse(raw) as { itemId?: string };
+        const doc = await loadRoadmap(opts.roadmapPath);
+        const request = itemId ? buildDecomposeRequest(doc, itemId) : null;
+        if (!request) return send(res, 404, MIME[".json"], JSON.stringify({ error: "item not found" }));
+        const dir = join(opts.rootDir, "requests");
+        const file = await writeDecomposeRequest(dir, request);
+        return send(res, 200, MIME[".json"], JSON.stringify({ prompt: request.prompt, file }));
       }
 
       // Static files (index.html for "/", otherwise the requested path under rootDir).

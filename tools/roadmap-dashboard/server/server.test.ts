@@ -72,3 +72,25 @@ test("GET / serves the HTML shell", async () => {
   const text = await r.text();
   assert.match(text, /id="app"/);
 });
+
+test("POST /api/decompose returns a prompt and writes a request file", async () => {
+  // The seed test doc only has v5; add a child-bearing item via PUT first.
+  const cur = await (await fetch(`${base}/api/roadmap`)).json() as RoadmapDoc;
+  cur.items.push({ id: "v8", title: "v8 — Ricky", status: "planned", kind: "version" });
+  await fetch(`${base}/api/roadmap`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(cur) });
+
+  const r = await fetch(`${base}/api/decompose`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ itemId: "v8" }),
+  });
+  assert.equal(r.status, 200);
+  const body = await r.json() as { prompt: string; file: string };
+  assert.match(body.prompt, /roadmap\.json/);
+  assert.match(body.file, /v8\.json$/);
+});
+
+test("POST /api/decompose 404s for an unknown item", async () => {
+  const r = await fetch(`${base}/api/decompose`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ itemId: "nope" }),
+  });
+  assert.equal(r.status, 404);
+});
