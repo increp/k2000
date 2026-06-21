@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.svflinear",
+    "version": "1.0",
+    "name": "SvfLinear",
+    "description": "Linear TPT/ZDF state-variable filter (LP/BP/HP) — Cmajor coexistence spike pilot",
+    "mainProcessor": "SvfLinear",
+    "source": [ "SvfLinear.cmajor" ]
+}
