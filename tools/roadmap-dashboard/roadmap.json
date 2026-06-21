@@ -3,7 +3,7 @@
     "product": "Bernie",
     "tagline": "A K2061/K2088-class VAST engine bracketed by a constant Summit voice",
     "currentVersion": "5",
-    "nextStep": "v5.1 — Q17 click-free model hot-swap",
+    "nextStep": "v5.2 — Real Separation / dual-filter (then the Cmajor spike)",
     "lastUpdated": "2026-06-20",
     "schemaVersion": 1
   },
@@ -18,7 +18,7 @@
     { "id": "v5", "title": "v5 — The Constant Summit Spine", "status": "in-progress", "kind": "version", "tags": ["keystone"], "firmness": "firm", "summary": "Always-present selectable filter-model library + Huggett flagship; live click-free hot-swap; stereo, per-Layer.", "children": [
       { "id": "v5.0", "title": "v5.0 — Nonlinear Huggett (plain-tanh spine)", "status": "shipped", "kind": "point", "shipped": "2026-06-20", "summary": "Three asymmetric tanh stages + clean HP pre-filter. Remediated post-UAT (ADAA dropped)." },
       { "id": "v5.1", "title": "v5.1 — Q17 click-free model hot-swap", "status": "planned", "kind": "point", "summary": "Equal-power crossfade on model change; migrate per-voice State from heap to in-place. Prerequisite for any 2nd model." },
-      { "id": "v5.2", "title": "v5.2 — Real Separation / dual-filter", "status": "specced", "kind": "point", "summary": "Two independently-tuned 2-pole sections; proper Separation; Summit dual routings; works in 12 and 24 dB.", "specLinks": ["docs/specs/2026-06-20-huggett-separation-design.md"] },
+      { "id": "v5.2", "title": "v5.2 — Real Separation / dual-filter", "status": "in-progress", "kind": "point", "summary": "Two independently-tuned 2-pole sections; proper Separation; Summit dual routings; works in 12 and 24 dB. ACTIVE — spec decisions resolved; writing the implementation plan.", "specLinks": ["docs/specs/2026-06-20-huggett-separation-design.md"] },
       { "id": "v5.3", "title": "v5.3 — HQ oversampling tiers + on-screen keyboard", "status": "specced", "kind": "point", "summary": "Light/Normal/Heavy/Full OS with independent live/render selectors; playable + MIDI-display keyboard." },
       { "id": "v5.4", "title": "v5.4 — Moog ladder (2nd filter model)", "status": "specced", "kind": "point", "summary": "4-pole self-oscillating; pole-mix BP/HP; bassComp; DC blocker. Gated on hot-swap + OS tiers.", "specLinks": ["docs/specs/2026-06-20-moog-ladder-design.md"] },
       { "id": "v5.5", "title": "v5.5 — Oberheim SEM (3rd filter model)", "status": "planned", "kind": "point", "summary": "2-pole multimode SVF, non-self-oscillating; LP→notch→HP morph + BP." }
@@ -50,6 +50,6 @@
     { "id": "thread-harness", "title": "DSP test-harness coverage", "summary": "Grows to cover every spine/source/FX component; gates releases." },
     { "id": "thread-perf", "title": "Per-voice perf gate", "summary": "256 voices × full stereo × graph DSP; profiling as a release gate." },
     { "id": "thread-gui", "title": "Incremental GUI toward the target aesthetic", "summary": "Each phase advances the visual design; no deferred 'real GUI'." },
-    { "id": "thread-security", "title": "Security-scan CI baseline", "summary": "SAST + SCA (cppcheck/clang-tidy/CodeQL + dep/CVE scan)." }
+    { "id": "thread-security", "title": "Security-scan CI/CD gate", "summary": "SAST + SCA (cppcheck/clang-tidy/CodeQL + dep/CVE scan) wired as a CI/CD GATE (fails the build on regression), not just a baseline. Package the setup as a reusable skill if it generalizes. Scheduled after v5.2 + the Cmajor spike." }
   ]
 }
