@@ -14,6 +14,7 @@ add_executable(k2000_tests
     SpineFilterTests.cpp
     HuggettNonlinearTests.cpp
     HuggettSeparationTests.cpp
+    HuggettSeparationClickTests.cpp
     OverdriveDiagnosticTests.cpp
     FilterModelLibraryTests.cpp
     PresetMigrationTests.cpp

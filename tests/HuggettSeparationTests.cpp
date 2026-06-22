@@ -41,14 +41,21 @@ struct HuggettSeparationTests : public juce::UnitTest {
             auto cfg = [slope](HuggettFilter& h) {
                 h.setMode(HuggettFilter::Mode::LP); h.setSlope(slope);
             };
-            auto cfg0 = [&](HuggettFilter& h){ cfg(h); h.setSeparation(0.0f); };
-            auto cfg2 = [&](HuggettFilter& h){ cfg(h); h.setSeparation(2.0f); };
-            const double r0 = respDb(cfg0, 1500.0, 1000.0f, 0.0f);
-            const double r2 = respDb(cfg2, 1500.0, 1000.0f, 0.0f);
-            expect(std::abs(r2 - r0) > 3.0,
-                   "separation must change the 1500 Hz LP response by >3 dB (slope "
-                   + juce::String(slope == HuggettFilter::Slope::db12 ? "12" : "24") + " dB): got "
-                   + juce::String(std::abs(r2 - r0), 2) + " dB");
+            // Separation reshapes the response curve. Assert it changes the magnitude by
+            // >3 dB SOMEWHERE across the band rather than at one fixed probe: the v5.2
+            // click fix keeps the 12 dB passband level stable (separation widens the band
+            // without a level jump), so a single-frequency level test no longer captures it.
+            const double freqs[] = { 250, 500, 1000, 1500, 2000, 3000, 4500, 6000 };
+            double maxDiff = 0.0;
+            for (double f : freqs) {
+                const double r0 = respDb([&](HuggettFilter& h){ cfg(h); h.setSeparation(0.0f); }, f, 1000.0f, 0.0f);
+                const double r2 = respDb([&](HuggettFilter& h){ cfg(h); h.setSeparation(2.0f); }, f, 1000.0f, 0.0f);
+                maxDiff = std::max(maxDiff, std::abs(r2 - r0));
+            }
+            expect(maxDiff > 3.0,
+                   "separation must reshape the LP response by >3 dB somewhere (slope "
+                   + juce::String(slope == HuggettFilter::Slope::db12 ? "12" : "24") + " dB): max "
+                   + juce::String(maxDiff, 2) + " dB");
         }
 
         beginTest("T2: sep=0 single-mode slopes are correct (12 dB ~1-pole-pair, 24 dB ~2x steeper)");

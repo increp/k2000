@@ -24,14 +24,17 @@ void HuggettFilter::setCommon(float cutoffHz, float resonance, float drive) noex
 
 HuggettFilter::Resolved HuggettFilter::resolve() const noexcept {
     using N = NlSvfCell;
-    const bool sep0 = std::abs(separationOct_) < 1.0e-6f;
     switch (routing_) {
         case Routing::LP:
             if (slope_ == Slope::db24) return { N::LP, N::LP, true,  false, 1.0f };
-            return { N::LP, N::LP, false, sep0, 1.0f };               // 12 dB: single iff sep==0 (D1a)
+            // 12 dB: ALWAYS parallel at half-gain — continuous through sep=0 (click-free).
+            // At sep=0 the two coincident sections average back to a single LP; as sep
+            // grows the band widens with a stable passband level (no +6 dB jump). The
+            // former single-iff-sep==0 path caused a 6 dB topology-switch click at 0.
+            return { N::LP, N::LP, false, false, 0.5f };
         case Routing::HP:
             if (slope_ == Slope::db24) return { N::HP, N::HP, true,  false, 1.0f };
-            return { N::HP, N::HP, false, sep0, 1.0f };
+            return { N::HP, N::HP, false, false, 0.5f };   // 12 dB: as LP — half-gain parallel, click-free
         case Routing::BP:
             // a@cutA = HP (low edge) -> b@cutB = LP (high edge); separation = bandwidth.
             return { N::HP, N::LP, true, false, 1.0f };
