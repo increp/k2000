@@ -4,7 +4,7 @@
     "tagline": "A K2061/K2088-class VAST engine bracketed by a constant Summit voice",
     "currentVersion": "5",
     "nextStep": "Moog as the FIRST production Cmajor filter block (ADR-0012 migration step, avoids the double-build; fade engine is latent/live now that v5.1 shipped) → v6 dynamic graph",
-    "lastUpdated": "2026-06-21",
+    "lastUpdated": "2026-06-22",
     "schemaVersion": 1
   },
   "items": [

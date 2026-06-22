@@ -1,5 +1,10 @@
 #include "HuggettHpStage.h"
+#include "SpineState.h"
 #include <new>
+
+// Q18 governance: the HP state must fit the SpineFilterSlot in-place HP buffer.
+static_assert(sizeof(HuggettHpStage::State) <= kSpineHpStateBytes,
+              "HuggettHpStage::State exceeds kSpineHpStateBytes — bump it or slim the HP state");
 
 HuggettHpStage::State* HuggettHpStage::makeState() const {
     return constructState(::operator new(sizeof(State)));
