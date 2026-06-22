@@ -68,7 +68,10 @@ void HuggettFilter::processStereo(State& s, float* left, float* right, int n) co
 
     for (int i = 0; i < n; ++i) {
         float l = left[i], r = right[i];
-        if (preOn) { l = preSat_.process(l); r = preSat_.process(r); }
+        // Drive blends in by amount (preDrive_/postDrive_ are 0..1): at 0 the shaper is
+        // bypassed identically; it ramps to fully-wet at 1 — a gradual, click-free onset.
+        // (The shaper engages a fixed bias + makeup gain, so a hard on/off jumps off 0.)
+        if (preOn) { l += preDrive_ * (preSat_.process(l) - l); r += preDrive_ * (preSat_.process(r) - r); }
 
         if (rz.single) {
             vs.a.process(l, r, rz.tapA);
@@ -83,7 +86,7 @@ void HuggettFilter::processStereo(State& s, float* left, float* right, int n) co
             r = rz.parGain * (ra + rb);
         }
 
-        if (postOn) { l = postSat_.process(l); r = postSat_.process(r); }
+        if (postOn) { l += postDrive_ * (postSat_.process(l) - l); r += postDrive_ * (postSat_.process(r) - r); }
         if (nonlinear) { l = vs.dc.process(l, 0); r = vs.dc.process(r, 1); }
         left[i] = l; right[i] = r;
     }

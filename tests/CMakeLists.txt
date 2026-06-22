@@ -15,6 +15,7 @@ add_executable(k2000_tests
     HuggettNonlinearTests.cpp
     HuggettSeparationTests.cpp
     HuggettSeparationClickTests.cpp
+    HuggettDriveOnsetTests.cpp
     OverdriveDiagnosticTests.cpp
     FilterModelLibraryTests.cpp
     PresetMigrationTests.cpp
