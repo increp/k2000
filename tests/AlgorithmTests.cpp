@@ -6,10 +6,10 @@ public:
     AlgorithmLibraryTests() : juce::UnitTest("AlgorithmLibrary") {}
 
     void runTest() override {
-        beginTest("library has the 4 algorithms; entry 0 is filter_then_shaper (shaper-only, spine carries filter)");
-        expectEquals((int) AlgorithmLibrary::count(), 4);
+        beginTest("library trimmed to 2 algorithms; entry 0 is the shaper (spine carries the filter)");
+        expectEquals((int) AlgorithmLibrary::count(), 2);
         const Algorithm& a0 = AlgorithmLibrary::byIndex(0);
-        expect(juce::String(a0.id) == "filter_then_shaper");
+        expect(juce::String(a0.id) == "shaper");
         expectEquals((int) a0.slotCount, 1);
         expect(a0.blockTypePerSlot[0] == BlockTypeId::Waveshaper);
 

@@ -11,14 +11,13 @@ constexpr Algorithm make(const char* id, const char* name,
     return alg;
 }
 
-// APPEND-ONLY. Do not reorder existing entries (choice index is serialised).
-// v5: SvfFilter retired from graph to always-on spine. Former filter-bearing
-// entries become shaper-only (or empty); ids/order preserved for ADR-0008.
-const std::array<Algorithm, 4> kAlgorithms = {{
-    make("filter_then_shaper", "Shaper",   1, BlockTypeId::Waveshaper, BlockTypeId::None),
-    make("shaper_then_filter", "Shaper",   1, BlockTypeId::Waveshaper, BlockTypeId::None),
-    make("filter_only",        "Passthru", 0, BlockTypeId::None,       BlockTypeId::None),
-    make("thru",               "Thru",     0, BlockTypeId::None,       BlockTypeId::None),
+// v5 retired the SvfFilter from the per-voice graph to the always-on Summit spine,
+// which collapsed the four legacy algorithms into two real behaviours (a waveshaper
+// or nothing). Trimmed to those two (2026-06-21) — preset index-compat deliberately
+// dropped (no installed base). v6's dynamic graph will supersede this selector.
+const std::array<Algorithm, 2> kAlgorithms = {{
+    make("shaper", "Shaper", 1, BlockTypeId::Waveshaper, BlockTypeId::None),
+    make("thru",   "Thru",   0, BlockTypeId::None,       BlockTypeId::None),
 }};
 }  // namespace
 

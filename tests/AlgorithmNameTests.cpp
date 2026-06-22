@@ -15,9 +15,7 @@ public:
         const juce::StringArray names = params::algoNames();
         expectEquals(names.size(), (int) AlgorithmLibrary::count());
 
-        beginTest("entry 0 (filter_then_shaper) is now 'Shaper' — filter retired to spine");
-        // Library entry 0 is filter_then_shaper; in v5 the filter moved to the
-        // always-on spine, so the graph block is just "Shaper".
+        beginTest("entry 0 is 'Shaper' (the spine carries the filter)");
         expect(names[0] == "Shaper",
                "names[0] should be 'Shaper', got: " + names[0]);
 

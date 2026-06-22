@@ -31,25 +31,16 @@ public:
     }
 
     void runTest() override {
-        beginTest("filter_then_shaper and shaper_then_filter both shaper-only in v5 (filter in spine)");
-        // In v5 the graph SvfFilter was retired to the always-on spine; both
-        // legacy algorithm ids now contain only a Waveshaper block, so their
-        // outputs are identical.
-        ParamSnapshot a = base(); a.algorithmId = (int) AlgorithmLibrary::indexOfId("filter_then_shaper");
-        ParamSnapshot b = base(); b.algorithmId = (int) AlgorithmLibrary::indexOfId("shaper_then_filter");
-        auto oa = renderOnce(a), ob = renderOnce(b);
-        double diff = 0.0;
-        for (int i = 0; i < N; ++i) diff += std::abs(oa[i] - ob[i]);
-        expectWithinAbsoluteError((float) diff, 0.0f, 1e-5f);
+        beginTest("shaper: waveshaper drive changes the output (the shaper block is in the graph)");
+        // The trimmed 'shaper' algorithm carries a Waveshaper block, so changing its
+        // drive must change the rendered output.
+        ParamSnapshot a = base(); a.algorithmId = (int) AlgorithmLibrary::indexOfId("shaper");
+        a.wsDrive = 0.0f; auto a0 = renderOnce(a);
+        a.wsDrive = 1.0f; auto a1 = renderOnce(a);
+        double da = 0.0; for (int i = 0; i < N; ++i) da += std::abs(a0[i] - a1[i]);
+        expect(da > 1e-3f, "shaper drive should change the output (diff " + juce::String(da, 6) + ")");
 
-        beginTest("filter_only: shaper drive has no effect");
-        ParamSnapshot c = base(); c.algorithmId = (int) AlgorithmLibrary::indexOfId("filter_only");
-        c.wsDrive = 0.0f; auto c0 = renderOnce(c);
-        c.wsDrive = 1.0f; auto c1 = renderOnce(c);
-        double d = 0.0; for (int i = 0; i < N; ++i) d += std::abs(c0[i] - c1[i]);
-        expectWithinAbsoluteError((float) d, 0.0f, 1e-5f);
-
-        beginTest("thru: waveshaper drive has no effect (shaper block not in graph)");
+        beginTest("thru: waveshaper drive has no effect (no shaper block in the graph)");
         ParamSnapshot t = base(); t.algorithmId = (int) AlgorithmLibrary::indexOfId("thru");
         t.wsDrive = 0.0f; auto t0 = renderOnce(t);
         t.wsDrive = 1.0f; auto t1 = renderOnce(t);
