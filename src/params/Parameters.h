@@ -23,7 +23,8 @@ struct LayerIds {
 // Returns a reference to the (statically built) ids for the given layer.
 const LayerIds& layerIds(int layer);
 
-inline constexpr auto masterGain = "master.gain";
+inline constexpr auto masterGain      = "master.gain";
+inline constexpr auto spineModelFadeMs = "spine.modelFadeMs";
 
 juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 

@@ -2,6 +2,7 @@
 #include "Parameters.h"
 #include "../dsp/AlgorithmLibrary.h"
 #include "../dsp/spine/FilterModelLibrary.h"
+#include "../dsp/spine/SpineState.h"
 #include "../util/Utf8.h"
 
 namespace params {
@@ -188,6 +189,9 @@ APVTS::ParameterLayout createLayout() {
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
         "Master Gain", juce::NormalisableRange<float>{-60.0f, 6.0f, 0.0f}, -9.0f));
+    layout.add(std::make_unique<FloatParam>(juce::ParameterID{spineModelFadeMs, 1},
+        "Spine Model Fade",
+        juce::NormalisableRange<float>{kMinModelFadeMs, kMaxModelFadeMs, 0.0f}, kDefaultModelFadeMs));
 
     return layout;
 }
@@ -209,6 +213,7 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.ampReleaseS  = raw(apvts, id.ampRelease);
     s.algorithmId        = (int) raw(apvts, id.algorithm);
     s.masterGainDb       = raw(apvts, masterGain);
+    s.spineModelFadeMs   = raw(apvts, spineModelFadeMs);
     s.spineModel         = (int) raw(apvts, id.spineModel);
     s.spineSeparationOct = raw(apvts, id.spineSeparation);
     s.spineSlope         = (int) raw(apvts, id.spineSlope);

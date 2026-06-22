@@ -88,7 +88,7 @@ void Voice::render(float* outL, float* outR, int numSamples) {
     // so a voice playing layer 1 filters with layer 1's settings, not layer 0's.
     std::copy(tmpL, tmpL + numSamples, tmpR);
     spine_.processStereo(layer_->hpStage(), s.hpEnable != 0,
-                         layer_->spineModel(), kDefaultModelFadeMs, tmpL, tmpR, numSamples);
+                         layer_->spineModel(), s.spineModelFadeMs, tmpL, tmpR, numSamples);
 
     const float lvl = layer_->level();
     const float spineOut = juce::Decibels::decibelsToGain(s.spineOutputDb);

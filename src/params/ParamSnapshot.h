@@ -39,6 +39,7 @@ struct ParamSnapshot {
     int   spineSlope         = 1;   // 0=12 dB, 1=24 dB
     float spineDrive         = 0.0f;
     float spineOutputDb      = 0.0f;
+    float spineModelFadeMs   = 25.0f;   // global: spine.modelFadeMs (2..100 ms)
 
     // HP pre-filter (always-available, before the main model)
     int   hpEnable      = 0;      // 0=off 1=on

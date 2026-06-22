@@ -95,6 +95,16 @@ public:
             s = params::snapshot(apvts, 0);
             expect(s.huggettRouting == 6, "routing param round-trips to 6 (LP+HP)");
         }
+
+        beginTest("spine.modelFadeMs default reaches the snapshot (25 ms) and round-trips");
+        {
+            auto s = params::snapshot(apvts, 0);
+            expectWithinAbsoluteError(s.spineModelFadeMs, 25.0f, 1e-4f);
+            if (auto* p = apvts.getParameter(params::spineModelFadeMs))
+                p->setValueNotifyingHost(p->convertTo0to1(60.0f));
+            s = params::snapshot(apvts, 0);
+            expectWithinAbsoluteError(s.spineModelFadeMs, 60.0f, 0.1f);
+        }
     }
 };
 
