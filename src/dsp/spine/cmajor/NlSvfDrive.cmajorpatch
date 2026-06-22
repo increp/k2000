@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.nlsvfdrive",
+    "version": "1.0",
+    "name": "NlSvfDrive",
+    "description": "Fused SVF + resonance saturator + drive shaper (Cmajor Spike II fused-processor perf probe)",
+    "mainProcessor": "NlSvfDrive",
+    "source": [ "NlSvfDrive.cmajor" ]
+}
