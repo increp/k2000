@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# MSVC reports __cplusplus as 199711L by default even in C++17 mode; this flag makes
+# it standards-conformant. Cmajor-generated headers (and other third-party code) gate
+# on __cplusplus >= 201703L, so without this the Windows build fails. No-op on GCC/Clang.
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>")
+
 # Speed up Windows builds; harmless on Linux
 set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 
