@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.wtosc",
+    "version": "1.0",
+    "name": "WtOsc",
+    "description": "Single-cycle wavetable oscillator (Cmajor Spike II data-boundary probe)",
+    "mainProcessor": "WtOsc",
+    "source": [ "WtOsc.cmajor" ]
+}

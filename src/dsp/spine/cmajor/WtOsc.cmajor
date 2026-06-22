@@ -1,0 +1,31 @@
+processor WtOsc
+{
+    output stream float out;
+    input  event float frequency [[ name: "Freq", min: 1, max: 20000, init: 220 ]];
+
+    // Runtime-settable wavetable: a fixed-size value endpoint the host writes via setValue.
+    // (external float[] is baked at codegen in the --target=cpp path, so it can't carry
+    // user-loaded data — a value/event endpoint is the runtime data-in mechanism.)
+    input value float[256] tableIn;
+
+    float phase = 0.0f;
+    float freq  = 220.0f;
+    event frequency (float v) { freq = v; }
+
+    void main()
+    {
+        let n = 256;
+        loop
+        {
+            let pos  = phase * float (n);
+            let idx  = int (pos);
+            let i0   = idx % n;
+            let i1   = (i0 + 1) % n;
+            let frac = pos - float (idx);
+            out <- tableIn[i0] * (1.0f - frac) + tableIn[i1] * frac;
+            phase += freq / float (processor.frequency);
+            while (phase >= 1.0f) phase -= 1.0f;
+            advance();
+        }
+    }
+}

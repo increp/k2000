@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.gain",
+    "version": "1.0",
+    "name": "Gain",
+    "description": "Toolchain probe patch (Task 1)",
+    "mainProcessor": "Gain",
+    "source": [ "Gain.cmajor" ]
+}

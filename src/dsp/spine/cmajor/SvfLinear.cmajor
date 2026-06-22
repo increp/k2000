@@ -1,0 +1,52 @@
+processor SvfLinear
+{
+    input  stream float in;
+    output stream float out;
+    input  event float cutoffHz  [[ name: "Cutoff",    min: 16,  max: 20000, init: 1000 ]];
+    input  event float resonance [[ name: "Resonance", min: 0,   max: 0.999, init: 0 ]];
+    input  event int32 tap       [[ name: "Tap",       min: 0,   max: 2,     init: 0 ]];  // 0=LP 1=HP 2=BP
+
+    float g, k, a1, a2, a3;
+    float ic1, ic2;
+    bool  dirty = true;
+    float cutoff = 1000.0f, res = 0.0f;
+    int32 tapSel = 0;
+
+    event cutoffHz  (float v) { cutoff = v; dirty = true; }
+    event resonance (float v) { res = v;    dirty = true; }
+    event tap       (int32 v) { tapSel = v; }
+
+    void recompute()
+    {
+        let sr = float (processor.frequency);
+        let c  = clamp (cutoff, 16.0f, sr * 0.45f);
+        let r  = clamp (res,    0.0f,  0.999f);
+        let Q  = 0.5f + r * r * 49.5f;
+        g  = tan (float (pi) * c / sr);
+        k  = 1.0f / Q;
+        a1 = 1.0f / (1.0f + g * (g + k));
+        a2 = g * a1;
+        a3 = g * a2;
+        dirty = false;
+    }
+
+    void main()
+    {
+        loop
+        {
+            if (dirty) recompute();
+            let v0 = in;
+            let v3 = v0 - ic2;
+            let v1 = a1 * ic1 + a2 * v3;
+            let v2 = ic2 + a2 * ic1 + a3 * v3;
+            ic1 = 2.0f * v1 - ic1;
+            ic2 = 2.0f * v2 - ic2;
+            float result;
+            if      (tapSel == 1) result = v0 - k * v1 - v2;  // HP
+            else if (tapSel == 2) result = v1;                // BP
+            else                  result = v2;                // LP
+            out <- result;
+            advance();
+        }
+    }
+}

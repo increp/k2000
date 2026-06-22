@@ -23,6 +23,15 @@ add_executable(k2000_tests
     MultiLayerTests.cpp
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
+    CmajorSvfAdapterTests.cpp
+    CmajorSvfEquivalenceTests.cpp
+    CmajorFilterModelTests.cpp
+    CmajorSvfPerfTests.cpp
+    NlSvfEquivalenceTests.cpp
+    AsymDriveEquivalenceTests.cpp
+    WtOscTests.cpp
+    NlSvfPerfTests.cpp
+    NlSvfFusedPerfTests.cpp
     TestDspSelfTests.cpp
     fixtures/SpineShaperHarnessTests.cpp
     fixtures/SpineHuggettHarnessTests.cpp
@@ -44,7 +53,14 @@ add_executable(k2000_tests
     ../src/dsp/spine/HuggettFilter.cpp
     ../src/dsp/spine/FilterModelLibrary.cpp
     ../src/dsp/spine/SpineFilterSlot.cpp
-    ../src/dsp/spine/HuggettHpStage.cpp)
+    ../src/dsp/spine/HuggettHpStage.cpp
+    ../src/dsp/spine/cmajor/SvfLinearAdapter.cpp
+    ../src/dsp/spine/cmajor/CmajorSvfFilter.cpp
+    ../src/dsp/spine/cmajor/NlSvfAdapter.cpp
+    ../src/dsp/spine/cmajor/AsymDriveAdapter.cpp
+    ../src/dsp/spine/cmajor/WtOscAdapter.cpp
+    ../src/dsp/spine/cmajor/NlSvfLeanAdapter.cpp
+    ../src/dsp/spine/cmajor/NlSvfDriveLeanAdapter.cpp)
 
 target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
