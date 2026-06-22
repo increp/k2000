@@ -106,6 +106,7 @@ public:
             p.setLimiterEnabled(true);
             float mEnabled = 0.0f;
             for (int k = 0; k < 8; ++k) { buf.clear(); p.processBlock(buf, midi); midi.clear(); mEnabled = std::max(mEnabled, peakOf(buf)); }
+            expect(mEnabled > 0.0f, "test must actually produce signal (else the cap check is vacuous)");
             expect(mEnabled <= ceil + 1e-4f, "enabled output must stay <= ceiling (peak " + juce::String(mEnabled,5) + ")");
         }
     }
