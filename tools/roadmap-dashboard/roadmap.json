@@ -3,7 +3,7 @@
     "product": "Bernie",
     "tagline": "A K2061/K2088-class VAST engine bracketed by a constant Summit voice",
     "currentVersion": "5",
-    "nextStep": "v5.1 click-free hot-swap (per-voice State heap→in-place) → Moog as the FIRST production Cmajor filter block (ADR-0012 migration step, avoids the double-build) → v6 dynamic graph",
+    "nextStep": "Moog as the FIRST production Cmajor filter block (ADR-0012 migration step, avoids the double-build; fade engine is latent/live now that v5.1 shipped) → v6 dynamic graph",
     "lastUpdated": "2026-06-21",
     "schemaVersion": 1
   },
@@ -103,9 +103,10 @@
         {
           "id": "v5.1",
           "title": "v5.1 — Q17 click-free model hot-swap",
-          "status": "planned",
+          "status": "shipped",
           "kind": "point",
-          "summary": "Equal-power crossfade on model change; migrate per-voice State from heap to in-place. Prerequisite for any 2nd model."
+          "shipped": "2026-06-22",
+          "summary": "SHIPPED: per-voice equal-power crossfade (~25 ms default, 2–100 ms via spine.modelFadeMs), coalesce depth-1; per-voice state heap→in-place dual-buffer (kMaxSpineStateBytes=512, static_assert governed); Q17b closed by note-start snap-bind. Production library still has ONE model (Huggett) — fade engine is latent until Moog lands. 179 tests, 0 failed."
         },
         {
           "id": "v5.2",
