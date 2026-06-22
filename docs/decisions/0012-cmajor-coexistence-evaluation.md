@@ -1,6 +1,6 @@
 # ADR 0012 — Cmajor coexistence evaluation (pre-v6 gate)
 
-**Status:** Proposed, 2026-06-21 — pending user sign-off. **Spike II evidence added (nonlinear + data-boundary).** **Version:** 5.03. Decides the `cmajor-spike` gate; gates how v6's DSP graph is authored.
+**Status:** Accepted, 2026-06-21 (ratified after Spike I + II). **Version:** 5.03. Decides the `cmajor-spike` gate; gates how v6's DSP graph is authored.
 
 ## Context
 
