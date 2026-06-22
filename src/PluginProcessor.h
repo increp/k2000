@@ -1,8 +1,10 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <atomic>
 #include "Program.h"
 #include "VoiceManager.h"
 #include "params/Parameters.h"
+#include "dsp/SafetyLimiter.h"
 
 class K2000AudioProcessor : public juce::AudioProcessor {
 public:
@@ -35,10 +37,17 @@ public:
 
     juce::AudioProcessorValueTreeState& apvts() { return apvts_; }
 
+    bool  isLimiterEnabled() const { return limiterEnabled_.load(std::memory_order_relaxed); }
+    void  setLimiterEnabled(bool on) { limiterEnabled_.store(on, std::memory_order_relaxed); }
+    float gainReductionDb() const { return gainReductionDb_.load(std::memory_order_relaxed); }
+
 private:
     juce::AudioProcessorValueTreeState apvts_;
     Program program_;
     VoiceManager voiceManager_;
     std::vector<float> scratchL_, scratchR_;
+    SafetyLimiter      limiter_;
+    std::atomic<bool>  limiterEnabled_{ true };   // protected: NOT an APVTS param; defaults ON
+    std::atomic<float> gainReductionDb_{ 0.0f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessor)
 };

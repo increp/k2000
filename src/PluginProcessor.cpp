@@ -80,6 +80,8 @@ void K2000AudioProcessor::prepareToPlay(double sr, int samplesPerBlock) {
     voiceManager_.prepare(sr, samplesPerBlock);
     scratchL_.assign(samplesPerBlock, 0.0f);
     scratchR_.assign(samplesPerBlock, 0.0f);
+    limiter_.prepare(sr);
+    limiter_.reset();
 }
 
 void K2000AudioProcessor::releaseResources() {}
@@ -125,6 +127,14 @@ void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         const float* src = (c == 1 && outCh > 1) ? scratchR_.data() : scratchL_.data();
         for (int i = 0; i < n; ++i) ch[i] = src[i] * gainLin;
     }
+    if (limiterEnabled_.load(std::memory_order_relaxed) && outCh > 0) {
+        float* L = buffer.getWritePointer(0);
+        float* R = (outCh > 1) ? buffer.getWritePointer(1) : nullptr;
+        limiter_.process(L, R, n);
+        gainReductionDb_.store(limiter_.gainReductionDb(), std::memory_order_relaxed);
+    } else {
+        gainReductionDb_.store(0.0f, std::memory_order_relaxed);
+    }
 }
 
 juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
@@ -150,6 +160,7 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
     root->setAttribute("v", 5);  // schema version; gates the cumulative load shim
+    root->setAttribute("limiterEnabled", limiterEnabled_.load(std::memory_order_relaxed) ? 1 : 0);
 
     auto* slots = root->createNewChildElement("Slots");
     auto* s0 = slots->createNewChildElement("Slot");
@@ -174,6 +185,7 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
     auto xml = getXmlFromBinary(data, size);
     if (xml == nullptr) return;
     if (xml->getTagName() != "K2000Root") return;
+    limiterEnabled_.store(xml->getBoolAttribute("limiterEnabled", true), std::memory_order_relaxed);  // absent (old project) -> ON
 
     if (auto* params = xml->getChildByName("Params")) {
         if (auto* paramsRoot = params->getFirstChildElement()) {
