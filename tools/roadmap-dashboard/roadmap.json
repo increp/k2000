@@ -3,63 +3,416 @@
     "product": "Bernie",
     "tagline": "A K2061/K2088-class VAST engine bracketed by a constant Summit voice",
     "currentVersion": "5",
-    "nextStep": "SAFETY: hearing-safety output limiter (default-ON) + Separation zero-click fix → v6 design (per-voice DSP graph authored as fused Cmajor processors per ADR-0012)",
+    "nextStep": "Separation zero-crossing click fix → v6 design (per-voice DSP graph authored as fused Cmajor processors per ADR-0012)",
     "lastUpdated": "2026-06-21",
     "schemaVersion": 1
   },
   "items": [
-    { "id": "v1", "title": "v1 — Skeleton end-to-end", "status": "shipped", "kind": "version", "shipped": "2026-05-30", "summary": "1 osc, 2-slot DSP chain, ADSR, 8-voice, plain UI." },
-    { "id": "v2", "title": "v2 — Layer abstraction", "status": "shipped", "kind": "version", "shipped": "2026-06-14", "summary": "Voice split into per-note runtime + Layer owning DSP + ParamSnapshot." },
-    { "id": "v3", "title": "v3 — Algorithm abstraction", "status": "shipped", "kind": "version", "shipped": "2026-06-15", "summary": "Selectable algorithm = ordered walk through a per-Layer block palette." },
-    { "id": "v4", "title": "v4 — Multi-Layer Programs", "status": "shipped", "kind": "version", "shipped": "2026-06-16", "summary": "Program holds 2 Layers; shared voice pool; Layer/Split/Dual routing." },
-    { "id": "v4.5", "title": "v4.5 — K2061 re-positioning + Summit UI foundation", "status": "in-progress", "kind": "version", "shipped": "2026-06-19", "summary": "Engine re-positioned to K2061/K2088 VAST + constant Summit spine; UI foundation. KB OCR fix outstanding.", "children": [
-      { "id": "v4.5-kb-ocr", "title": "Pirkle synth-book OCR fix in k2000-kb", "status": "planned", "kind": "task", "summary": "PDF text layer is garbled mojibake; needs an OCR fallback in kb-build." }
-    ] },
-    { "id": "v5", "title": "v5 — The Constant Summit Spine", "status": "in-progress", "kind": "version", "tags": ["keystone"], "firmness": "firm", "summary": "Always-present selectable filter-model library + Huggett flagship; live click-free hot-swap; stereo, per-Layer.", "children": [
-      { "id": "v5.0", "title": "v5.0 — Nonlinear Huggett (plain-tanh spine)", "status": "shipped", "kind": "point", "shipped": "2026-06-20", "summary": "Three asymmetric tanh stages + clean HP pre-filter. Remediated post-UAT (ADAA dropped)." },
-      { "id": "v5-safety-limiter", "title": "v5 — Hearing-safety output limiter (default-ON)", "status": "planned", "kind": "point", "tags": ["safety", "priority"], "summary": "SAFETY: a global output/amp brickwall limiter that hard-caps the signal to a safe ceiling so extreme resonance/separation/self-oscillation can never blow the listener's ears or speakers. ON by default; defeatable ONLY via an explicit operator action gated behind a hearing-safety warning (never silently off, never off by preset). Scheduled immediately AFTER the Cmajor spike — user priority." },
-      { "id": "v5-sep-zero-click", "title": "Fix Separation zero-crossing click", "status": "planned", "kind": "task", "tags": ["bug", "priority"], "summary": "BUG: HuggettFilter clicks when Separation sweeps through 0 — at 12 dB the routing flips single<->parallel at sep==0 (resolve(): single = sep0) and cutA/cutB collapse to coincident, an abrupt discontinuity. Needs click-free handling (smoothing/crossfade across the transition, or a continuous routing formulation). Scheduled with the safety work, after the spike." },
-      { "id": "v5.1", "title": "v5.1 — Q17 click-free model hot-swap", "status": "planned", "kind": "point", "summary": "Equal-power crossfade on model change; migrate per-voice State from heap to in-place. Prerequisite for any 2nd model." },
-      { "id": "v5.2", "title": "v5.2 — Real Separation / dual-filter", "status": "shipped", "kind": "point", "shipped": "2026-06-21", "summary": "Two independently-tuned 2-pole sections; proper Separation; Summit dual routings; works in 12 and 24 dB.", "specLinks": ["docs/specs/2026-06-20-huggett-separation-design.md"] },
-      { "id": "v5.3", "title": "v5.3 — HQ oversampling tiers + on-screen keyboard", "status": "specced", "kind": "point", "summary": "Light/Normal/Heavy/Full OS with independent live/render selectors; playable + MIDI-display keyboard." },
-      { "id": "v5.4", "title": "v5.4 — Moog ladder (2nd filter model)", "status": "specced", "kind": "point", "summary": "4-pole self-oscillating; pole-mix BP/HP; bassComp; DC blocker. Gated on hot-swap + OS tiers.", "specLinks": ["docs/specs/2026-06-20-moog-ladder-design.md"] },
-      { "id": "v5.5", "title": "v5.5 — Oberheim SEM (3rd filter model)", "status": "planned", "kind": "point", "summary": "2-pole multimode SVF, non-self-oscillating; LP→notch→HP morph + BP." }
-    ] },
-    { "id": "v6", "title": "v6 — Dynamic VAST Graph Routing", "status": "planned", "kind": "version", "tags": ["keystone"], "firmness": "firm", "summary": "Wired serial+parallel per-voice DSP graph; splits/joins; visual wiring editor." },
-    { "id": "v7", "title": "v7 — Source & DSP Block Library", "status": "planned", "kind": "version", "firmness": "firm", "summary": "Osc per-waveform mini-mixer, KVA, noise; DSP blocks (mixer, ring mod, shapers, EQ)." },
-    { "id": "v8", "title": "v8 — Ricky: The FX Section", "status": "planned", "kind": "version", "firmness": "firm", "summary": "Post-VCA multi-FX + aux chains; a subset also exposed as VAST blocks." },
-    { "id": "v9", "title": "v9 — Multipart, Cascade & Multis", "status": "planned", "kind": "version", "firmness": "firm", "summary": "A/B/Split/Layer surface; toward 32 layers / 256 voices; Multis (≤16)." },
-    { "id": "v10", "title": "v10 — FM Layers", "status": "planned", "kind": "version", "firmness": "firm", "summary": "6-operator FM source + operator panel." },
-    { "id": "v11", "title": "v11 — Sampling & Keymaps", "status": "planned", "kind": "version", "firmness": "firm", "summary": "Sample/keymap sources (the big v11+ piece, decomposed out)." },
-    { "id": "v12", "title": "v12 — Preset System & Patch Management", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Browser, tagging, compare/init, patch morph." },
-    { "id": "v13", "title": "v13 — Commercialization I", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Demo mode + license unlock + macOS port." },
-    { "id": "v14", "title": "v14 — Commercial-VST Comparison & RE Rig", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Offline-host a commercial VST, capture, compare through the metric catalog." },
-    { "id": "v15", "title": "v15 — Filter Model Expansion", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Diode ladder + more topologies; gates re-anchored to hardware." },
-    { "id": "v16", "title": "v16 — Modulation Deepening", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Expanded mod matrix, more LFO/env, advanced voice modes." },
-    { "id": "v17", "title": "v17 — Performance Layer", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Arpeggiator, sequencer, macros/controllers." },
-    { "id": "v18", "title": "v18 — MPE & Per-Note Expression", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Per-note pitch/pressure/slide." },
-    { "id": "v19", "title": "v19 — Advanced Sources", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Wavetable / additive / granular deepening." },
-    { "id": "v20", "title": "v20 — The Final Aesthetic", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Full target GUI, theming, hi-DPI/scalable UI." },
-    { "id": "v21", "title": "v21 — Preset Ecosystem & Factory Library", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Packs, sharing, curated factory sounds." },
-    { "id": "v22", "title": "v22 — Performance & Scale Hardening", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "256-voice everywhere, SIMD, multicore." },
-    { "id": "v23", "title": "v23 — Platform Expansion", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "AU/AUv3, CLAP, more hosts/formats." },
-    { "id": "v24", "title": "v24 — AI-Assisted Sound Design", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Local-LLM patch generation/morphing." },
-    { "id": "v25", "title": "v25 — Bernie 1.0: Commercial Flagship Release", "status": "tentative", "kind": "version", "firmness": "tentative", "summary": "Everything converges; 1.0 ship." },
-    { "id": "cmajor-spike", "title": "Cmajor Spike — decision gate (pre-v6)", "status": "shipped", "kind": "version", "tags": ["gate"], "shipped": "2026-06-21", "summary": "DONE (Spike I + II) → ADR-0012 (Proposed): GO / hybrid. Equivalence bit-exact (linear + nonlinear); data boundary solved (value endpoint runtime-settable; external float[] is codegen-baked-only); clean FilterModel slot-in, RT-safe; AOT generated-C++ committed (no engine embed, no CI dependency). Perf (equal-work): single node ~1.95×, but a FUSED per-voice processor (SVF+sat+drive in one advance) ~1.3× — author v6 as fused processors, not micro-nodes. Boundary: Cmajor below the per-voice DSP-block line, JUCE everywhere else. RATIFIED — ADR-0012 Accepted (both spikes complete).", "specLinks": ["docs/decisions/0012-cmajor-coexistence-evaluation.md", "docs/superpowers/specs/2026-06-21-cmajor-spike-design.md", "docs/superpowers/specs/2026-06-21-cmajor-nonlinear-spike-design.md"], "children": [
-      { "id": "cmajor-spike-toolchain", "title": "Toolchain + spike harness", "status": "shipped", "kind": "task", "summary": "Stand up Cmajor in an isolated spike harness OUTSIDE the VST3 target: choose AOT C++ codegen (cmaj generate --target=cpp) vs the runtime/JIT lib, and confirm Cmajor's license is compatible (note it in the ADR). Gate: a trivial gain patch compiles and processes a buffer with the expected gain." },
-      { "id": "cmajor-spike-port-svf", "title": "Port the linear TPT SVF", "status": "shipped", "kind": "task", "summary": "Reimplement NlSvfCell's LINEAR TPT core (cutoff/resonance, LP/BP/HP taps) as a Cmajor processor — the bounded pilot surface. Deliverable: an SVF Cmajor patch driven by cutoff/res. (Nonlinear res-sat is out of scope for the pilot.)" },
-      { "id": "cmajor-spike-equivalence", "title": "Numeric equivalence gate", "status": "shipped", "kind": "task", "summary": "Compare the Cmajor SVF against the C++ NlSvfCell across cutoff/resonance sweeps using the existing tests/testdsp magnitude-response + NSR helpers. Gate: responses match within a tolerance (assert; CI-fail on regression)." },
-      { "id": "cmajor-spike-juce-integration", "title": "JUCE/APVTS integration", "status": "shipped", "kind": "task", "summary": "Host the Cmajor SVF inside a JUCE AudioProcessor path: block processing + parameter passing (cutoff/res from atomics, the snapshot pattern) + RT-safety (no audio-thread alloc). Gate: audio flows through the JUCE-hosted Cmajor node with correct params." },
-      { "id": "cmajor-spike-256voice-perf", "title": "256-voice perf model (the crux)", "status": "shipped", "kind": "task", "summary": "Benchmark the per-voice cost: 256 Cmajor instances vs one patch with internal polyphony. Measure CPU + memory at 256 voices against the current C++ spine baseline. Gate: numbers vs C++ baseline that fit (or explicitly fail) the per-voice budget — this decides go/no-go." },
-      { "id": "cmajor-spike-windows-ci", "title": "Windows CI feasibility", "status": "in-progress", "kind": "task", "summary": "Decided (ADR-0012): commit the generated C++ — no Cmajor toolchain in CI. Spike code (generated C++ + adapters + tests) lives in the test target Windows CI builds; PENDING confirmation green on the next CI run." },
-      { "id": "cmajor-spike-adr", "title": "ADR-0012 + recommendation", "status": "shipped", "kind": "task", "summary": "Synthesize findings (equivalence, 256-voice perf, integration friction, licensing, dev experience) into ADR-0012. Outcomes are not just go/no-go: a HYBRID (Cmajor for some/all DSP, JUCE for host/UI/params) is a valid recommendation. If adopting, define the JUCE↔Cmajor boundary, the migration slot/approach, and whether v6's graph is authored in Cmajor." }
-    ] },
-    { "id": "cmajor-migration", "title": "Cmajor Adoption — hybrid (coexist with JUCE; below the per-voice DSP-block line)", "status": "planned", "kind": "version", "tags": ["conditional"], "firmness": "firm", "summary": "ADR-0012 (Accepted) — GO/hybrid: Cmajor owns per-voice DSP-block math (AOT generated-C++ behind thin C++ adapters), JUCE keeps host/UI/params/MIDI + the C++ voice pool; v6's graph authored as FUSED per-voice Cmajor processors (no double-build). Both spikes done: equivalence bit-exact, data boundary solved, realistic perf ~1.3× (budget into the 256-voice perf gate). Sign-off done. First step: port a real shipping DSP block behind its existing interface; move adapter state heap→in-place (Q17/Q18); measure oversampled-nonlinear cost at v5.3." }
+    {
+      "id": "v1",
+      "title": "v1 — Skeleton end-to-end",
+      "status": "shipped",
+      "kind": "version",
+      "shipped": "2026-05-30",
+      "summary": "1 osc, 2-slot DSP chain, ADSR, 8-voice, plain UI."
+    },
+    {
+      "id": "v2",
+      "title": "v2 — Layer abstraction",
+      "status": "shipped",
+      "kind": "version",
+      "shipped": "2026-06-14",
+      "summary": "Voice split into per-note runtime + Layer owning DSP + ParamSnapshot."
+    },
+    {
+      "id": "v3",
+      "title": "v3 — Algorithm abstraction",
+      "status": "shipped",
+      "kind": "version",
+      "shipped": "2026-06-15",
+      "summary": "Selectable algorithm = ordered walk through a per-Layer block palette."
+    },
+    {
+      "id": "v4",
+      "title": "v4 — Multi-Layer Programs",
+      "status": "shipped",
+      "kind": "version",
+      "shipped": "2026-06-16",
+      "summary": "Program holds 2 Layers; shared voice pool; Layer/Split/Dual routing."
+    },
+    {
+      "id": "v4.5",
+      "title": "v4.5 — K2061 re-positioning + Summit UI foundation",
+      "status": "in-progress",
+      "kind": "version",
+      "shipped": "2026-06-19",
+      "summary": "Engine re-positioned to K2061/K2088 VAST + constant Summit spine; UI foundation. KB OCR fix outstanding.",
+      "children": [
+        {
+          "id": "v4.5-kb-ocr",
+          "title": "Pirkle synth-book OCR fix in k2000-kb",
+          "status": "planned",
+          "kind": "task",
+          "summary": "PDF text layer is garbled mojibake; needs an OCR fallback in kb-build."
+        }
+      ]
+    },
+    {
+      "id": "v5",
+      "title": "v5 — The Constant Summit Spine",
+      "status": "in-progress",
+      "kind": "version",
+      "tags": [
+        "keystone"
+      ],
+      "firmness": "firm",
+      "summary": "Always-present selectable filter-model library + Huggett flagship; live click-free hot-swap; stereo, per-Layer.",
+      "children": [
+        {
+          "id": "v5.0",
+          "title": "v5.0 — Nonlinear Huggett (plain-tanh spine)",
+          "status": "shipped",
+          "kind": "point",
+          "shipped": "2026-06-20",
+          "summary": "Three asymmetric tanh stages + clean HP pre-filter. Remediated post-UAT (ADAA dropped)."
+        },
+        {
+          "id": "v5-safety-limiter",
+          "title": "v5 — Hearing-safety output limiter (default-ON)",
+          "status": "shipped",
+          "shipped": "2026-06-22",
+          "kind": "point",
+          "tags": [
+            "safety",
+            "priority"
+          ],
+          "summary": "SAFETY: a global output/amp brickwall limiter that hard-caps the signal to a safe ceiling so extreme resonance/separation/self-oscillation can never blow the listener's ears or speakers. ON by default; defeatable ONLY via an explicit operator action gated behind a hearing-safety warning (never silently off, never off by preset). Scheduled immediately AFTER the Cmajor spike — user priority."
+        },
+        {
+          "id": "v5-sep-zero-click",
+          "title": "Fix Separation zero-crossing click",
+          "status": "planned",
+          "kind": "task",
+          "tags": [
+            "bug",
+            "priority"
+          ],
+          "summary": "BUG: HuggettFilter clicks when Separation sweeps through 0 — at 12 dB the routing flips single<->parallel at sep==0 (resolve(): single = sep0) and cutA/cutB collapse to coincident, an abrupt discontinuity. Needs click-free handling (smoothing/crossfade across the transition, or a continuous routing formulation). Scheduled with the safety work, after the spike."
+        },
+        {
+          "id": "v5.1",
+          "title": "v5.1 — Q17 click-free model hot-swap",
+          "status": "planned",
+          "kind": "point",
+          "summary": "Equal-power crossfade on model change; migrate per-voice State from heap to in-place. Prerequisite for any 2nd model."
+        },
+        {
+          "id": "v5.2",
+          "title": "v5.2 — Real Separation / dual-filter",
+          "status": "shipped",
+          "kind": "point",
+          "shipped": "2026-06-21",
+          "summary": "Two independently-tuned 2-pole sections; proper Separation; Summit dual routings; works in 12 and 24 dB.",
+          "specLinks": [
+            "docs/specs/2026-06-20-huggett-separation-design.md"
+          ]
+        },
+        {
+          "id": "v5.3",
+          "title": "v5.3 — HQ oversampling tiers + on-screen keyboard",
+          "status": "specced",
+          "kind": "point",
+          "summary": "Light/Normal/Heavy/Full OS with independent live/render selectors; playable + MIDI-display keyboard."
+        },
+        {
+          "id": "v5.4",
+          "title": "v5.4 — Moog ladder (2nd filter model)",
+          "status": "specced",
+          "kind": "point",
+          "summary": "4-pole self-oscillating; pole-mix BP/HP; bassComp; DC blocker. Gated on hot-swap + OS tiers.",
+          "specLinks": [
+            "docs/specs/2026-06-20-moog-ladder-design.md"
+          ]
+        },
+        {
+          "id": "v5.5",
+          "title": "v5.5 — Oberheim SEM (3rd filter model)",
+          "status": "planned",
+          "kind": "point",
+          "summary": "2-pole multimode SVF, non-self-oscillating; LP→notch→HP morph + BP."
+        }
+      ]
+    },
+    {
+      "id": "v6",
+      "title": "v6 — Dynamic VAST Graph Routing",
+      "status": "planned",
+      "kind": "version",
+      "tags": [
+        "keystone"
+      ],
+      "firmness": "firm",
+      "summary": "Wired serial+parallel per-voice DSP graph; splits/joins; visual wiring editor.",
+      "children": [
+        {
+          "id": "point-mqoj8s4o-1",
+          "title": "First move towards a proper GUI based on sketches",
+          "status": "planned",
+          "kind": "point"
+        }
+      ]
+    },
+    {
+      "id": "v7",
+      "title": "v7 — Source & DSP Block Library",
+      "status": "planned",
+      "kind": "version",
+      "firmness": "firm",
+      "summary": "Osc per-waveform mini-mixer, KVA, noise; DSP blocks (mixer, ring mod, shapers, EQ)."
+    },
+    {
+      "id": "v8",
+      "title": "v8 — Ricky: The FX Section",
+      "status": "planned",
+      "kind": "version",
+      "firmness": "firm",
+      "summary": "Post-VCA multi-FX + aux chains; a subset also exposed as VAST blocks."
+    },
+    {
+      "id": "v9",
+      "title": "v9 — Multipart, Cascade & Multis",
+      "status": "planned",
+      "kind": "version",
+      "firmness": "firm",
+      "summary": "A/B/Split/Layer surface; toward 32 layers / 256 voices; Multis (≤16)."
+    },
+    {
+      "id": "v10",
+      "title": "v10 — FM Layers",
+      "status": "planned",
+      "kind": "version",
+      "firmness": "firm",
+      "summary": "6-operator FM source + operator panel."
+    },
+    {
+      "id": "v11",
+      "title": "v11 — Sampling & Keymaps",
+      "status": "planned",
+      "kind": "version",
+      "firmness": "firm",
+      "summary": "Sample/keymap sources (the big v11+ piece, decomposed out)."
+    },
+    {
+      "id": "v12",
+      "title": "v12 — Preset System & Patch Management",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Browser, tagging, compare/init, patch morph."
+    },
+    {
+      "id": "v13",
+      "title": "v13 — Commercialization I",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Demo mode + license unlock + macOS port."
+    },
+    {
+      "id": "v14",
+      "title": "v14 — Commercial-VST Comparison & RE Rig",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Offline-host a commercial VST, capture, compare through the metric catalog."
+    },
+    {
+      "id": "v15",
+      "title": "v15 — Filter Model Expansion",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Diode ladder + more topologies; gates re-anchored to hardware."
+    },
+    {
+      "id": "v16",
+      "title": "v16 — Modulation Deepening",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Expanded mod matrix, more LFO/env, advanced voice modes."
+    },
+    {
+      "id": "v17",
+      "title": "v17 — Performance Layer",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Arpeggiator, sequencer, macros/controllers."
+    },
+    {
+      "id": "v18",
+      "title": "v18 — MPE & Per-Note Expression",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Per-note pitch/pressure/slide."
+    },
+    {
+      "id": "v19",
+      "title": "v19 — Advanced Sources",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Wavetable / additive / granular deepening."
+    },
+    {
+      "id": "v20",
+      "title": "v20 — The Final Aesthetic",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Full target GUI, theming, hi-DPI/scalable UI."
+    },
+    {
+      "id": "v21",
+      "title": "v21 — Preset Ecosystem & Factory Library",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Packs, sharing, curated factory sounds."
+    },
+    {
+      "id": "v22",
+      "title": "v22 — Performance & Scale Hardening",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "256-voice everywhere, SIMD, multicore."
+    },
+    {
+      "id": "v23",
+      "title": "v23 — Platform Expansion",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "AU/AUv3, CLAP, more hosts/formats."
+    },
+    {
+      "id": "v24",
+      "title": "v24 — AI-Assisted Sound Design",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Local-LLM patch generation/morphing."
+    },
+    {
+      "id": "v25",
+      "title": "v25 — Bernie 1.0: Commercial Flagship Release",
+      "status": "tentative",
+      "kind": "version",
+      "firmness": "tentative",
+      "summary": "Everything converges; 1.0 ship."
+    },
+    {
+      "id": "cmajor-spike",
+      "title": "Cmajor Spike — decision gate (pre-v6)",
+      "status": "shipped",
+      "kind": "version",
+      "tags": [
+        "gate"
+      ],
+      "shipped": "2026-06-21",
+      "summary": "DONE (Spike I + II) → ADR-0012 (Proposed): GO / hybrid. Equivalence bit-exact (linear + nonlinear); data boundary solved (value endpoint runtime-settable; external float[] is codegen-baked-only); clean FilterModel slot-in, RT-safe; AOT generated-C++ committed (no engine embed, no CI dependency). Perf (equal-work): single node ~1.95×, but a FUSED per-voice processor (SVF+sat+drive in one advance) ~1.3× — author v6 as fused processors, not micro-nodes. Boundary: Cmajor below the per-voice DSP-block line, JUCE everywhere else. RATIFIED — ADR-0012 Accepted (both spikes complete).",
+      "specLinks": [
+        "docs/decisions/0012-cmajor-coexistence-evaluation.md",
+        "docs/superpowers/specs/2026-06-21-cmajor-spike-design.md",
+        "docs/superpowers/specs/2026-06-21-cmajor-nonlinear-spike-design.md"
+      ],
+      "children": [
+        {
+          "id": "cmajor-spike-toolchain",
+          "title": "Toolchain + spike harness",
+          "status": "shipped",
+          "kind": "task",
+          "summary": "Stand up Cmajor in an isolated spike harness OUTSIDE the VST3 target: choose AOT C++ codegen (cmaj generate --target=cpp) vs the runtime/JIT lib, and confirm Cmajor's license is compatible (note it in the ADR). Gate: a trivial gain patch compiles and processes a buffer with the expected gain."
+        },
+        {
+          "id": "cmajor-spike-port-svf",
+          "title": "Port the linear TPT SVF",
+          "status": "shipped",
+          "kind": "task",
+          "summary": "Reimplement NlSvfCell's LINEAR TPT core (cutoff/resonance, LP/BP/HP taps) as a Cmajor processor — the bounded pilot surface. Deliverable: an SVF Cmajor patch driven by cutoff/res. (Nonlinear res-sat is out of scope for the pilot.)"
+        },
+        {
+          "id": "cmajor-spike-equivalence",
+          "title": "Numeric equivalence gate",
+          "status": "shipped",
+          "kind": "task",
+          "summary": "Compare the Cmajor SVF against the C++ NlSvfCell across cutoff/resonance sweeps using the existing tests/testdsp magnitude-response + NSR helpers. Gate: responses match within a tolerance (assert; CI-fail on regression)."
+        },
+        {
+          "id": "cmajor-spike-juce-integration",
+          "title": "JUCE/APVTS integration",
+          "status": "shipped",
+          "kind": "task",
+          "summary": "Host the Cmajor SVF inside a JUCE AudioProcessor path: block processing + parameter passing (cutoff/res from atomics, the snapshot pattern) + RT-safety (no audio-thread alloc). Gate: audio flows through the JUCE-hosted Cmajor node with correct params."
+        },
+        {
+          "id": "cmajor-spike-256voice-perf",
+          "title": "256-voice perf model (the crux)",
+          "status": "shipped",
+          "kind": "task",
+          "summary": "Benchmark the per-voice cost: 256 Cmajor instances vs one patch with internal polyphony. Measure CPU + memory at 256 voices against the current C++ spine baseline. Gate: numbers vs C++ baseline that fit (or explicitly fail) the per-voice budget — this decides go/no-go."
+        },
+        {
+          "id": "cmajor-spike-windows-ci",
+          "title": "Windows CI feasibility",
+          "status": "in-progress",
+          "kind": "task",
+          "summary": "Decided (ADR-0012): commit the generated C++ — no Cmajor toolchain in CI. Spike code (generated C++ + adapters + tests) lives in the test target Windows CI builds; PENDING confirmation green on the next CI run."
+        },
+        {
+          "id": "cmajor-spike-adr",
+          "title": "ADR-0012 + recommendation",
+          "status": "shipped",
+          "kind": "task",
+          "summary": "Synthesize findings (equivalence, 256-voice perf, integration friction, licensing, dev experience) into ADR-0012. Outcomes are not just go/no-go: a HYBRID (Cmajor for some/all DSP, JUCE for host/UI/params) is a valid recommendation. If adopting, define the JUCE↔Cmajor boundary, the migration slot/approach, and whether v6's graph is authored in Cmajor."
+        }
+      ]
+    },
+    {
+      "id": "cmajor-migration",
+      "title": "Cmajor Adoption — hybrid (coexist with JUCE; below the per-voice DSP-block line)",
+      "status": "planned",
+      "kind": "version",
+      "tags": [
+        "conditional"
+      ],
+      "firmness": "firm",
+      "summary": "ADR-0012 (Accepted) — GO/hybrid: Cmajor owns per-voice DSP-block math (AOT generated-C++ behind thin C++ adapters), JUCE keeps host/UI/params/MIDI + the C++ voice pool; v6's graph authored as FUSED per-voice Cmajor processors (no double-build). Both spikes done: equivalence bit-exact, data boundary solved, realistic perf ~1.3× (budget into the 256-voice perf gate). Sign-off done. First step: port a real shipping DSP block behind its existing interface; move adapter state heap→in-place (Q17/Q18); measure oversampled-nonlinear cost at v5.3."
+    }
   ],
   "continuousThreads": [
-    { "id": "thread-harness", "title": "DSP test-harness coverage", "summary": "Grows to cover every spine/source/FX component; gates releases." },
-    { "id": "thread-perf", "title": "Per-voice perf gate", "summary": "256 voices × full stereo × graph DSP; profiling as a release gate." },
-    { "id": "thread-gui", "title": "Incremental GUI toward the target aesthetic", "summary": "Each phase advances the visual design; no deferred 'real GUI'." },
-    { "id": "thread-security", "title": "Security-scan CI/CD gate", "summary": "SAST + SCA (cppcheck/clang-tidy/CodeQL + dep/CVE scan) wired as a CI/CD GATE (fails the build on regression), not just a baseline. Package the setup as a reusable skill if it generalizes. Scheduled after v5.2 + the Cmajor spike." }
+    {
+      "id": "thread-harness",
+      "title": "DSP test-harness coverage",
+      "summary": "Grows to cover every spine/source/FX component; gates releases."
+    },
+    {
+      "id": "thread-perf",
+      "title": "Per-voice perf gate",
+      "summary": "256 voices × full stereo × graph DSP; profiling as a release gate."
+    },
+    {
+      "id": "thread-gui",
+      "title": "Incremental GUI toward the target aesthetic",
+      "summary": "Each phase advances the visual design; no deferred 'real GUI'."
+    },
+    {
+      "id": "thread-security",
+      "title": "Security-scan CI/CD gate",
+      "summary": "SAST + SCA (cppcheck/clang-tidy/CodeQL + dep/CVE scan) wired as a CI/CD GATE (fails the build on regression), not just a baseline. Package the setup as a reusable skill if it generalizes. Scheduled after v5.2 + the Cmajor spike."
+    }
   ]
 }
