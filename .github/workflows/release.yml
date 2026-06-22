@@ -1,0 +1,63 @@
+name: Release
+
+# Build the Windows VST3 and publish a GitHub Release whenever a version tag
+# (vX.Y.Z) is pushed. This restores the release-tagging practice (the last tag
+# before this workflow was v4.0.0) and makes it automatic: tag the release
+# commit, push the tag, and CI cuts the Windows release.
+#
+# workflow_dispatch lets you (re)build a release for an existing tag without
+# pushing a new one — pass the tag name as the input.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and release (e.g. v5.3.0)'
+        required: true
+
+permissions:
+  contents: write   # required to create the GitHub Release and upload assets
+
+jobs:
+  release:
+    name: windows-release
+    runs-on: windows-2022
+    steps:
+      - name: Resolve tag ref
+        id: ref
+        shell: bash
+        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.tag }}
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package VST3
+        id: package
+        shell: pwsh
+        run: |
+          $vst3 = "build/k2000_artefacts/Release/VST3/k2000.vst3"
+          if (!(Test-Path $vst3)) { throw "VST3 not found at $vst3" }
+          $zip = "k2000-${{ steps.ref.outputs.tag }}-windows.zip"
+          Compress-Archive -Path $vst3 -DestinationPath $zip -Force
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ref.outputs.tag }}
+          name: k2000 ${{ steps.ref.outputs.tag }}
+          generate_release_notes: true
+          files: ${{ steps.package.outputs.zip }}
