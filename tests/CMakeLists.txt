@@ -19,6 +19,7 @@ add_executable(k2000_tests
     OverdriveDiagnosticTests.cpp
     FilterModelLibraryTests.cpp
     InPlaceStateTests.cpp
+    ModelHotSwapTests.cpp
     PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp

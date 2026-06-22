@@ -1,5 +1,6 @@
 #include "Voice.h"
 #include "Layer.h"
+#include "dsp/spine/SpineState.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <algorithm>
 #include <cmath>
@@ -44,8 +45,10 @@ void Voice::noteOn(int midiNote, float velocity) {
     velocity_ = velocity;
     osc_.reset();
     amp_.reset();
-    spine_.reset(layer_ ? layer_->spineModel() : nullptr,
-                 layer_ ? layer_->hpStage()    : nullptr);
+    // bind() snaps the spine to the current layer's model with no fade; correct for note-start
+    // (including stolen-voice reassignment where the layer changes between prepare and noteOn).
+    spine_.bind(layer_ ? layer_->spineModel() : nullptr,
+                layer_ ? layer_->hpStage()    : nullptr);
     if (layer_)
         for (int t = 1; t < (int) kNumBlockTypes; ++t)
             if (blockStates_[t]) layer_->block((BlockTypeId) t).resetVoice(*blockStates_[t]);
@@ -85,7 +88,7 @@ void Voice::render(float* outL, float* outR, int numSamples) {
     // so a voice playing layer 1 filters with layer 1's settings, not layer 0's.
     std::copy(tmpL, tmpL + numSamples, tmpR);
     spine_.processStereo(layer_->hpStage(), s.hpEnable != 0,
-                         layer_->spineModel(), tmpL, tmpR, numSamples);
+                         layer_->spineModel(), kDefaultModelFadeMs, tmpL, tmpR, numSamples);
 
     const float lvl = layer_->level();
     const float spineOut = juce::Decibels::decibelsToGain(s.spineOutputDb);
