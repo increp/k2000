@@ -23,6 +23,7 @@ add_executable(k2000_tests
     MultiLayerTests.cpp
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
+    SafetyLimiterTests.cpp
     CmajorSvfAdapterTests.cpp
     CmajorSvfEquivalenceTests.cpp
     CmajorFilterModelTests.cpp
