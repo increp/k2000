@@ -98,7 +98,7 @@ public:
 
         beginTest("spine.modelFadeMs default reaches the snapshot (25 ms) and round-trips");
         {
-            auto s = params::snapshot(apvts, 0);
+            s = params::snapshot(apvts, 0);
             expectWithinAbsoluteError(s.spineModelFadeMs, 25.0f, 1e-4f);
             if (auto* p = apvts.getParameter(params::spineModelFadeMs))
                 p->setValueNotifyingHost(p->convertTo0to1(60.0f));
