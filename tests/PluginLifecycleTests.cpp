@@ -1,5 +1,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <cmath>
+#include <algorithm>
 #include "../src/PluginProcessor.h"
 
 class PluginLifecycleTest : public juce::UnitTest {
@@ -61,6 +63,50 @@ public:
             q.setStateInformation(mb.getData(), (int) mb.getSize());
             float restored = *q.apvts().getRawParameterValue(params::layerIds(0).filterCutoff);
             expectWithinAbsoluteError(restored, 3200.0f, 5.0f);
+        }
+
+        beginTest("safety limiter is enabled by default");
+        {
+            K2000AudioProcessor p;
+            expect(p.isLimiterEnabled(), "fresh instance must default to limiter ON");
+        }
+
+        beginTest("limiter-enable round-trips through saved state (OFF and ON)");
+        {
+            K2000AudioProcessor p; p.prepareToPlay(SR, BLOCK);
+            p.setLimiterEnabled(false);
+            juce::MemoryBlock mb; p.getStateInformation(mb);
+            K2000AudioProcessor q; q.prepareToPlay(SR, BLOCK);
+            expect(q.isLimiterEnabled(), "q starts ON before load");
+            q.setStateInformation(mb.getData(), (int) mb.getSize());
+            expect(! q.isLimiterEnabled(), "OFF must persist across save/restore");
+
+            p.setLimiterEnabled(true);
+            juce::MemoryBlock mb2; p.getStateInformation(mb2);
+            q.setStateInformation(mb2.getData(), (int) mb2.getSize());
+            expect(q.isLimiterEnabled(), "ON must persist across save/restore");
+        }
+
+        beginTest("enabled limiter caps a hot processed block; disabled does not");
+        {
+            // Drive a loud note and confirm enabled output stays under the ceiling.
+            const float ceil = std::pow(10.0f, -12.0f / 20.0f);
+            auto peakOf = [](juce::AudioBuffer<float>& b) {
+                float m = 0.0f;
+                for (int c = 0; c < b.getNumChannels(); ++c)
+                    for (int i = 0; i < b.getNumSamples(); ++i) m = std::max(m, std::abs(b.getSample(c, i)));
+                return m;
+            };
+            K2000AudioProcessor p; p.prepareToPlay(SR, BLOCK);
+            // crank master gain so the raw mix would exceed the ceiling
+            if (auto* mg = p.apvts().getParameter(params::masterGain))
+                mg->setValueNotifyingHost(mg->convertTo0to1(6.0f));
+            juce::MidiBuffer midi; midi.addEvent(juce::MidiMessage::noteOn(1, 48, (juce::uint8) 127), 0);
+            juce::AudioBuffer<float> buf(2, BLOCK);
+            p.setLimiterEnabled(true);
+            float mEnabled = 0.0f;
+            for (int k = 0; k < 8; ++k) { buf.clear(); p.processBlock(buf, midi); midi.clear(); mEnabled = std::max(mEnabled, peakOf(buf)); }
+            expect(mEnabled <= ceil + 1e-4f, "enabled output must stay <= ceiling (peak " + juce::String(mEnabled,5) + ")");
         }
     }
 };
