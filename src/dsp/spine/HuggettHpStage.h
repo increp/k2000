@@ -15,7 +15,9 @@ public:
     };
 
     void prepare(double sampleRate) noexcept { sampleRate_ = sampleRate; }
-    State* makeState() const;                 // prepare-time alloc only
+    State* makeState() const;                 // heap convenience (prepare-time / tests)
+    std::size_t stateSize() const noexcept { return sizeof(State); }
+    State* constructState(void* mem) const;   // placement-new; RT-safe
     void reset(State& s) const noexcept;
 
     void setParams(float cutoffHz, float resonance, Slope slope) noexcept {

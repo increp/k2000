@@ -24,7 +24,9 @@ public:
     };
 
     void prepare(double sampleRate) noexcept override { sampleRate_ = sampleRate; }
-    State* makeState() const override;
+    std::size_t stateSize()  const noexcept override { return sizeof(VoiceState); }
+    std::size_t stateAlign() const noexcept override { return alignof(VoiceState); }
+    FilterModel::State* constructState(void* mem) const override;
     void reset(State& s) const noexcept override;
 
     void setCommon(float cutoffHz, float resonance, float drive) noexcept override;

@@ -1,8 +1,8 @@
 #include "HuggettFilter.h"
 #include <cmath>
 
-FilterModel::State* HuggettFilter::makeState() const {
-    auto* vs = new VoiceState();
+FilterModel::State* HuggettFilter::constructState(void* mem) const {
+    auto* vs = new (mem) VoiceState();
     vs->a.prepare(sampleRate_);
     vs->b.prepare(sampleRate_);
     vs->dc.prepare(sampleRate_);

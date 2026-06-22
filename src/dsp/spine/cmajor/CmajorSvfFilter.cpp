@@ -1,7 +1,7 @@
 #include "CmajorSvfFilter.h"
 
-FilterModel::State* CmajorSvfFilter::makeState() const {
-    auto* vs = new VoiceState();
+FilterModel::State* CmajorSvfFilter::constructState(void* mem) const {
+    auto* vs = new (mem) VoiceState();
     vs->l.prepare(sampleRate_);
     vs->r.prepare(sampleRate_);
     return vs;

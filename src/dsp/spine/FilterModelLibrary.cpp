@@ -1,6 +1,12 @@
 #include "FilterModelLibrary.h"
 #include "HuggettFilter.h"
 #include "../../util/Utf8.h"
+#include "SpineState.h"
+// Q18 governance: every registered model's State must fit the per-voice slot.
+static_assert(sizeof(HuggettFilter::VoiceState)  <= kMaxSpineStateBytes,
+              "HuggettFilter::VoiceState exceeds kMaxSpineStateBytes — bump it (Q18) or slim the model");
+static_assert(alignof(HuggettFilter::VoiceState) <= kSpineStateAlign,
+              "HuggettFilter::VoiceState over-aligned for the spine slot");
 
 namespace {
 struct Entry {

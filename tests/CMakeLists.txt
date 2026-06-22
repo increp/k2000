@@ -18,6 +18,7 @@ add_executable(k2000_tests
     HuggettDriveOnsetTests.cpp
     OverdriveDiagnosticTests.cpp
     FilterModelLibraryTests.cpp
+    InPlaceStateTests.cpp
     PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp

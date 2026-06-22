@@ -1,7 +1,12 @@
 #include "HuggettHpStage.h"
+#include <new>
 
 HuggettHpStage::State* HuggettHpStage::makeState() const {
-    auto* st = new State();
+    return constructState(::operator new(sizeof(State)));
+}
+
+HuggettHpStage::State* HuggettHpStage::constructState(void* mem) const {
+    auto* st = new (mem) State();
     st->a.prepare(sampleRate_);
     st->b.prepare(sampleRate_);
     st->dc.prepare(sampleRate_);
