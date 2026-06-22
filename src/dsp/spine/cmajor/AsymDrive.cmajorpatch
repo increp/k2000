@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.asymdrive",
+    "version": "1.0",
+    "name": "AsymDrive",
+    "description": "Memoryless asymmetric tanh drive shaper (Cmajor Spike II)",
+    "mainProcessor": "AsymDrive",
+    "source": [ "AsymDrive.cmajor" ]
+}

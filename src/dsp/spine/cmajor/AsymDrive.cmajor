@@ -1,0 +1,36 @@
+processor AsymDrive
+{
+    input  stream float in;
+    output stream float out;
+    input  event float drive01    [[ name: "Drive",      min: 0,  max: 1,  init: 0 ]];
+    input  event float biasFixed  [[ name: "Bias",       min: -1, max: 1,  init: 0 ]];
+    input  event float maxDriveDb [[ name: "MaxDriveDb", min: 0,  max: 48, init: 30 ]];
+
+    float gain = 1.0f, bias = 0.0f, comp = 1.0f;
+    bool  dirty = true;
+    float d01 = 0.0f, biasF = 0.0f, maxDb = 30.0f;
+
+    event drive01    (float v) { d01 = v;   dirty = true; }
+    event biasFixed  (float v) { biasF = v; dirty = true; }
+    event maxDriveDb (float v) { maxDb = v; dirty = true; }
+
+    void recompute()
+    {
+        let dB = max (0.0f, d01) * maxDb;
+        gain = pow (10.0f, dB / 20.0f);
+        bias = biasF;
+        let full = (gain > 1.0f) ? (1.0f / tanh (gain)) : 1.0f;
+        comp = 1.0f + 0.75f * (full - 1.0f);
+        dirty = false;
+    }
+
+    void main()
+    {
+        loop
+        {
+            if (dirty) recompute();
+            out <- comp * tanh (gain * in + bias);
+            advance();
+        }
+    }
+}
