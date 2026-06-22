@@ -73,7 +73,8 @@ struct SafetyLimiterTests : public juce::UnitTest {
             const float grAfterBurst = lim.gainReductionDb();
             // feed quiet blocks; GR should fall back toward 0 within a few release times
             float grLater = grAfterBurst;
-            for (int b = 0; b < 20; ++b) { std::vector<float> q((size_t)256, 0.05f * ceil); lim.process(q.data(), nullptr, 256); grLater = lim.gainReductionDb(); }
+            // ~320 ms of quiet (>= 4 release time-constants at 80 ms) so recovery is robust, not marginal
+            for (int b = 0; b < 60; ++b) { std::vector<float> q((size_t)256, 0.05f * ceil); lim.process(q.data(), nullptr, 256); grLater = lim.gainReductionDb(); }
             expect(grLater < grAfterBurst * 0.1f, "GR should recover toward 0 (after " + juce::String(grAfterBurst,3)
                    + " -> " + juce::String(grLater,3) + ")");
         }

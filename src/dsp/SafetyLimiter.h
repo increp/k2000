@@ -36,7 +36,7 @@ public:
 
 private:
     static constexpr float kSafetyCeilingDb = -12.0f;  // CALIB — tune after smoke-test
-    static constexpr float kReleaseMs       = 40.0f;   // CALIB
+    static constexpr float kReleaseMs       = 80.0f;   // CALIB
     double sampleRate_ = 48000.0;
     float  ceilingLin_ = 0.2511886f;   // pow(10, -12/20); recomputed in prepare()
     float  relCoeff_   = 0.0f;
