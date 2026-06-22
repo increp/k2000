@@ -125,20 +125,24 @@ void K2000AudioProcessorEditor::buildStaticControls() {
             processorRef.setLimiterEnabled(true);
             return;
         }
-        // turning OFF — require an explicit, warned confirmation
+        // JUCE 2-button result codes (juce_AlertWindow.h): button[0] -> 1, button[1] -> 0,
+        // and a dismiss/escape also -> 0. So "Disable" is button[0] (the only code meaning
+        // disable) and "Cancel" is button[1]; every non-Disable outcome (Cancel, escape,
+        // close) returns 0 and keeps the limiter ON. Fail-safe.
         auto opts = juce::MessageBoxOptions()
             .withIconType(juce::MessageBoxIconType::WarningIcon)
             .withTitle("Disable safety limiter?")
             .withMessage("Disabling the safety limiter allows dangerously loud output that "
                          "can damage hearing or equipment. Continue?")
-            .withButton("Cancel")     // index 0 (safe default)
-            .withButton("Disable");   // index 1
+            .withButton("Disable")   // button[0] -> result 1
+            .withButton("Cancel");   // button[1] -> result 0 (also the dismiss code)
         juce::AlertWindow::showAsync(opts, [this](int result) {
-            if (result == 1) processorRef.setLimiterEnabled(false);                       // "Disable"
-            else safetyLimiter_.setToggleState(true, juce::dontSendNotification);         // revert -> stays ON
+            if (result == 1) processorRef.setLimiterEnabled(false);                 // explicit Disable
+            else safetyLimiter_.setToggleState(true, juce::dontSendNotification);   // Cancel/escape/close -> stay ON
         });
     };
     ampSection_.addAndMakeVisible(safetyLimiter_);
+    ampSection_.setReserved(false);   // Amp is now a live section (safety limiter), not a placeholder
 
     limitIndicator_.setText("LIMIT", juce::dontSendNotification);
     limitIndicator_.setJustificationType(juce::Justification::centred);
