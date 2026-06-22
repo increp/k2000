@@ -3,7 +3,7 @@
     "product": "Bernie",
     "tagline": "A K2061/K2088-class VAST engine bracketed by a constant Summit voice",
     "currentVersion": "5",
-    "nextStep": "Ratify ADR-0012 (Cmajor GO/hybrid, Proposed) → nonlinear follow-up spike (Huggett res-sat) → then v6 design",
+    "nextStep": "Cmajor Spike II (nonlinear + data-boundary, inline) → SAFETY: hearing-safety output limiter (default-ON) + Separation zero-click fix → ratify ADR-0012 → v6 design",
     "lastUpdated": "2026-06-21",
     "schemaVersion": 1
   },
@@ -17,6 +17,8 @@
     ] },
     { "id": "v5", "title": "v5 — The Constant Summit Spine", "status": "in-progress", "kind": "version", "tags": ["keystone"], "firmness": "firm", "summary": "Always-present selectable filter-model library + Huggett flagship; live click-free hot-swap; stereo, per-Layer.", "children": [
       { "id": "v5.0", "title": "v5.0 — Nonlinear Huggett (plain-tanh spine)", "status": "shipped", "kind": "point", "shipped": "2026-06-20", "summary": "Three asymmetric tanh stages + clean HP pre-filter. Remediated post-UAT (ADAA dropped)." },
+      { "id": "v5-safety-limiter", "title": "v5 — Hearing-safety output limiter (default-ON)", "status": "planned", "kind": "point", "tags": ["safety", "priority"], "summary": "SAFETY: a global output/amp brickwall limiter that hard-caps the signal to a safe ceiling so extreme resonance/separation/self-oscillation can never blow the listener's ears or speakers. ON by default; defeatable ONLY via an explicit operator action gated behind a hearing-safety warning (never silently off, never off by preset). Scheduled immediately AFTER the Cmajor spike — user priority." },
+      { "id": "v5-sep-zero-click", "title": "Fix Separation zero-crossing click", "status": "planned", "kind": "task", "tags": ["bug", "priority"], "summary": "BUG: HuggettFilter clicks when Separation sweeps through 0 — at 12 dB the routing flips single<->parallel at sep==0 (resolve(): single = sep0) and cutA/cutB collapse to coincident, an abrupt discontinuity. Needs click-free handling (smoothing/crossfade across the transition, or a continuous routing formulation). Scheduled with the safety work, after the spike." },
       { "id": "v5.1", "title": "v5.1 — Q17 click-free model hot-swap", "status": "planned", "kind": "point", "summary": "Equal-power crossfade on model change; migrate per-voice State from heap to in-place. Prerequisite for any 2nd model." },
       { "id": "v5.2", "title": "v5.2 — Real Separation / dual-filter", "status": "shipped", "kind": "point", "shipped": "2026-06-21", "summary": "Two independently-tuned 2-pole sections; proper Separation; Summit dual routings; works in 12 and 24 dB.", "specLinks": ["docs/specs/2026-06-20-huggett-separation-design.md"] },
       { "id": "v5.3", "title": "v5.3 — HQ oversampling tiers + on-screen keyboard", "status": "specced", "kind": "point", "summary": "Light/Normal/Heavy/Full OS with independent live/render selectors; playable + MIDI-display keyboard." },
