@@ -3,7 +3,7 @@
     "product": "Bernie",
     "tagline": "A K2061/K2088-class VAST engine bracketed by a constant Summit voice",
     "currentVersion": "5",
-    "nextStep": "Separation zero-crossing click fix → v6 design (per-voice DSP graph authored as fused Cmajor processors per ADR-0012)",
+    "nextStep": "v5.1 click-free hot-swap (per-voice State heap→in-place) → Moog as the FIRST production Cmajor filter block (ADR-0012 migration step, avoids the double-build) → v6 dynamic graph",
     "lastUpdated": "2026-06-21",
     "schemaVersion": 1
   },
@@ -90,14 +90,15 @@
         },
         {
           "id": "v5-sep-zero-click",
-          "title": "Fix Separation zero-crossing click",
-          "status": "planned",
+          "title": "Fix Separation click + gradual drive onset",
+          "status": "shipped",
+          "shipped": "2026-06-22",
           "kind": "task",
           "tags": [
             "bug",
             "priority"
           ],
-          "summary": "BUG: HuggettFilter clicks when Separation sweeps through 0 — at 12 dB the routing flips single<->parallel at sep==0 (resolve(): single = sep0) and cutA/cutB collapse to coincident, an abrupt discontinuity. Needs click-free handling (smoothing/crossfade across the transition, or a continuous routing formulation). Scheduled with the safety work, after the spike."
+          "summary": "SHIPPED: two spine continuity-at-0 fixes. (1) Separation click — 12 dB LP/HP no longer switch single<->parallel-sum at sep=0 (6 dB jump); always half-gain parallel, so sep=0 = one LP and it widens continuously. (2) Pre/post drive onset — the shaper engaged a fixed bias + makeup gain the instant drive>0; now blends in by the drive amount (identity at 0, gradual). Tests: HuggettSeparationClickTests, HuggettDriveOnsetTests."
         },
         {
           "id": "v5.1",
