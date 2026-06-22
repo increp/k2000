@@ -47,6 +47,21 @@ public:
         for (float x : outL) sumAbs += std::abs(x);
         expect(sumAbs > 1.0, "voice should produce audible output after noteOn");
 
+        beginTest("noteOn renders finite, audible output (bind path)");
+        {
+            Layer regLayer; regLayer.prepare(48000.0, 512);
+            Voice regVoice; regVoice.setLayer(&regLayer); regVoice.prepare(48000.0, 512);
+            regVoice.noteOn(60, 1.0f);
+            std::vector<float> lBuf(512, 0.0f), rBuf(512, 0.0f);
+            regVoice.render(lBuf.data(), rBuf.data(), 512);
+            float regPeak = 0.0f;
+            for (int i = 0; i < 512; ++i) {
+                expect(std::isfinite(lBuf[i]), "non-finite sample after noteOn via bind");
+                regPeak = std::max(regPeak, std::abs(lBuf[i]));
+            }
+            expect(regPeak > 0.0f, "voice produced silence after noteOn");
+        }
+
         beginTest("noteOff eventually silences voice");
         v.noteOff();
         for (int i = 0; i < 200; ++i) {
