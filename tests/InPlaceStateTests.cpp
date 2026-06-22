@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstddef>
 #include <cmath>
+#include <cstring>
 
 // Task 1: in-place state lifecycle equals the heap path, and every registered
 // model fits the per-voice slot budget (Q18).
@@ -36,8 +37,8 @@ struct InPlaceStateTests : public juce::UnitTest {
         runTone(h, *st, inplaceOut);
         h.destroyState(st);
 
-        bool identical = true;
-        for (size_t i = 0; i < heapOut.size(); ++i) identical = identical && (heapOut[i] == inplaceOut[i]);
+        const bool identical = (std::memcmp(heapOut.data(), inplaceOut.data(),
+                                            heapOut.size() * sizeof(float)) == 0);
         expect(identical, "in-place output diverged from heap output");
 
         beginTest("every registered model fits kMaxSpineStateBytes (Q18)");
