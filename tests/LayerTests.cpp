@@ -60,6 +60,18 @@ public:
             expect(peak < 0.6f, "HP attenuates 200 Hz: " + juce::String(peak));
         }
 
+        beginTest("pre-built models: spineModel(id) is stable across updateParameters");
+        {
+            Layer layer; layer.prepare(48000.0, 512);
+            const FilterModel* m0a = layer.spineModel(0);
+            ParamSnapshot s; s.spineModel = 0;
+            layer.updateParameters(s);
+            const FilterModel* m0b = layer.spineModel(0);
+            expect(m0a != nullptr, "model 0 not built");
+            expect(m0a == m0b, "model instance was rebuilt on update (should be pre-built/stable)");
+            expect(layer.spineModel() == m0a, "current model should be id 0");
+        }
+
         beginTest("Lowering the cutoff drops high-note energy");
         {
             // Same Layer config save the cutoff; a high note through a low LP

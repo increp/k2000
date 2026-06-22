@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <memory>
+#include <vector>
 #include <cstddef>
 #include "dsp/Algorithm.h"
 #include "dsp/AlgorithmLibrary.h"
@@ -38,7 +39,10 @@ public:
     void  setLevel(float linearGain) { level_ = linearGain; }
     float level() const { return level_; }
 
-    const FilterModel* spineModel() const { return spineModel_.get(); }
+    const FilterModel* spineModel() const { return models_[currentModelId_].get(); }
+    const FilterModel* spineModel(std::size_t id) const {
+        return models_[id < models_.size() ? id : 0].get();
+    }
 
     const HuggettHpStage* hpStage() const { return &hpStage_; }
 
@@ -49,9 +53,9 @@ private:
     ParamSnapshot snapshot_;
     float level_ = 1.0f;  // linear output gain, set each block from layer{i}.level
 
-    std::unique_ptr<FilterModel> spineModel_;
-    std::size_t spineModelId_ = SIZE_MAX;   // forces first build
-    HuggettFilter* huggett_ = nullptr;      // non-owning view when model 0 is active
+    std::vector<std::unique_ptr<FilterModel>> models_;   // one per registered model (pre-built)
+    std::size_t currentModelId_ = 0;
+    HuggettFilter* huggett_ = nullptr;      // non-owning view of the Huggett instance
     HuggettHpStage hpStage_;               // fixed HP pre-stage (config shared; per-voice state in the slot)
     double sampleRate_ = 44100.0;
 };
