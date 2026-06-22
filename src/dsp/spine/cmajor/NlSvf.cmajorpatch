@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.nlsvf",
+    "version": "1.0",
+    "name": "NlSvf",
+    "description": "Linear TPT SVF + in-loop resonance saturator (Cmajor Spike II)",
+    "mainProcessor": "NlSvf",
+    "source": [ "NlSvf.cmajor" ]
+}
