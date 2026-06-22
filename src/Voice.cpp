@@ -15,7 +15,7 @@ void Voice::prepare(double sr, int maxBlock) {
     amp_.prepare(sr);
     scratch_.assign(maxBlock, 0.0f);
     scratchR_.assign(maxBlock, 0.0f);
-    spine_.prepare(sr, layer_ ? layer_->spineModel() : nullptr,
+    spine_.prepare(sr, maxBlock, layer_ ? layer_->spineModel() : nullptr,
                        layer_ ? layer_->hpStage()    : nullptr);
 
     // One VoiceState per palette block type.
