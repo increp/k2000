@@ -2,6 +2,7 @@
 #include "../src/dsp/spine/HuggettFilter.h"
 #include "../src/dsp/spine/FilterModelLibrary.h"
 #include "../src/dsp/spine/SpineState.h"
+#include "fixtures/CountingFilterModel.h"
 #include <vector>
 #include <cstddef>
 #include <cmath>
@@ -46,6 +47,17 @@ struct InPlaceStateTests : public juce::UnitTest {
             auto m = FilterModelLibrary::create(i);
             expect(m->stateSize()  <= kMaxSpineStateBytes, "model " + juce::String((int) i) + " state too large");
             expect(m->stateAlign() <= kSpineStateAlign,    "model " + juce::String((int) i) + " over-aligned");
+        }
+
+        beginTest("CountingFilterModel: construct/destroy balance");
+        {
+            const int before = CountingFilterModel::liveStates();
+            CountingFilterModel cm; cm.prepare(48000.0); cm.setCommon(1000.0f, 0.0f, 0.0f);
+            alignas(kSpineStateAlign) std::byte b[kMaxSpineStateBytes];
+            auto* cst = cm.constructState(b);
+            expect(CountingFilterModel::liveStates() == before + 1, "construct did not bump counter");
+            cm.destroyState(cst);
+            expect(CountingFilterModel::liveStates() == before, "destroy did not balance counter");
         }
     }
 };
