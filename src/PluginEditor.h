@@ -6,7 +6,8 @@
 #include "gui/Section.h"
 #include "gui/ParamBinder.h"
 
-class K2000AudioProcessorEditor : public juce::AudioProcessorEditor {
+class K2000AudioProcessorEditor : public juce::AudioProcessorEditor,
+                                  private juce::Timer {
 public:
     explicit K2000AudioProcessorEditor(K2000AudioProcessor& p);
     ~K2000AudioProcessorEditor() override;
@@ -57,6 +58,10 @@ private:
 
     Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
     Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
+    // Amp section: safety limiter controls (protected — NOT bound to APVTS)
+    juce::Label        safetyLbl_;        // "Safety" caption
+    juce::ToggleButton safetyLimiter_;    // protected enable (NOT bound to APVTS)
+    juce::Label        limitIndicator_;   // lights when the limiter is reducing gain
 
     // --- Modulation row ---
     Section ampEnvSection_{ "Amp Env", /*spine*/ true };
@@ -82,6 +87,7 @@ private:
 
     void buildStaticControls();   // combos' item lists, labels, child attach (once)
     void bindLayer(int layer);    // (re)bind every per-layer control via binder_
+    void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)
 };

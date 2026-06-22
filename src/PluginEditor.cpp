@@ -11,10 +11,12 @@ K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     binder_.bind(masterGain_, params::masterGain);
 
     bindLayer(0);
+    startTimerHz(24);
     setSize(1040, 740);
 }
 
 K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
+    stopTimer();
     binder_.clear();        // detach all attachments while the controls are still alive
     setLookAndFeel(nullptr);
 }
@@ -111,6 +113,38 @@ void K2000AudioProcessorEditor::buildStaticControls() {
                      &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
         addAndMakeVisible(*s);
 
+    // Amp section: hearing-safety output limiter (protected control — not an APVTS param).
+    safetyLbl_.setText("Safety", juce::dontSendNotification);
+    safetyLbl_.setJustificationType(juce::Justification::centred);
+    ampSection_.addAndMakeVisible(safetyLbl_);
+
+    safetyLimiter_.setButtonText("Limiter");
+    safetyLimiter_.setToggleState(processorRef.isLimiterEnabled(), juce::dontSendNotification);
+    safetyLimiter_.onClick = [this] {
+        if (safetyLimiter_.getToggleState()) {           // turning ON — always allowed, no warning
+            processorRef.setLimiterEnabled(true);
+            return;
+        }
+        // turning OFF — require an explicit, warned confirmation
+        auto opts = juce::MessageBoxOptions()
+            .withIconType(juce::MessageBoxIconType::WarningIcon)
+            .withTitle("Disable safety limiter?")
+            .withMessage("Disabling the safety limiter allows dangerously loud output that "
+                         "can damage hearing or equipment. Continue?")
+            .withButton("Cancel")     // index 0 (safe default)
+            .withButton("Disable");   // index 1
+        juce::AlertWindow::showAsync(opts, [this](int result) {
+            if (result == 1) processorRef.setLimiterEnabled(false);                       // "Disable"
+            else safetyLimiter_.setToggleState(true, juce::dontSendNotification);         // revert -> stays ON
+        });
+    };
+    ampSection_.addAndMakeVisible(safetyLimiter_);
+
+    limitIndicator_.setText("LIMIT", juce::dontSendNotification);
+    limitIndicator_.setJustificationType(juce::Justification::centred);
+    limitIndicator_.setColour(juce::Label::textColourId, juce::Colours::darkgrey);
+    ampSection_.addAndMakeVisible(limitIndicator_);
+
     // Routing section
     addAndMakeVisible(routingSection_);
     enableLbl_.setText("Enable", juce::dontSendNotification);
@@ -173,6 +207,16 @@ void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
     g.fillAll(SummitLookAndFeel::panelBg);
 }
 
+void K2000AudioProcessorEditor::timerCallback() {
+    const bool active = processorRef.gainReductionDb() > 0.1f;
+    limitIndicator_.setColour(juce::Label::textColourId,
+                              active ? juce::Colours::red : juce::Colours::darkgrey);
+    // keep the toggle in sync if state changed via load
+    if (safetyLimiter_.getToggleState() != processorRef.isLimiterEnabled())
+        safetyLimiter_.setToggleState(processorRef.isLimiterEnabled(), juce::dontSendNotification);
+    limitIndicator_.repaint();
+}
+
 void K2000AudioProcessorEditor::resized() {
     auto area = getLocalBounds().reduced(10);
 
@@ -222,6 +266,12 @@ void K2000AudioProcessorEditor::resized() {
         filterSection_.setBounds(row.removeFromLeft((int) (rest * 0.55f)).reduced(2));
         driveSection_.setBounds(row.removeFromLeft((int) (rest * 0.09f)).reduced(2));
         ampSection_.setBounds(row.reduced(2));
+        {
+            auto ac = ampSection_.contentBounds();
+            safetyLbl_.setBounds(ac.removeFromTop(16));
+            safetyLimiter_.setBounds(ac.removeFromTop(28).reduced(4, 2));
+            limitIndicator_.setBounds(ac.removeFromTop(20));
+        }
 
         // Source children: two stacked cell-rows inside contentBounds.
         auto sc = sourceSection_.contentBounds();
