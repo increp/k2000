@@ -78,23 +78,49 @@ struct MoogLadderTests : public juce::UnitTest {
             expect(bassHiRes < bassLoRes,        "bass did not thin as resonance rose");
         }
 
-        beginTest("self-oscillation: sustains + tracks fc within 3%");
+        beginTest("self-oscillation: sustains + tracks fc within 3% (7-point sweep)");
         {
-            for (double fc : { 220.0, 880.0 }) {
+            // Helper: measure self-osc pitch at `fc` using zero-crossing rate over the
+            // last `zcWindow` samples of a `bufLen`-sample buffer kicked by a single impulse.
+            auto measurePitch = [&](double fc, int bufLen, int zcWindow) -> std::pair<double,double> {
                 MoogLadder mo; mo.prepare(kSR); mo.setSlope(MoogLadder::Slope::db24);
                 std::unique_ptr<FilterModel::State> so(mo.makeState());
                 mo.setCommon((float) fc, 1.0f, 0.0f); mo.reset(*so);
-                std::vector<float> l(1 << 15, 0.0f), r(1 << 15, 0.0f);
-                l[0] = r[0] = 1.0f;                       // impulse kick
-                mo.processStereo(*so, l.data(), r.data(), (int) l.size());
-                // sustained: tail energy is non-trivial
-                double tail = 0; for (int i = (int)l.size()-4096; i < (int)l.size(); ++i) tail += std::abs(l[(size_t)i]);
-                expect(tail > 1.0, "self-oscillation did not sustain at fc=" + juce::String(fc));
-                // pitch: zero-crossing rate over the tail ~ fc
-                int zc = 0; for (int i = (int)l.size()-8192+1; i < (int)l.size(); ++i)
+                std::vector<float> l(bufLen, 0.0f), rv(bufLen, 0.0f);
+                l[0] = rv[0] = 1.0f;   // impulse kick
+                mo.processStereo(*so, l.data(), rv.data(), bufLen);
+                // tail energy check (last 4096 samples)
+                double tail = 0.0;
+                for (int i = bufLen - 4096; i < bufLen; ++i) tail += std::abs(l[(size_t)i]);
+                // zero-crossing rate over zcWindow samples at the very end
+                int zc = 0;
+                for (int i = bufLen - zcWindow + 1; i < bufLen; ++i)
                     if ((l[(size_t)i-1] <= 0.0f) != (l[(size_t)i] <= 0.0f)) ++zc;
-                const double f = zc * 0.5 * kSR / 8192.0;
-                expect(std::abs(f - fc) / fc < 0.03, "self-osc pitch off: " + juce::String(f,1) + " vs " + juce::String(fc));
+                const double f = zc * 0.5 * kSR / (double)zcWindow;
+                return { f, tail };
+            };
+
+            // 7 gated cutoffs spanning ~6 octaves. Buffer = 1<<16 (65536 samples) so
+            // 55 Hz has ~75 cycles over 65536 samples; zc window = 16384 samples.
+            const int kBuf = 1 << 16;
+            const int kZcWin = 16384;
+            for (double fc : { 55.0, 110.0, 220.0, 440.0, 880.0, 1760.0, 3520.0 }) {
+                auto [f, tail] = measurePitch(fc, kBuf, kZcWin);
+                const double errPct = std::abs(f - fc) / fc * 100.0;
+                expect(tail > 1.0, "self-oscillation did not sustain at fc=" + juce::String(fc));
+                expect(std::abs(f - fc) / fc < 0.03,
+                       "self-osc pitch off at fc=" + juce::String(fc) + ": measured=" +
+                       juce::String(f,1) + " err=" + juce::String(errPct,2) + "%");
+                logMessage("self-osc fc=" + juce::String(fc) + " -> measured=" +
+                           juce::String(f,1) + " err=" + juce::String(errPct,2) + "%");
+            }
+
+            // Non-gating diagnostics at 5000 and 7000 Hz (high-end drift visible, not blocking).
+            for (double fc : { 5000.0, 7000.0 }) {
+                auto [f, tail] = measurePitch(fc, kBuf, kZcWin);
+                const double errPct = std::abs(f - fc) / fc * 100.0;
+                logMessage("DIAG (non-gating) fc=" + juce::String(fc) + " -> measured=" +
+                           juce::String(f,1) + " err=" + juce::String(errPct,2) + "%");
             }
         }
     }
