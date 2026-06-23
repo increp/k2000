@@ -12,6 +12,7 @@ public:
 
     struct VoiceState : public FilterModel::State {
         MoogLadderAdapter l, r;
+        float fundamentalHz = 0.0f;   // played-note Hz (per-voice; re-forwarded each block)
     };
 
     void prepare(double sampleRate) noexcept override { sampleRate_ = sampleRate; }
@@ -27,6 +28,14 @@ public:
     void setMode(Mode m)   noexcept { mode_  = m; }
     void setSeparation(float) noexcept { /* no analog in a single ladder */ }
 
+    // Task 6: played-note sub-osc "bass voice". setBass is model-wide (amount/wave/
+    // octave shared by both lanes); setFundamental is per-voice (writes both lanes of
+    // the given state). Octave convention: 0=fundamental, 1=-1oct, 2=-2oct.
+    void setBass(float amount, int wave, int octave) noexcept {
+        bassAmount_ = amount; bassWave_ = wave; bassOctave_ = octave;
+    }
+    void setFundamental(State& s, float hz) const noexcept;
+
     void processStereo(State& s, float* left, float* right, int numSamples) const noexcept override;
 
 private:
@@ -34,4 +43,7 @@ private:
     float  cutoffHz_ = 1000.0f, resonance_ = 0.0f, drive_ = 0.0f;
     Slope  slope_ = Slope::db24;
     Mode   mode_  = Mode::LP;
+    float  bassAmount_ = 0.0f;
+    int    bassWave_   = 0;
+    int    bassOctave_ = 0;
 };

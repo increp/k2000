@@ -244,6 +244,42 @@ struct MoogLadderTests : public juce::UnitTest {
             expect(bpMid > bpHigh * 1.41,
                    "BP mid not > high by >3 dB: mid=" + juce::String(bpMid,4) + " high=" + juce::String(bpHigh,4));
         }
+
+        beginTest("bass voice adds energy at the played fundamental; amount=0 is a no-op");
+        {
+            MoogLadder mb; mb.prepare(kSR);
+            std::unique_ptr<FilterModel::State> s0(mb.makeState());
+            std::unique_ptr<FilterModel::State> s1(mb.makeState());
+            mb.setCommon(1500.0f, 0.0f, 0.0f); mb.setSlope(MoogLadder::Slope::db24);
+
+            auto run = [&](FilterModel::State& state, float amount)->std::vector<float> {
+                mb.setBass(amount, /*sine*/0, /*oct*/0);
+                mb.setFundamental(state, 110.0f); mb.reset(state);
+                std::vector<float> l(16384, 0.0f), r(16384, 0.0f);  // SILENT input
+                mb.processStereo(state, l.data(), r.data(), (int) l.size());
+                return l;
+            };
+            const auto off = run(*s0, 0.0f);
+            const auto on  = run(*s1, 0.8f);
+
+            // amount=0: pure silence in -> bit-identical silence out.
+            // fpclassify(v)==FP_ZERO is the warning-free spelling of "exactly +/-0".
+            bool zero = true; for (float v : off) zero = zero && (std::fpclassify(v) == FP_ZERO);
+            expect(zero, "bassAmount=0 was not a no-op on silent input");
+            // amount>0: energy present, and concentrated near 110 Hz (Goertzel)
+            double e = 0; for (float v : on) e += double(v)*v;
+            expect(e > 1.0, "bass voice produced no energy");
+
+            // Pitch check via zero-crossing rate over the last 8192 samples (~110 Hz).
+            const int zcWin = 8192;
+            int zc = 0;
+            for (int i = (int) on.size() - zcWin + 1; i < (int) on.size(); ++i)
+                if ((on[(size_t)i-1] <= 0.0f) != (on[(size_t)i] <= 0.0f)) ++zc;
+            const double f = zc * 0.5 * kSR / (double) zcWin;
+            logMessage("bass voice oct0 measured pitch=" + juce::String(f,1) + " Hz");
+            expect(std::abs(f - 110.0) / 110.0 < 0.05,
+                   "bass voice pitch off at oct0: measured=" + juce::String(f,1) + " Hz");
+        }
     }
 };
 static MoogLadderTests moogLadderTestsInstance;

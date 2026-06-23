@@ -39,7 +39,7 @@ struct MoogLadder
     };
 
     //==============================================================================
-    static constexpr uint32_t numInputEndpoints  = 6;
+    static constexpr uint32_t numInputEndpoints  = 11;
     static constexpr uint32_t numOutputEndpoints = 1;
 
     static constexpr uint32_t maxFramesPerBlock  = 32;
@@ -49,40 +49,55 @@ struct MoogLadder
 
     enum class EndpointHandles
     {
-        in        = 1,
-        out       = 7,
-        cutoffHz  = 2,
-        resonance = 3,
-        drive     = 4,
-        slope     = 5,
-        mode      = 6
+        in            = 1 ,
+        out           = 12,
+        cutoffHz      = 2 ,
+        resonance     = 3 ,
+        drive         = 4 ,
+        slope         = 5 ,
+        mode          = 6 ,
+        fundamentalHz = 7 ,
+        bassAmount    = 8 ,
+        bassWave      = 9 ,
+        bassOctave    = 10,
+        noteReset     = 11
     };
 
     static constexpr uint32_t getEndpointHandleForName (std::string_view endpointName)
     {
-        if (endpointName == "in")         return static_cast<uint32_t> (EndpointHandles::in);
-        if (endpointName == "out")        return static_cast<uint32_t> (EndpointHandles::out);
-        if (endpointName == "cutoffHz")   return static_cast<uint32_t> (EndpointHandles::cutoffHz);
-        if (endpointName == "resonance")  return static_cast<uint32_t> (EndpointHandles::resonance);
-        if (endpointName == "drive")      return static_cast<uint32_t> (EndpointHandles::drive);
-        if (endpointName == "slope")      return static_cast<uint32_t> (EndpointHandles::slope);
-        if (endpointName == "mode")       return static_cast<uint32_t> (EndpointHandles::mode);
+        if (endpointName == "in")             return static_cast<uint32_t> (EndpointHandles::in);
+        if (endpointName == "out")            return static_cast<uint32_t> (EndpointHandles::out);
+        if (endpointName == "cutoffHz")       return static_cast<uint32_t> (EndpointHandles::cutoffHz);
+        if (endpointName == "resonance")      return static_cast<uint32_t> (EndpointHandles::resonance);
+        if (endpointName == "drive")          return static_cast<uint32_t> (EndpointHandles::drive);
+        if (endpointName == "slope")          return static_cast<uint32_t> (EndpointHandles::slope);
+        if (endpointName == "mode")           return static_cast<uint32_t> (EndpointHandles::mode);
+        if (endpointName == "fundamentalHz")  return static_cast<uint32_t> (EndpointHandles::fundamentalHz);
+        if (endpointName == "bassAmount")     return static_cast<uint32_t> (EndpointHandles::bassAmount);
+        if (endpointName == "bassWave")       return static_cast<uint32_t> (EndpointHandles::bassWave);
+        if (endpointName == "bassOctave")     return static_cast<uint32_t> (EndpointHandles::bassOctave);
+        if (endpointName == "noteReset")      return static_cast<uint32_t> (EndpointHandles::noteReset);
         return 0;
     }
 
     static constexpr EndpointInfo inputEndpoints[] =
     {
-        { 1,  "in",         EndpointType::stream },
-        { 2,  "cutoffHz",   EndpointType::event  },
-        { 3,  "resonance",  EndpointType::event  },
-        { 4,  "drive",      EndpointType::event  },
-        { 5,  "slope",      EndpointType::event  },
-        { 6,  "mode",       EndpointType::event  }
+        { 1,   "in",             EndpointType::stream },
+        { 2,   "cutoffHz",       EndpointType::event  },
+        { 3,   "resonance",      EndpointType::event  },
+        { 4,   "drive",          EndpointType::event  },
+        { 5,   "slope",          EndpointType::event  },
+        { 6,   "mode",           EndpointType::event  },
+        { 7,   "fundamentalHz",  EndpointType::event  },
+        { 8,   "bassAmount",     EndpointType::event  },
+        { 9,   "bassWave",       EndpointType::event  },
+        { 10,  "bassOctave",     EndpointType::event  },
+        { 11,  "noteReset",      EndpointType::event  }
     };
 
     static constexpr EndpointInfo outputEndpoints[] =
     {
-        { 7,  "out",  EndpointType::stream }
+        { 12,  "out",  EndpointType::stream }
     };
 
     //==============================================================================
@@ -109,7 +124,12 @@ struct MoogLadder
         inputEndpoints[2],
         inputEndpoints[3],
         inputEndpoints[4],
-        inputEndpoints[5]
+        inputEndpoints[5],
+        inputEndpoints[6],
+        inputEndpoints[7],
+        inputEndpoints[8],
+        inputEndpoints[9],
+        inputEndpoints[10]
     };
 
     static constexpr std::array<EndpointInfo, 0> inputMIDIEvents {};
@@ -120,7 +140,11 @@ struct MoogLadder
         inputEndpoints[2],
         inputEndpoints[3],
         inputEndpoints[4],
-        inputEndpoints[5]
+        inputEndpoints[5],
+        inputEndpoints[6],
+        inputEndpoints[7],
+        inputEndpoints[8],
+        inputEndpoints[9]
     };
 
     static constexpr const char* programDetailsJSON =
@@ -205,6 +229,69 @@ struct MoogLadder
             "        \"init\": 0\n"
             "      },\n"
             "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"fundamentalHz\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"float32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"Fundamental\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 20000,\n"
+            "        \"init\": 0\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"bassAmount\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"float32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"BassAmount\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 1,\n"
+            "        \"init\": 0\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"bassWave\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"int32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"BassWave\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 2,\n"
+            "        \"init\": 0\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"bassOctave\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"int32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"BassOctave\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 2,\n"
+            "        \"init\": 0\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"noteReset\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"void\"\n"
+            "      }\n"
             "    }\n"
             "  ],\n"
             "  \"outputs\": [\n"
@@ -485,6 +572,12 @@ struct MoogLadder
         float yp4 = {};
         float dcx1 = {};
         float dcy1 = {};
+        float subPhase = {};
+        float fundHz = {};
+        float bassAmt = {};
+        int32_t bassWaveSel = {};
+        int32_t bassOctaveSel = {};
+        float subTriZ = {};
         int32_t _sessionID = {};
         double _frequency = {};
         int32_t _resumeIndex = {};
@@ -513,6 +606,7 @@ struct MoogLadder
     using std_intrinsics_T_1 = float;
     using std_intrinsics_T_2 = float;
     using std_intrinsics_T_3 = float;
+    using std_intrinsics_T_4 = int32_t;
 
     //==============================================================================
     double getMaxFrequency() const
@@ -550,7 +644,7 @@ struct MoogLadder
 
     void copyOutputFrames (EndpointHandle endpointHandle, void* dest, uint32_t numFramesToCopy)
     {
-        if (endpointHandle == 7) { std::memcpy (reinterpret_cast<char*> (dest), std::addressof (cmajIO.out), 4 * numFramesToCopy); std::memset (reinterpret_cast<char*> (std::addressof (cmajIO.out)), 0, 4 * numFramesToCopy); return; }
+        if (endpointHandle == 12) { std::memcpy (reinterpret_cast<char*> (dest), std::addressof (cmajIO.out), 4 * numFramesToCopy); std::memset (reinterpret_cast<char*> (std::addressof (cmajIO.out)), 0, 4 * numFramesToCopy); return; }
         throw std::runtime_error ("Unknown stream endpointHandle:" + std::to_string (endpointHandle));
     }
 
@@ -617,6 +711,31 @@ struct MoogLadder
         _sendEvent_mode (cmajState, event);
     }
 
+    void addEvent_fundamentalHz (float event)
+    {
+        _sendEvent_fundamentalHz (cmajState, event);
+    }
+
+    void addEvent_bassAmount (float event)
+    {
+        _sendEvent_bassAmount (cmajState, event);
+    }
+
+    void addEvent_bassWave (int32_t event)
+    {
+        _sendEvent_bassWave (cmajState, event);
+    }
+
+    void addEvent_bassOctave (int32_t event)
+    {
+        _sendEvent_bassOctave (cmajState, event);
+    }
+
+    void addEvent_noteReset ()
+    {
+        _sendEvent_noteReset (cmajState);
+    }
+
     void addEvent (EndpointHandle endpointHandle, uint32_t typeIndex, const unsigned char* eventData)
     {
         (void) endpointHandle; (void) typeIndex; (void) eventData;
@@ -659,6 +778,43 @@ struct MoogLadder
             memcpy (&value, eventData, 4);
             eventData += 4;
             return addEvent_mode (value);
+        }
+
+        if (endpointHandle == 7)
+        {
+            float value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_fundamentalHz (value);
+        }
+
+        if (endpointHandle == 8)
+        {
+            float value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_bassAmount (value);
+        }
+
+        if (endpointHandle == 9)
+        {
+            int32_t value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_bassWave (value);
+        }
+
+        if (endpointHandle == 10)
+        {
+            int32_t value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_bassOctave (value);
+        }
+
+        if (endpointHandle == 11)
+        {
+            return addEvent_noteReset();
         }
     }
 
@@ -738,6 +894,62 @@ struct MoogLadder
         _state.modeSel = v;
     }
 
+    void _sendEvent_fundamentalHz (MoogLadder_State& _state, float value) noexcept
+    {
+        _MoogLadder__fundamentalHz (_state._state, value);
+    }
+
+    void _MoogLadder__fundamentalHz (_MoogLadder_State& _state, float v) noexcept
+    {
+        _state.fundHz = v;
+    }
+
+    void _sendEvent_bassAmount (MoogLadder_State& _state, float value) noexcept
+    {
+        _MoogLadder__bassAmount (_state._state, value);
+    }
+
+    void _MoogLadder__bassAmount (_MoogLadder_State& _state, float v) noexcept
+    {
+        _state.bassAmt = intrinsics::clamp (v, 0.0f, 1.0f);
+    }
+
+    float std__intrinsics__clamp (float value, float minimum, float maximum) noexcept
+    {
+        return (value > maximum) ? maximum : ((value < minimum) ? minimum : value);
+    }
+
+    void _sendEvent_bassWave (MoogLadder_State& _state, int32_t value) noexcept
+    {
+        _MoogLadder__bassWave (_state._state, value);
+    }
+
+    void _MoogLadder__bassWave (_MoogLadder_State& _state, int32_t v) noexcept
+    {
+        _state.bassWaveSel = v;
+    }
+
+    void _sendEvent_bassOctave (MoogLadder_State& _state, int32_t value) noexcept
+    {
+        _MoogLadder__bassOctave (_state._state, value);
+    }
+
+    void _MoogLadder__bassOctave (_MoogLadder_State& _state, int32_t v) noexcept
+    {
+        _state.bassOctaveSel = v;
+    }
+
+    void _sendEvent_noteReset (MoogLadder_State& _state) noexcept
+    {
+        _MoogLadder__noteReset (_state._state);
+    }
+
+    void _MoogLadder__noteReset (_MoogLadder_State& _state) noexcept
+    {
+        _state.subPhase = 0.0f;
+        _state.subTriZ = 0.0f;
+    }
+
     void _initialise (MoogLadder_State& _state, int32_t& processorID, int32_t sessionID, double frequency) noexcept
     {
         _MoogLadder___initialise (_state._state, processorID, sessionID, frequency);
@@ -753,6 +965,12 @@ struct MoogLadder
         _state.drv = 0.0f;
         _state.slopeSel = int32_t {1};
         _state.modeSel = int32_t {0};
+        _state.fundHz = 0.0f;
+        _state.bassAmt = 0.0f;
+        _state.bassWaveSel = int32_t {0};
+        _state.bassOctaveSel = int32_t {0};
+        _state.subPhase = 0.0f;
+        _state.subTriZ = 0.0f;
         _state.dcR = 0.998953f;
         _state.dcx1 = 0.0f;
         _state.dcy1 = 0.0f;
@@ -780,6 +998,8 @@ struct MoogLadder
     void _MoogLadder__main (_MoogLadder_State& _state, _MoogLadder_IO& _io) noexcept
     {
         bool  nlActive;
+        float  _temp;
+        float  bass;
         float  o1;
         float  o2;
         float  o3;
@@ -803,6 +1023,7 @@ struct MoogLadder
         float  y3;
         float  y4;
         float  tapOut;
+        float  preLim;
         float  limOut;
         float  dcOut;
         float  b1_0;
@@ -820,6 +1041,7 @@ struct MoogLadder
         float  y3_0;
         float  y4_0;
         float  tapOut_0;
+        float  preLim_0;
         float  limOut_0;
         float  dcOut_0;
 
@@ -830,6 +1052,15 @@ struct MoogLadder
                 _MoogLadder__recompute (_state);
             }
             nlActive = (_state.drv > 0.0f) ? true : (_state.res > 0.0f);
+            if (_state.bassAmt > 0.0f)
+            {
+                _temp = (_state.bassAmt * _MoogLadder__subSample (_state));
+            }
+            else
+            {
+                _temp = 0.0f;
+            }
+            bass = _temp;
             if (nlActive)
             {
                 o1 = g_CALIB_NL * (_MoogLadder__padTanh (_state.yp1) - _state.yp1);
@@ -863,7 +1094,8 @@ struct MoogLadder
                 _state.yp3 = y3;
                 _state.yp4 = y4;
                 tapOut = (_state.modeSel == int32_t {1}) ? ((((g_CALIB_BP_W1 * y1) + (g_CALIB_BP_W2 * y2)) + (g_CALIB_BP_W3 * y3)) + (g_CALIB_BP_W4 * y4)) : ((_state.modeSel == int32_t {2}) ? (g_CALIB_HP_SCALE * ((((y0 - (4.0f * y1)) + (6.0f * y2)) - (4.0f * y3)) + y4)) : ((_state.slopeSel == int32_t {0}) ? y2 : y4));
-                limOut = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (tapOut / g_CALIB_LIM_CEIL);
+                preLim = tapOut + bass;
+                limOut = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (preLim / g_CALIB_LIM_CEIL);
                 dcOut = (limOut - _state.dcx1) + (_state.dcR * _state.dcy1);
                 _state.dcx1 = limOut;
                 _state.dcy1 = dcOut;
@@ -890,7 +1122,8 @@ struct MoogLadder
                 y4_0 = (_state.G * (y3_0 - _state.s4)) + _state.s4;
                 _state.s4 = ((2.0f * y4_0) - _state.s4);
                 tapOut_0 = (_state.modeSel == int32_t {1}) ? ((((g_CALIB_BP_W1 * y1_0) + (g_CALIB_BP_W2 * y2_0)) + (g_CALIB_BP_W3 * y3_0)) + (g_CALIB_BP_W4 * y4_0)) : ((_state.modeSel == int32_t {2}) ? (g_CALIB_HP_SCALE * ((((y0_0 - (4.0f * y1_0)) + (6.0f * y2_0)) - (4.0f * y3_0)) + y4_0)) : ((_state.slopeSel == int32_t {0}) ? y2_0 : y4_0));
-                limOut_0 = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (tapOut_0 / g_CALIB_LIM_CEIL);
+                preLim_0 = tapOut_0 + bass;
+                limOut_0 = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (preLim_0 / g_CALIB_LIM_CEIL);
                 dcOut_0 = (limOut_0 - _state.dcx1) + (_state.dcR * _state.dcy1);
                 _state.dcx1 = limOut_0;
                 _state.dcy1 = dcOut_0;
@@ -923,11 +1156,6 @@ struct MoogLadder
         _state.dirty = false;
     }
 
-    float std__intrinsics__clamp (float value, float minimum, float maximum) noexcept
-    {
-        return (value > maximum) ? maximum : ((value < minimum) ? minimum : value);
-    }
-
     float std__intrinsics__tan (float n) noexcept
     {
         {
@@ -954,6 +1182,81 @@ struct MoogLadder
         {
             return (v1 > v2) ? v1 : v2;
         }
+    }
+
+    float _MoogLadder__subSample (_MoogLadder_State& _state) noexcept
+    {
+        float  sr;
+        float  octShift;
+        float  subFreq;
+        float  dt;
+        float  t;
+        float  s;
+        float  sq;
+        float  t2;
+
+        sr = static_cast<float> (1.0 * g__frequency);
+        octShift = static_cast<float> (int32_t {1} << intrinsics::clamp (_state.bassOctaveSel, int32_t {0}, int32_t {8}));
+        subFreq = _state.fundHz / octShift;
+        dt = subFreq / sr;
+        t = _state.subPhase;
+        s = {};
+        if (_state.bassWaveSel == int32_t {2})
+        {
+            s = (((2.0f * t) - 1.0f) - _MoogLadder__polyBlep (t, dt));
+        }
+        else
+        {
+            if (_state.bassWaveSel == int32_t {1})
+            {
+                sq = (t < 0.5f) ? 1.0f : -1.0f;
+                sq = (sq + _MoogLadder__polyBlep (t, dt));
+                t2 = ((t + 0.5f) >= 1.0f) ? (t - 0.5f) : (t + 0.5f);
+                sq = (sq - _MoogLadder__polyBlep (t2, dt));
+                _state.subTriZ = (((4.0f * dt) * sq) + (0.9999f * _state.subTriZ));
+                s = _state.subTriZ;
+            }
+            else
+            {
+                s = intrinsics::sin (6.2831855f * t);
+            }
+        }
+        _state.subPhase = (_state.subPhase + dt);
+        for (;;)
+        {
+            if  (! (_state.subPhase >= 1.0f))
+            {
+                break;
+            }
+            _state.subPhase = (_state.subPhase - 1.0f);
+        }
+        return s;
+    }
+
+    int32_t std__intrinsics__clamp_0 (int32_t value, int32_t minimum, int32_t maximum) noexcept
+    {
+        return (value > maximum) ? maximum : ((value < minimum) ? minimum : value);
+    }
+
+    float _MoogLadder__polyBlep (float t, float dt) noexcept
+    {
+        float  x;
+        float  x_0;
+
+        if (t < dt)
+        {
+            x = t / dt;
+            return ((x + x) - (x * x)) - 1.0f;
+        }
+        else
+        {
+            if (t > (1.0f - dt))
+            {
+                x_0 = (t - 1.0f) / dt;
+                return (((x_0 * x_0) + x_0) + x_0) + 1.0f;
+            }
+        }
+        return 0.0f;
     }
 
     float _MoogLadder__padTanh (float x) noexcept

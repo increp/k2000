@@ -17,6 +17,11 @@ public:
     void reset() noexcept;
     void setCutoff(float hz) noexcept;
     void setParams(float cutoffHz, float resonance, float drive, int slope, int mode = 0) noexcept;
+    // Task 6: sub-osc bass voice. setBass forwards amount/wave/octave; setFundamental
+    // forwards the played-note Hz; noteReset fires the phase reset (note-on seam).
+    void setBass(float amount, int wave, int octave) noexcept;
+    void setFundamental(float hz) noexcept;
+    void noteReset() noexcept;
     void process(float* mono, int numSamples) noexcept;
 
 private:

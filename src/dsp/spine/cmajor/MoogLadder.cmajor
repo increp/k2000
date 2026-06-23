@@ -16,6 +16,16 @@ processor MoogLadder
     input  event int32 slope     [[ name: "Slope",     min: 0,  max: 1,     init: 1 ]];   // 0=y2 1=y4
     input  event int32 mode      [[ name: "Mode",      min: 0,  max: 2,     init: 0 ]];   // 0=LP 1=BP 2=HP
 
+    // --- Task 6: played-note sub-oscillator "bass voice" ---
+    // A per-voice band-limited oscillator at the played-note fundamental, summed
+    // CLEAN into the ladder tap (pre-limiter) so it shares the output ceiling but
+    // is NOT shaped by the ladder. Runs regardless of res/drive.
+    input  event float fundamentalHz [[ name: "Fundamental", min: 0, max: 20000, init: 0 ]];
+    input  event float bassAmount    [[ name: "BassAmount",  min: 0, max: 1,     init: 0 ]];
+    input  event int32 bassWave      [[ name: "BassWave",    min: 0, max: 2,     init: 0 ]];  // 0=sine 1=tri 2=saw
+    input  event int32 bassOctave    [[ name: "BassOctave",  min: 0, max: 2,     init: 0 ]];  // 0=fundamental 1=-1oct 2=-2oct
+    input  event void  noteReset;    // note-on phase reset (zeroes subPhase)
+
     float g, G, r;
     float dcR = 0.998953f;        // DC-blocker pole (updated in recompute from actual SR)
     bool  dirty = true;
@@ -25,6 +35,14 @@ processor MoogLadder
     float s1, s2, s3, s4;       // stage integrator states
     float yp1, yp2, yp3, yp4;   // previous outputs of each stage (per-stage tanh delta)
     float dcx1 = 0.0f, dcy1 = 0.0f;  // DC-blocker one-pole state (x_{n-1}, y_{n-1})
+
+    // --- Task 6: sub-oscillator state ---
+    float subPhase = 0.0f;       // phase accumulator in [0,1)
+    float fundHz   = 0.0f;       // played-note fundamental (Hz); 0 = silent
+    float bassAmt  = 0.0f;       // mix amount 0..1; 0 = bit-identical no-op
+    int32 bassWaveSel   = 0;     // 0=sine 1=tri 2=saw
+    int32 bassOctaveSel = 0;     // 0=fundamental 1=-1oct 2=-2oct
+    float subTriZ = 0.0f;        // triangle integrator state (band-limited tri)
 
     // CALIB: per-stage nonlinearity scale. Each ladder stage's tanh delta is scaled
     // by this coefficient. 1.0 = full per-stage saturation. The four deltas are
@@ -70,12 +88,64 @@ processor MoogLadder
     event slope     (int32 v) { slopeSel = v; }
     event mode      (int32 v) { modeSel  = v; }
 
+    event fundamentalHz (float v) { fundHz = v; }
+    event bassAmount    (float v) { bassAmt = clamp (v, 0.0f, 1.0f); }
+    event bassWave      (int32 v) { bassWaveSel   = v; }
+    event bassOctave    (int32 v) { bassOctaveSel = v; }
+    event noteReset     ()        { subPhase = 0.0f; subTriZ = 0.0f; }
+
     // Project-standard fast tanh approximation (Pade [3/3], monotone, bounded).
     // Reused from NlSvfDrive.cmajor — do NOT modify independently.
     float padTanh (float x)
     {
         let x2 = x * x;
         return clamp (x * (27.0f + x2) / (27.0f + 9.0f * x2), -1.0f, 1.0f);
+    }
+
+    // PolyBLEP residual: corrects the discontinuity of naive saw/square at phase
+    // wraps to suppress aliasing. t = phase in [0,1), dt = phase increment per sample.
+    // Returns the correction to ADD to a naive saw (or to build a band-limited square).
+    float polyBlep (float t, float dt)
+    {
+        if (t < dt)            { let x = t / dt;        return x + x - x * x - 1.0f; }
+        else if (t > 1.0f - dt){ let x = (t - 1.0f) / dt; return x * x + x + x + 1.0f; }
+        return 0.0f;
+    }
+
+    // One sub-oscillator sample at the current subPhase. Wave: 0=sine, 1=triangle,
+    // 2=saw (both tri & saw band-limited via PolyBLEP). Advances subPhase by dt.
+    // Octave convention: octave 0 = the played fundamental; each step drops an octave:
+    //   subFreq = fundHz / 2^bassOctaveSel.
+    float subSample()
+    {
+        let sr = float (processor.frequency);
+        let octShift = float (1 << clamp (bassOctaveSel, 0, 8));   // 2^octave
+        let subFreq  = fundHz / octShift;
+        let dt = subFreq / sr;                                     // phase increment
+
+        let t = subPhase;
+        float s;
+        if (bassWaveSel == 2) {
+            // Naive saw in [-1,1]: 2*t-1, minus PolyBLEP residual at the wrap.
+            s = 2.0f * t - 1.0f - polyBlep (t, dt);
+        } else if (bassWaveSel == 1) {
+            // Band-limited triangle = leaky integral of a band-limited square.
+            // Build square from two PolyBLEP saws a half-period apart, then integrate.
+            var sq = (t < 0.5f) ? 1.0f : -1.0f;
+            sq += polyBlep (t, dt);
+            let t2 = (t + 0.5f >= 1.0f) ? (t - 0.5f) : (t + 0.5f);
+            sq -= polyBlep (t2, dt);
+            // Leaky integrator: tri[n] = dt*4*sq + (1-leak)*tri[n-1]. Use subTriZ state.
+            subTriZ = 4.0f * dt * sq + (1.0f - 1e-4f) * subTriZ;
+            s = subTriZ;
+        } else {
+            // Sine: no aliasing to correct (single partial).
+            s = sin (float (2.0 * pi) * t);
+        }
+
+        subPhase += dt;
+        while (subPhase >= 1.0f) subPhase -= 1.0f;
+        return s;
     }
 
     void recompute() {
@@ -126,6 +196,13 @@ processor MoogLadder
             if (dirty) recompute();
 
             let nlActive = (drv > 0.0f || res > 0.0f);
+
+            // Task 6: sub-osc bass voice, computed ONCE per frame and folded into BOTH
+            // branches' pre-limiter tap so the linear and nonlinear paths cannot diverge.
+            // GUARD: bassAmt==0 -> bass term is EXACTLY 0.0f and the oscillator never
+            // runs, so the bassAmt==0 path is bit-identical to the ladder-only output
+            // (no epsilon can leak from an unused sub-computation).
+            let bass = (bassAmt > 0.0f) ? (bassAmt * subSample()) : 0.0f;
 
             if (nlActive) {
                 // PER-STAGE tanh saturation (4 saturators — authentic Moog ladder).
@@ -181,9 +258,12 @@ processor MoogLadder
                     : (modeSel == 2)
                         ? CALIB_HP_SCALE * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
                         : (slopeSel == 0) ? y2 : y4;   // LP path
+                // Task 6: sum the clean sub-osc BEFORE the limiter so it shares the
+                // output ceiling but is unshaped by the ladder. bass==0 when bassAmt==0.
+                let preLim = tapOut + bass;
                 // Pirkle-style bounded soft ceiling: transparent for small signals,
                 // saturates smoothly as amplitude approaches CALIB_LIM_CEIL.
-                let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
+                let limOut = CALIB_LIM_CEIL * padTanh (preLim / CALIB_LIM_CEIL);
                 // One-pole DC blocker: y[n] = x[n] - x[n-1] + R * y[n-1]
                 let dcOut = limOut - dcx1 + dcR * dcy1;
                 dcx1 = limOut; dcy1 = dcOut;
@@ -209,8 +289,10 @@ processor MoogLadder
                     : (modeSel == 2)
                         ? CALIB_HP_SCALE * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
                         : (slopeSel == 0) ? y2 : y4;   // LP path
+                // Task 6: sum the clean sub-osc BEFORE the limiter (same as NL branch).
+                let preLim = tapOut + bass;
                 // Limiter + DC blocker applied identically for consistency.
-                let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
+                let limOut = CALIB_LIM_CEIL * padTanh (preLim / CALIB_LIM_CEIL);
                 let dcOut = limOut - dcx1 + dcR * dcy1;
                 dcx1 = limOut; dcy1 = dcOut;
                 out <- dcOut;

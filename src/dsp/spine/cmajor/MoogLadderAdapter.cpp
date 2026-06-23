@@ -32,6 +32,15 @@ void MoogLadderAdapter::setParams(float c, float r, float dr, int slope, int mod
     d->addEvent_mode((int32_t) mode);
 }
 
+void MoogLadderAdapter::setBass(float amount, int wave, int octave) noexcept {
+    auto* d = gen(storage_);
+    d->addEvent_bassAmount(amount);
+    d->addEvent_bassWave((int32_t) wave);
+    d->addEvent_bassOctave((int32_t) octave);
+}
+void MoogLadderAdapter::setFundamental(float hz) noexcept { gen(storage_)->addEvent_fundamentalHz(hz); }
+void MoogLadderAdapter::noteReset() noexcept { gen(storage_)->addEvent_noteReset(); }
+
 void MoogLadderAdapter::process(float* mono, int numSamples) noexcept {
     auto* d = gen(storage_);
     const int cap = (int) Generated::maxFramesPerBlock;
