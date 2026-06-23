@@ -458,6 +458,9 @@ struct MoogLadder
         float s2 = {};
         float s3 = {};
         float s4 = {};
+        float yp1 = {};
+        float yp2 = {};
+        float yp3 = {};
         float yp4 = {};
         int32_t _sessionID = {};
         double _frequency = {};
@@ -727,10 +730,12 @@ struct MoogLadder
     void _MoogLadder__main (_MoogLadder_State& _state, _MoogLadder_IO& _io) noexcept
     {
         bool  nlActive;
-        float  d4;
+        float  o1;
+        float  o2;
+        float  o3;
+        float  o4;
         float  gain;
         float  x_in;
-        float  x_nl;
         float  b1;
         float  b2;
         float  b3;
@@ -739,6 +744,7 @@ struct MoogLadder
         float  G3;
         float  G4;
         float  B;
+        float  O;
         float  y4cf;
         float  u1;
         float  y1;
@@ -769,10 +775,12 @@ struct MoogLadder
             nlActive = (_state.drv > 0.0f) ? true : (_state.res > 0.0f);
             if (nlActive)
             {
-                d4 = _MoogLadder__padTanh (_state.yp4) - _state.yp4;
+                o1 = g_CALIB_NL * (_MoogLadder__padTanh (_state.yp1) - _state.yp1);
+                o2 = g_CALIB_NL * (_MoogLadder__padTanh (_state.yp2) - _state.yp2);
+                o3 = g_CALIB_NL * (_MoogLadder__padTanh (_state.yp3) - _state.yp3);
+                o4 = g_CALIB_NL * (_MoogLadder__padTanh (_state.yp4) - _state.yp4);
                 gain = 1.0f + (_state.drv * 3.0f);
                 x_in = (_state.drv > 0.0f) ? _MoogLadder__padTanh (gain * _io.in) : _io.in;
-                x_nl = x_in - d4;
                 b1 = (1.0f - _state.G) * _state.s1;
                 b2 = (1.0f - _state.G) * _state.s2;
                 b3 = (1.0f - _state.G) * _state.s3;
@@ -781,16 +789,20 @@ struct MoogLadder
                 G3 = G2 * _state.G;
                 G4 = G2 * G2;
                 B = (((G3 * b1) + (G2 * b2)) + (_state.G * b3)) + b4;
-                y4cf = ((G4 * x_nl) + B) / (1.0f + (_state.r * G4));
-                u1 = x_nl - (_state.r * y4cf);
+                O = (((G4 * o1) + (G3 * o2)) + (G2 * o3)) + (_state.G * o4);
+                y4cf = (((G4 * x_in) + O) + B) / (1.0f + (_state.r * G4));
+                u1 = (x_in - (_state.r * y4cf)) + o1;
                 y1 = (_state.G * (u1 - _state.s1)) + _state.s1;
                 _state.s1 = ((2.0f * y1) - _state.s1);
-                y2 = (_state.G * (y1 - _state.s2)) + _state.s2;
+                y2 = (_state.G * ((y1 + o2) - _state.s2)) + _state.s2;
                 _state.s2 = ((2.0f * y2) - _state.s2);
-                y3 = (_state.G * (y2 - _state.s3)) + _state.s3;
+                y3 = (_state.G * ((y2 + o3) - _state.s3)) + _state.s3;
                 _state.s3 = ((2.0f * y3) - _state.s3);
-                y4 = (_state.G * (y3 - _state.s4)) + _state.s4;
+                y4 = (_state.G * ((y3 + o4) - _state.s4)) + _state.s4;
                 _state.s4 = ((2.0f * y4) - _state.s4);
+                _state.yp1 = y1;
+                _state.yp2 = y2;
+                _state.yp3 = y3;
                 _state.yp4 = y4;
                 _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2 : y4));
             }
@@ -889,6 +901,7 @@ struct MoogLadder
     //==============================================================================
     int32_t g__sessionID {};
     double g__frequency {};
+    static constexpr float g_CALIB_NL { 1.0f };
 
     //==============================================================================
     struct intrinsics
