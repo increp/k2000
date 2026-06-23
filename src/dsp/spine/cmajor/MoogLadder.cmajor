@@ -82,20 +82,35 @@ processor MoogLadder
         let fc = clamp (cutoff, 16.0f, sr * 0.45f);
         g = tan (float (pi) * fc / sr);
 
-        // CALIB: resonance taper — res in [0,1] -> r in [0,4].
-        // res^1.5 * 4 shapes so musically-useful resonance occupies most of the knob
-        // and self-oscillation threshold (r=4) sits at the very top (res=1.0).
+        // CALIB: resonance taper — res in [0,1] -> r in [0, R_MAX].
+        // r = res^5 * 5.5. The exponent (5) packs musically-useful, non-oscillating
+        // resonance into the bulk of the knob; R_MAX=5.5 places the r=4 self-osc
+        // (Barkhausen) threshold at res~0.938, so the filter self-oscillates ROBUSTLY
+        // over the TOP of the range (res~0.95..1.0) instead of only marginally at the
+        // exact top. Crossing r=4 below max means the linear loop GROWS past threshold
+        // and the per-stage tanh sets a real limit-cycle amplitude (~0.3 at res=1.0),
+        // not just sustaining the seed. R_MAX > 4 is the whole point: r must EXCEED the
+        // threshold for genuine self-oscillation, not sit exactly on it.
+        let R_MAX = 5.5f;
         let resClamped = clamp (res, 0.0f, 1.0f);
-        r = resClamped * resClamped * sqrt (resClamped) * 4.0f;
+        let res2 = resClamped * resClamped;
+        r = res2 * res2 * resClamped * R_MAX;   // res^5 * R_MAX
 
-        // CALIB: Huovilainen tuning compensation.
-        // The one-sample delay in the per-stage tanh deltas shifts the resonant
-        // frequency downward. Pre-warp g upward to compensate.
-        // Factor: 1 + g^2 * 0.5 * sqrt(r/4). Holds within ±3% over the full gated
-        // 7-cutoff sweep {55..3520} Hz at SR=48 kHz with the per-stage nonlinearity
-        // (worst gated case fc=3520 -> +2.62%); unchanged from the single-tap calib.
-        let rNorm = r * 0.25f;   // r/4 in [0,1]
-        g = g * (1.0f + g * g * 0.5f * sqrt (rNorm));
+        // CALIB: Huovilainen-style tuning compensation, re-tuned for r>4.
+        // Two effects, opposite signs:
+        //  (1) The one-sample delay in the per-stage tanh deltas shifts the resonant
+        //      frequency DOWN — historically corrected by pre-warping g UP via
+        //      g^2 * TC * sqrt(r/4). With the old r in [0,4] this dominated.
+        //  (2) Now that r EXCEEDS 4 near max, the strong feedback pulls the self-osc
+        //      pitch SHARP by a roughly constant fraction proportional to the excess
+        //      (r-4). This dominates and is corrected by scaling g DOWN.
+        // The old up-prewarp (TC term) is no longer needed in the gated range and
+        // would only add high-fc sharpness, so it is dropped (TC=0); the down-scale
+        // by RC*(r-4) is what holds pitch. RC=0.06 balances the sweep so the worst
+        // gated case is fc=3520 -> +2.08% (and fc<=440 -> -1.46%), within +-3% over
+        // {55..3520} Hz at SR=48 kHz. (High-fc 5k/7k diagnostics still drift; non-gating.)
+        let rExcess = max (0.0f, r - 4.0f);
+        g = g * (1.0f - 0.06f * rExcess);
 
         G = g / (1.0f + g);
 

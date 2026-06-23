@@ -902,16 +902,20 @@ struct MoogLadder
     {
         float  sr;
         float  fc;
+        float  R_MAX;
         float  resClamped;
-        float  rNorm;
+        float  res2;
+        float  rExcess;
 
         sr = static_cast<float> (1.0 * g__frequency);
         fc = intrinsics::clamp (_state.cutoff, 16.0f, sr * 0.45f);
         _state.g = intrinsics::tan ((3.1415927f * fc) / sr);
+        R_MAX = 5.5f;
         resClamped = intrinsics::clamp (_state.res, 0.0f, 1.0f);
-        _state.r = (((resClamped * resClamped) * intrinsics::sqrt (resClamped)) * 4.0f);
-        rNorm = _state.r * 0.25f;
-        _state.g = (_state.g * (1.0f + (((_state.g * _state.g) * 0.5f) * intrinsics::sqrt (rNorm))));
+        res2 = resClamped * resClamped;
+        _state.r = (((res2 * res2) * resClamped) * R_MAX);
+        rExcess = intrinsics::max (0.0f, _state.r - 4.0f);
+        _state.g = (_state.g * (1.0f - (0.06f * rExcess)));
         _state.G = (_state.g / (1.0f + _state.g));
         _state.dcR = (1.0f - (50.265484f / sr));
         _state.dirty = false;
@@ -943,10 +947,10 @@ struct MoogLadder
         }
     }
 
-    float std__intrinsics__sqrt (float n) noexcept
+    float std__intrinsics__max (float v1, float v2) noexcept
     {
         {
-            return 0.0f;
+            return (v1 > v2) ? v1 : v2;
         }
     }
 

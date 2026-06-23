@@ -136,6 +136,41 @@ struct MoogLadderTests : public juce::UnitTest {
             }
         }
 
+        beginTest("ROBUSTNESS: self-osc is loud at res=1.0 and engages over a range (not a knife-edge)");
+        {
+            // Regression gate for the resonance-taper calibration: r must EXCEED the
+            // Barkhausen threshold (r=4) near max resonance so the loop grows past
+            // threshold and the per-stage tanh sets a real limit-cycle amplitude — a
+            // robust, audible self-oscillation. The previous taper mapped res=1.0 -> r=4
+            // EXACTLY (threshold), so it only marginally sustained the seed (tail peak
+            // ~0.008) and did NOT oscillate at all below res=1.0 (knife-edge).
+            // Measure the self-osc TAIL PEAK (post-limiter) from a single impulse kick.
+            auto tailPeak = [&](double fc, float res) -> float {
+                MoogLadder mp; mp.prepare(kSR); mp.setSlope(MoogLadder::Slope::db24);
+                std::unique_ptr<FilterModel::State> sp(mp.makeState());
+                mp.setCommon((float) fc, res, 0.0f); mp.reset(*sp);
+                const int N = 1 << 16;
+                std::vector<float> l(N, 0.0f), r(N, 0.0f);
+                l[0] = r[0] = 1.0f;   // impulse kick
+                mp.processStereo(*sp, l.data(), r.data(), N);
+                float pk = 0.0f;
+                for (int i = N - 16384; i < N; ++i) pk = std::max(pk, std::abs(l[(size_t)i]));
+                return pk;
+            };
+            // At res=1.0 the self-osc must be LOUD (tail peak > 0.2) at a couple of cutoffs.
+            for (double fc : { 220.0, 880.0 }) {
+                const float pk = tailPeak(fc, 1.0f);
+                logMessage("ROBUST self-osc fc=" + juce::String(fc) + " res=1.00 tail peak=" + juce::String(pk, 4));
+                expect(pk > 0.2f,
+                       "self-osc not robust at res=1.0 fc=" + juce::String(fc) + ": tail peak=" + juce::String(pk, 4));
+            }
+            // It must also sustain at res=0.98 (oscillates over a RANGE, not just the exact top).
+            const float pk98 = tailPeak(440.0, 0.98f);
+            logMessage("ROBUST self-osc fc=440 res=0.98 tail peak=" + juce::String(pk98, 4));
+            expect(pk98 > 0.05f,
+                   "self-osc did not sustain at res=0.98 (knife-edge): tail peak=" + juce::String(pk98, 4));
+        }
+
         beginTest("bounded + finite at max res/drive/loud input");
         {
             MoogLadder mb; mb.prepare(kSR); mb.setSlope(MoogLadder::Slope::db24);
