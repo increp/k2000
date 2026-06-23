@@ -143,8 +143,8 @@ processor MoogLadder
                 dcx1 = limOut; dcy1 = dcOut;
                 out <- dcOut;
             } else {
-                // LINEAR path (drv==0 && res==0): exact Task-2 code, bit-for-bit identical.
-                // No tanh calls; yp4 stays zero (cleared on reset).
+                // LINEAR path (drv==0 && res==0): no tanh calls; yp1..yp4 stay zero (cleared on reset).
+                // Limiter + DC blocker still applied here (output consistency; transparent at normal levels).
                 // DC-blocker states are also updated here to keep them from drifting if
                 // the processor switches between nl/linear mid-stream.
                 let b1 = (1.0f - G) * s1; let b2 = (1.0f - G) * s2;

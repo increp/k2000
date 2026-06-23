@@ -158,11 +158,15 @@ struct MoogLadderTests : public juce::UnitTest {
             }
             float dRMS = (float)std::sqrt(dSumSq / kDiagWin);
             float dCrestFactor = (dRMS > 1e-9f) ? (dPeak / dRMS) : 0.0f;
-            // Non-gating: log the crest factor (near-sine target = sqrt(2) ~= 1.414)
             logMessage("DIAG self-osc fc=440 peak=" + juce::String(dPeak, 4)
                        + " RMS=" + juce::String(dRMS, 4)
                        + " crest=" + juce::String(dCrestFactor, 4)
                        + " (near-sine target ~1.414)");
+            // Gate: the Pirkle output limiter (CALIB_LIM_CEIL=1.5) must bound pure-resonance self-osc.
+            // Without the limiter the drv=0 ladder rings far above 1.5 — this is what makes the limiter a tested feature.
+            expect(dPeak < 1.5f, "self-osc peak exceeded limiter ceiling: " + juce::String(dPeak, 4));
+            expect(dCrestFactor > 1.3f && dCrestFactor < 1.6f,
+                   "self-osc crest factor outside near-sine band: " + juce::String(dCrestFactor, 4));
         }
     }
 };
