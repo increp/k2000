@@ -57,9 +57,10 @@ processor MoogLadder
     let CALIB_BP_W3 = -4.0f;
     let CALIB_BP_W4 =  0.0f;
 
-    // HP mode: binomial HP (y0 - 4*y1 + 6*y2 - 4*y3 + y4) where y0 is the
-    // pre-ladder input (the u1 feedback-combined signal). This is the 4th-order
-    // binomial difference applied to the stage outputs — the Xpander HP4 formula.
+    // HP mode: binomial HP (y0 - 4*y1 + 6*y2 - 4*y3 + y4) where y0 is the CLEAN
+    // pre-feedback ladder input (x_in - r*y4cf), WITHOUT the stage-1 nonlinear
+    // delta o1 — using u1 (= y0 + o1) here would distort the HP character at res>0.
+    // This is the 4th-order binomial difference on the stage outputs (Xpander HP4).
     // CALIB: scale factor on the full mix to keep output level comparable to LP.
     let CALIB_HP_SCALE = 1.0f;
 
@@ -161,7 +162,10 @@ processor MoogLadder
                 let y4cf = (G4 * x_in + O + B) / (1.0f + r * G4);
 
                 // Forward pass with the per-stage offsets folded into each stage input.
-                let u1 = x_in - r * y4cf + o1;
+                // y0 = clean pre-feedback ladder input (no nonlinear delta); the HP
+                // pole-mix needs this clean y0, while stage 1 adds its own delta o1.
+                let y0 = x_in - r * y4cf;
+                let u1 = y0 + o1;
                 let y1 = G * (u1 - s1) + s1;       s1 = 2.0f * y1 - s1;
                 let y2 = G * (y1 + o2 - s2) + s2;  s2 = 2.0f * y2 - s2;
                 let y3 = G * (y2 + o3 - s3) + s3;  s3 = 2.0f * y3 - s3;
@@ -171,11 +175,11 @@ processor MoogLadder
 
                 // --- Task 4/5: mode tap + output limiter + DC blocker ---
                 // LP: slope selector (y2=12dB or y4=24dB); BP/HP: pole-mix.
-                // y0 (pre-feedback ladder input) is u1 (already computed above).
+                // HP uses y0 (clean pre-feedback input, computed above WITHOUT o1).
                 let tapOut = (modeSel == 1)
                     ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)
                     : (modeSel == 2)
-                        ? CALIB_HP_SCALE * (u1 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
+                        ? CALIB_HP_SCALE * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
                         : (slopeSel == 0) ? y2 : y4;   // LP path
                 // Pirkle-style bounded soft ceiling: transparent for small signals,
                 // saturates smoothly as amplitude approaches CALIB_LIM_CEIL.
@@ -194,8 +198,8 @@ processor MoogLadder
                 let G2 = G * G; let G3 = G2 * G; let G4 = G2 * G2;
                 let B  = G3 * b1 + G2 * b2 + G * b3 + b4;
                 let y4cf = (G4 * in + B) / (1.0f + r * G4);
-                let u1 = in - r * y4cf;
-                let y1 = G * (u1 - s1) + s1; s1 = 2.0f * y1 - s1;
+                let y0 = in - r * y4cf;   // clean pre-feedback input (linear path has no o1)
+                let y1 = G * (y0 - s1) + s1; s1 = 2.0f * y1 - s1;
                 let y2 = G * (y1 - s2) + s2; s2 = 2.0f * y2 - s2;
                 let y3 = G * (y2 - s3) + s3; s3 = 2.0f * y3 - s3;
                 let y4 = G * (y3 - s4) + s4; s4 = 2.0f * y4 - s4;
@@ -203,7 +207,7 @@ processor MoogLadder
                 let tapOut = (modeSel == 1)
                     ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)
                     : (modeSel == 2)
-                        ? CALIB_HP_SCALE * (u1 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
+                        ? CALIB_HP_SCALE * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
                         : (slopeSel == 0) ? y2 : y4;   // LP path
                 // Limiter + DC blocker applied identically for consistency.
                 let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
