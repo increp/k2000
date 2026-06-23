@@ -1,5 +1,6 @@
 #include "MoogLadderAdapter.h"
 #include "generated/MoogLadder.h"
+#include <juce_core/juce_core.h>
 #include <algorithm>
 #include <cstring>
 #include <new>
@@ -13,7 +14,12 @@ namespace { Generated* gen(unsigned char* s) { return reinterpret_cast<Generated
 MoogLadderAdapter::MoogLadderAdapter() noexcept { new (storage_) Generated(); }
 MoogLadderAdapter::~MoogLadderAdapter() { gen(storage_)->~Generated(); }
 
-void MoogLadderAdapter::prepare(double sr) noexcept { gen(storage_)->initialise(0, sr); }
+void MoogLadderAdapter::prepare(double sr) noexcept {
+    auto* d = gen(storage_);
+    const double maxF = d->getMaxFrequency();
+    jassert(sr <= maxF);                 // spine is base-rate; >192 kHz is exotic and degrades, not crashes
+    d->initialise(0, sr <= maxF ? sr : maxF);
+}
 void MoogLadderAdapter::reset() noexcept { gen(storage_)->reset(); }
 void MoogLadderAdapter::setCutoff(float hz) noexcept { gen(storage_)->addEvent_cutoffHz(hz); }
 

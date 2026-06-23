@@ -23,7 +23,9 @@ struct MoogPipelineTests : public juce::UnitTest {
         beginTest("adapter is in-place and embeds cheaply");
         // Footprint sanity: with the small-block codegen the adapter is small.
         logMessage("sizeof(MoogLadderAdapter) = " + juce::String((int) sizeof(MoogLadderAdapter)));
-        expect(sizeof(MoogLadderAdapter) <= 512, "adapter larger than expected — check maxFramesPerBlock");
+        // De-risk gate: at the default maxFramesPerBlock=512 the generated state is ~4 KB/lane
+        // (~8 KB stereo); the small-block codegen (32) keeps the whole adapter well under 1 KB.
+        expect(sizeof(MoogLadderAdapter) <= 1024, "adapter footprint too large — small-block codegen not applied");
 
         beginTest("placement-construct into a raw buffer (no heap) and run");
         alignas(16) unsigned char buf[sizeof(MoogLadderAdapter)];
