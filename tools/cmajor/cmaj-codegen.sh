@@ -27,7 +27,7 @@ docker run --rm \
         libwebkit2gtk-4.0-37 libjavascriptcoregtk-4.0-18 >/dev/null
     export LD_LIBRARY_PATH=/cmaj
     /cmaj/cmaj --version
-    /cmaj/cmaj generate --target=cpp --output="'"$OUT"'" "'"$IN"'"
+    /cmaj/cmaj generate --target=cpp --maxFramesPerBlock=32 --output="'"$OUT"'" "'"$IN"'"
     # cmaj runs as root in the container; hand the output back to the host user.
     chown '"$HOST_UID:$HOST_GID"' "'"$OUT"'"
   '

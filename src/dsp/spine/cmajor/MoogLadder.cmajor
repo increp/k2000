@@ -1,0 +1,28 @@
+// Moog transistor-ladder (Spec 1). Task 1 = trivial one-pole to prove the
+// codegen+in-place pipeline; later tasks grow this into the 4-pole ladder.
+processor MoogLadder
+{
+    input  stream float in;
+    output stream float out;
+    input  event float cutoffHz [[ name: "Cutoff", min: 16, max: 20000, init: 1000 ]];
+
+    float g, z;
+    bool  dirty = true;
+    float cutoff = 1000.0f;
+    event cutoffHz (float v) { cutoff = v; dirty = true; }
+
+    void recompute() { let sr = float (processor.frequency);
+                       g = tan (float (pi) * clamp (cutoff, 16.0f, sr * 0.45f) / sr); dirty = false; }
+    void main()
+    {
+        loop {
+            if (dirty) recompute();
+            let G = g / (1.0f + g);
+            let v = (in - z) * G;
+            let y = v + z;
+            z = y + v;            // trapezoidal one-pole LP
+            out <- y;
+            advance();
+        }
+    }
+}
