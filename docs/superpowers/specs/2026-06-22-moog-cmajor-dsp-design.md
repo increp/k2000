@@ -126,7 +126,7 @@ New `tests/MoogLadderTests.cpp` (a `juce::UnitTest`, registered in `tests/CMakeL
 
 ## 7. Scope boundary (Spec 1 vs Spec 2)
 
-**In Spec 1:** the Cmajor processor + generated C++ + in-place adapter + `MoogLadder : FilterModel` + the `setVoiceContext` base hook (default no-op) + the test-target build + all tests + Arturia golden harness + the `kMaxSpineStateBytes` bump if needed.
+**In Spec 1:** the Cmajor processor + generated C++ + in-place adapter + `MoogLadder : FilterModel` + the test-target build + all tests + Arturia golden harness + the `kMaxSpineStateBytes` bump if needed. (The base `FilterModel::setVoiceContext` hook is **Spec 2** — see §2/§6 and the Deferred list below; Spec 1 exposes only the model-specific `setFundamental(State&, hz)`, not a base override, and does not touch `FilterModel.h`.)
 
 **Deferred to Spec 2:** registering `"moog"` in `FilterModelLibrary` (promote to plugin sources); per-model param-bank dispatch in `Layer`; **adding the base `FilterModel::setVoiceContext` hook** + the played-note plumbing through `Voice`/`SpineFilterSlot`; the bass-voice params (`spine.moog.bassAmount/bassWave/bassOctave`) + the common-core consolidation (remove Type, rename Routing→"Filter Routing", add Notch to Huggett); UI; version-surface bump; roadmap/register update.
 

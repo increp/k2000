@@ -330,6 +330,42 @@ struct MoogLadderTests : public juce::UnitTest {
             expect(std::abs(f - 110.0) / 110.0 < 0.05,
                    "bass voice pitch off at oct0: measured=" + juce::String(f,1) + " Hz");
         }
+
+        beginTest("bassAmount=0 is bit-identical to the ladder-only path on NON-silent input");
+        {
+            // Stronger than the silent no-op above: drive a non-trivial signal through the
+            // NONLINEAR path (res>0, drive>0) and confirm that configuring the bass voice with
+            // amount=0 — and a wave/fundamental that WOULD sound if amount>0 — leaves the
+            // ladder output byte-for-byte identical to never touching the bass at all.
+            const int kN = 8192;
+            auto fill = [&](std::vector<float>& l, std::vector<float>& r) {
+                l.assign((size_t) kN, 0.0f); r.assign((size_t) kN, 0.0f);
+                for (int i = 0; i < kN; ++i)
+                    l[(size_t)i] = r[(size_t)i] =
+                        0.5f * (float) std::sin(2.0 * juce::MathConstants<double>::pi * 220.0 * i / kSR);
+            };
+
+            MoogLadder mref; mref.prepare(kSR); mref.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sref(mref.makeState());
+            mref.setCommon(900.0f, 0.7f, 0.5f);                  // res>0 && drive>0 -> nonlinear path
+            mref.reset(*sref);
+            std::vector<float> aL, aR; fill(aL, aR);
+            mref.processStereo(*sref, aL.data(), aR.data(), kN); // ladder-only (bass never configured)
+
+            MoogLadder mbass; mbass.prepare(kSR); mbass.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sbass(mbass.makeState());
+            mbass.setCommon(900.0f, 0.7f, 0.5f);
+            mbass.setBass(0.0f, /*saw*/2, /*oct*/0);             // amount=0, but wave/fund are non-trivial
+            mbass.setFundamental(*sbass, 110.0f);
+            mbass.reset(*sbass);
+            std::vector<float> bL, bR; fill(bL, bR);
+            mbass.processStereo(*sbass, bL.data(), bR.data(), kN);
+
+            expect(std::memcmp(aL.data(), bL.data(), (size_t) kN * sizeof(float)) == 0,
+                   "bassAmount=0 perturbed the ladder output (left) vs ladder-only");
+            expect(std::memcmp(aR.data(), bR.data(), (size_t) kN * sizeof(float)) == 0,
+                   "bassAmount=0 perturbed the ladder output (right) vs ladder-only");
+        }
     }
 };
 static MoogLadderTests moogLadderTestsInstance;

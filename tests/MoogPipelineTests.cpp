@@ -5,7 +5,7 @@
 #include <cstddef>
 
 // Task 1: prove codegen + in-place embedding + small footprint, and that the
-// one-pole actually attenuates highs.
+// ladder LP actually attenuates highs.
 struct MoogPipelineTests : public juce::UnitTest {
     MoogPipelineTests() : juce::UnitTest("MoogPipeline") {}
     static constexpr double kSR = 48000.0;
@@ -35,7 +35,7 @@ struct MoogPipelineTests : public juce::UnitTest {
         a->reset(); a->setCutoff(500.0f);
         const double high = rms(*a, 5000.0);
         expect(std::isfinite(low) && std::isfinite(high), "non-finite output");
-        expect(high < low * 0.5, "one-pole LP did not attenuate 5 kHz vs 200 Hz");
+        expect(high < low * 0.5, "ladder LP did not attenuate 5 kHz vs 200 Hz");
         a->~MoogLadderAdapter();
     }
 };
