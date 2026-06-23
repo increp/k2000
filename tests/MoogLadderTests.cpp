@@ -123,6 +123,47 @@ struct MoogLadderTests : public juce::UnitTest {
                            juce::String(f,1) + " err=" + juce::String(errPct,2) + "%");
             }
         }
+
+        beginTest("bounded + finite at max res/drive/loud input");
+        {
+            MoogLadder mb; mb.prepare(kSR); mb.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sb(mb.makeState());
+            mb.setCommon(800.0f, 1.0f, 1.0f); mb.reset(*sb);
+            std::vector<float> l(1 << 16), r(1 << 16);
+            for (int i=0;i<(int)l.size();++i){ l[(size_t)i]=r[(size_t)i]=4.0f*(float)std::sin(2.0*juce::MathConstants<double>::pi*120.0*i/kSR);}
+            mb.processStereo(*sb, l.data(), r.data(), (int) l.size());
+            float peak = 0; bool finite = true;
+            for (int i=0;i<(int)l.size();++i){ peak=std::max(peak,std::abs(l[(size_t)i])); finite = finite && std::isfinite(l[(size_t)i]); }
+            expect(finite, "non-finite under extreme drive");
+            expect(peak < 2.0f, "output exceeded the limiter ceiling: " + juce::String(peak));
+            logMessage("bounded test: peak=" + juce::String(peak, 4));
+
+            // Non-gating diagnostic: peak/RMS score on a self-oscillating run at fc=440 Hz.
+            // Measures the degree of "clean-ness" via peak-to-RMS ratio (near-sine ~ sqrt(2)=1.414).
+            // At max resonance, zero input, the self-osc should be a near-sine.
+            MoogLadder md; md.prepare(kSR); md.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sd(md.makeState());
+            md.setCommon(440.0f, 1.0f, 0.0f); md.reset(*sd);
+            const int kDiagBuf = 1 << 16;
+            std::vector<float> dl(kDiagBuf, 0.0f), dr(kDiagBuf, 0.0f);
+            dl[0] = dr[0] = 1.0f;   // impulse kick
+            md.processStereo(*sd, dl.data(), dr.data(), kDiagBuf);
+            // Measure over the last 8192 samples (settled self-osc)
+            const int kDiagWin = 8192;
+            float dPeak = 0.0f; double dSumSq = 0.0;
+            for (int i = kDiagBuf - kDiagWin; i < kDiagBuf; ++i) {
+                float v = dl[(size_t)i];
+                dPeak = std::max(dPeak, std::abs(v));
+                dSumSq += double(v) * double(v);
+            }
+            float dRMS = (float)std::sqrt(dSumSq / kDiagWin);
+            float dCrestFactor = (dRMS > 1e-9f) ? (dPeak / dRMS) : 0.0f;
+            // Non-gating: log the crest factor (near-sine target = sqrt(2) ~= 1.414)
+            logMessage("DIAG self-osc fc=440 peak=" + juce::String(dPeak, 4)
+                       + " RMS=" + juce::String(dRMS, 4)
+                       + " crest=" + juce::String(dCrestFactor, 4)
+                       + " (near-sine target ~1.414)");
+        }
     }
 };
 static MoogLadderTests moogLadderTestsInstance;

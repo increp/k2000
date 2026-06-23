@@ -449,6 +449,7 @@ struct MoogLadder
         float g = {};
         float G = {};
         float r = {};
+        float dcR = {};
         bool dirty = {};
         float cutoff = {};
         float res = {};
@@ -462,6 +463,8 @@ struct MoogLadder
         float yp2 = {};
         float yp3 = {};
         float yp4 = {};
+        float dcx1 = {};
+        float dcy1 = {};
         int32_t _sessionID = {};
         double _frequency = {};
         int32_t _resumeIndex = {};
@@ -706,6 +709,9 @@ struct MoogLadder
         _state.res = 0.0f;
         _state.drv = 0.0f;
         _state.slopeSel = int32_t {1};
+        _state.dcR = 0.998953f;
+        _state.dcx1 = 0.0f;
+        _state.dcy1 = 0.0f;
     }
 
     void _advance (MoogLadder_State& _state, MoogLadder_IO& _io, int32_t _frames) noexcept
@@ -751,6 +757,9 @@ struct MoogLadder
         float  y2;
         float  y3;
         float  y4;
+        float  tapOut;
+        float  limOut;
+        float  dcOut;
         float  b1_0;
         float  b2_0;
         float  b3_0;
@@ -765,6 +774,9 @@ struct MoogLadder
         float  y2_0;
         float  y3_0;
         float  y4_0;
+        float  tapOut_0;
+        float  limOut_0;
+        float  dcOut_0;
 
         for (;;)
         {
@@ -804,7 +816,12 @@ struct MoogLadder
                 _state.yp2 = y2;
                 _state.yp3 = y3;
                 _state.yp4 = y4;
-                _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2 : y4));
+                tapOut = (_state.slopeSel == int32_t {0}) ? y2 : y4;
+                limOut = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (tapOut / g_CALIB_LIM_CEIL);
+                dcOut = (limOut - _state.dcx1) + (_state.dcR * _state.dcy1);
+                _state.dcx1 = limOut;
+                _state.dcy1 = dcOut;
+                _io.out = (_io.out + dcOut);
             }
             else
             {
@@ -826,7 +843,12 @@ struct MoogLadder
                 _state.s3 = ((2.0f * y3_0) - _state.s3);
                 y4_0 = (_state.G * (y3_0 - _state.s4)) + _state.s4;
                 _state.s4 = ((2.0f * y4_0) - _state.s4);
-                _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2_0 : y4_0));
+                tapOut_0 = (_state.slopeSel == int32_t {0}) ? y2_0 : y4_0;
+                limOut_0 = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (tapOut_0 / g_CALIB_LIM_CEIL);
+                dcOut_0 = (limOut_0 - _state.dcx1) + (_state.dcR * _state.dcy1);
+                _state.dcx1 = limOut_0;
+                _state.dcy1 = dcOut_0;
+                _io.out = (_io.out + dcOut_0);
             }
             return;
         }
@@ -847,6 +869,7 @@ struct MoogLadder
         rNorm = _state.r * 0.25f;
         _state.g = (_state.g * (1.0f + (((_state.g * _state.g) * 0.5f) * intrinsics::sqrt (rNorm))));
         _state.G = (_state.g / (1.0f + _state.g));
+        _state.dcR = (1.0f - (50.265484f / sr));
         _state.dirty = false;
     }
 
@@ -902,6 +925,7 @@ struct MoogLadder
     int32_t g__sessionID {};
     double g__frequency {};
     static constexpr float g_CALIB_NL { 1.0f };
+    static constexpr float g_CALIB_LIM_CEIL { 1.5f };
 
     //==============================================================================
     struct intrinsics

@@ -16,17 +16,31 @@ processor MoogLadder
     input  event int32 slope     [[ name: "Slope",     min: 0,  max: 1,     init: 1 ]];   // 0=y2 1=y4
 
     float g, G, r;
+    float dcR = 0.998953f;        // DC-blocker pole (updated in recompute from actual SR)
     bool  dirty = true;
     float cutoff = 1000.0f, res = 0.0f, drv = 0.0f;
     int32 slopeSel = 1;
     float s1, s2, s3, s4;       // stage integrator states
     float yp1, yp2, yp3, yp4;   // previous outputs of each stage (per-stage tanh delta)
+    float dcx1 = 0.0f, dcy1 = 0.0f;  // DC-blocker one-pole state (x_{n-1}, y_{n-1})
 
     // CALIB: per-stage nonlinearity scale. Each ladder stage's tanh delta is scaled
     // by this coefficient. 1.0 = full per-stage saturation. The four deltas are
     // independent and each self-limits; this just trims their aggregate strength so
     // the resonant peak grows (>1.5x) and self-osc tracks pitch without over-damping.
     let CALIB_NL = 1.0f;
+
+    // CALIB: output peak-limiter ceiling (Pirkle-style bounded soft ceiling).
+    // The limiter is: limOut = CALIB_LIM_CEIL * padTanh(tapOut / CALIB_LIM_CEIL)
+    // This is memoryless, monotonic, and transparent for |x| << ceiling.
+    // Self-oscillation settles to a clean near-sine at base rate (no oversampling needed).
+    // Ceiling of 1.5 keeps self-osc amplitude well below 2.0 while keeping
+    // normal-level signals (<<1.0) essentially unaffected (padTanh(x/1.5)~x/1.5*1.5=x).
+    let CALIB_LIM_CEIL = 1.5f;
+
+    // CALIB: DC-blocker corner frequency in Hz.
+    // R = 1 - 2*pi*fc_dc/sr. Corner ~8 Hz is well below the audio band.
+    let CALIB_DC_FC = 8.0f;
 
     event cutoffHz  (float v) { cutoff = v; dirty = true; }
     event resonance (float v) { res = v;    dirty = true; }
@@ -62,6 +76,10 @@ processor MoogLadder
         g = g * (1.0f + g * g * 0.5f * sqrt (rNorm));
 
         G = g / (1.0f + g);
+
+        // DC blocker pole: R = 1 - 2*pi*fc_dc/sr, corner ~8 Hz.
+        dcR = 1.0f - float (2.0 * pi) * CALIB_DC_FC / sr;
+
         dirty = false;
     }
 
@@ -114,10 +132,21 @@ processor MoogLadder
 
                 yp1 = y1; yp2 = y2; yp3 = y3; yp4 = y4;   // store for next sample
 
-                out <- (slopeSel == 0) ? y2 : y4;
+                // --- Task 4: output limiter + DC blocker ---
+                // Tap output from slope selector.
+                let tapOut = (slopeSel == 0) ? y2 : y4;
+                // Pirkle-style bounded soft ceiling: transparent for small signals,
+                // saturates smoothly as amplitude approaches CALIB_LIM_CEIL.
+                let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
+                // One-pole DC blocker: y[n] = x[n] - x[n-1] + R * y[n-1]
+                let dcOut = limOut - dcx1 + dcR * dcy1;
+                dcx1 = limOut; dcy1 = dcOut;
+                out <- dcOut;
             } else {
                 // LINEAR path (drv==0 && res==0): exact Task-2 code, bit-for-bit identical.
                 // No tanh calls; yp4 stays zero (cleared on reset).
+                // DC-blocker states are also updated here to keep them from drifting if
+                // the processor switches between nl/linear mid-stream.
                 let b1 = (1.0f - G) * s1; let b2 = (1.0f - G) * s2;
                 let b3 = (1.0f - G) * s3; let b4 = (1.0f - G) * s4;
                 let G2 = G * G; let G3 = G2 * G; let G4 = G2 * G2;
@@ -128,7 +157,13 @@ processor MoogLadder
                 let y2 = G * (y1 - s2) + s2; s2 = 2.0f * y2 - s2;
                 let y3 = G * (y2 - s3) + s3; s3 = 2.0f * y3 - s3;
                 let y4 = G * (y3 - s4) + s4; s4 = 2.0f * y4 - s4;
-                out <- (slopeSel == 0) ? y2 : y4;
+                // Linear path: signals are small (normal level), limiter is transparent.
+                // DC blocker applied identically for consistency.
+                let tapOut = (slopeSel == 0) ? y2 : y4;
+                let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
+                let dcOut = limOut - dcx1 + dcR * dcy1;
+                dcx1 = limOut; dcy1 = dcOut;
+                out <- dcOut;
             }
             advance();
         }
