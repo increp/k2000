@@ -3,6 +3,7 @@
 #include "../src/dsp/spine/SpineState.h"
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <cstddef>
 
 static_assert(sizeof(MoogLadder::VoiceState) <= kMaxSpineStateBytes,
@@ -243,6 +244,55 @@ struct MoogLadderTests : public juce::UnitTest {
                    "BP mid not > low by >3 dB: mid=" + juce::String(bpMid,4) + " low=" + juce::String(bpLow,4));
             expect(bpMid > bpHigh * 1.41,
                    "BP mid not > high by >3 dB: mid=" + juce::String(bpMid,4) + " high=" + juce::String(bpHigh,4));
+        }
+
+        beginTest("setSeparation is a no-op: identical output for sep=0 vs sep=2");
+        {
+            // MoogLadder is a single-ladder model; setSeparation has no analog.
+            // Run the same input through two fresh states with different separation
+            // values — the output buffers must be byte-identical.
+            const int kN = 4096;
+            std::vector<float> lA(kN), rA(kN), lB(kN), rB(kN);
+            for (int i = 0; i < kN; ++i)
+                lA[(size_t)i] = rA[(size_t)i] = lB[(size_t)i] = rB[(size_t)i] =
+                    (float) std::sin(2.0 * juce::MathConstants<double>::pi * 440.0 * i / kSR);
+
+            MoogLadder ms; ms.prepare(kSR); ms.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sA(ms.makeState());
+            std::unique_ptr<FilterModel::State> sB(ms.makeState());
+
+            ms.setCommon(1000.0f, 0.5f, 0.0f);
+            ms.setSeparation(0.0f); ms.reset(*sA);
+            ms.processStereo(*sA, lA.data(), rA.data(), kN);
+
+            ms.setCommon(1000.0f, 0.5f, 0.0f);
+            ms.setSeparation(2.0f); ms.reset(*sB);
+            ms.processStereo(*sB, lB.data(), rB.data(), kN);
+
+            expect(std::memcmp(lA.data(), lB.data(), (size_t)kN * sizeof(float)) == 0,
+                   "setSeparation(2) produced different output than setSeparation(0) on left channel");
+            expect(std::memcmp(rA.data(), rB.data(), (size_t)kN * sizeof(float)) == 0,
+                   "setSeparation(2) produced different output than setSeparation(0) on right channel");
+        }
+
+        beginTest("Arturia golden match (skipped until data captured)");
+        {
+            juce::File g = juce::File(BERNIE_GOLDEN_DIR).getChildFile("moog/response.csv");
+            if (! g.existsAsFile()) { logMessage("no golden Arturia data — skipping"); }
+            else {
+                MoogLadder mg; mg.prepare(kSR); mg.setSlope(MoogLadder::Slope::db24);
+                std::unique_ptr<FilterModel::State> sg(mg.makeState());
+                for (auto& line : juce::StringArray::fromLines(g.loadFileAsString())) {
+                    auto c = juce::StringArray::fromTokens(line, ",", "");
+                    if (c.size() < 4 || ! c[0].containsOnly("0123456789.")) continue;
+                    const double fc = c[0].getDoubleValue(), res = c[1].getDoubleValue(),
+                                 pr = c[2].getDoubleValue(), wantDb = c[3].getDoubleValue();
+                    mg.setCommon((float) fc, (float) res, 0.0f);
+                    const double gotDb = 20.0*std::log10(std::max(1e-6, mag(mg, *sg, fc, pr)));
+                    expect(std::abs(gotDb - wantDb) < 6.0,   // CALIB: tighten during calibration
+                           "Arturia mismatch @fc=" + juce::String(fc) + " pr=" + juce::String(pr));
+                }
+            }
         }
 
         beginTest("bass voice adds energy at the played fundamental; amount=0 is a no-op");
