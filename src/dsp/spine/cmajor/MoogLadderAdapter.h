@@ -16,6 +16,7 @@ public:
     void prepare(double sampleRate) noexcept;
     void reset() noexcept;
     void setCutoff(float hz) noexcept;
+    void setParams(float cutoffHz, float resonance, float drive, int slope) noexcept;
     void process(float* mono, int numSamples) noexcept;
 
 private:

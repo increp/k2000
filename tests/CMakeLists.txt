@@ -39,6 +39,7 @@ add_executable(k2000_tests
     NlSvfFusedPerfTests.cpp
     TestDspSelfTests.cpp
     MoogPipelineTests.cpp
+    MoogLadderTests.cpp
     fixtures/SpineShaperHarnessTests.cpp
     fixtures/SpineHuggettHarnessTests.cpp
     fixtures/SpineNlSvfHarnessTests.cpp
@@ -67,7 +68,8 @@ add_executable(k2000_tests
     ../src/dsp/spine/cmajor/WtOscAdapter.cpp
     ../src/dsp/spine/cmajor/NlSvfLeanAdapter.cpp
     ../src/dsp/spine/cmajor/NlSvfDriveLeanAdapter.cpp
-    ../src/dsp/spine/cmajor/MoogLadderAdapter.cpp)
+    ../src/dsp/spine/cmajor/MoogLadderAdapter.cpp
+    ../src/dsp/spine/MoogLadder.cpp)
 
 target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

@@ -1,27 +1,50 @@
-// Moog transistor-ladder (Spec 1). Task 1 = trivial one-pole to prove the
-// codegen+in-place pipeline; later tasks grow this into the 4-pole ladder.
+// Moog transistor-ladder (Spec 1). Task 2 = linear 4-pole ZDF ladder (closed-form
+// delay-free solve, taps y2/y4 for 12/24 dB slope). Task 3 adds nonlinearity.
 processor MoogLadder
 {
     input  stream float in;
     output stream float out;
-    input  event float cutoffHz [[ name: "Cutoff", min: 16, max: 20000, init: 1000 ]];
+    input  event float cutoffHz  [[ name: "Cutoff",    min: 16, max: 20000, init: 1000 ]];
+    input  event float resonance [[ name: "Resonance", min: 0,  max: 1,     init: 0 ]];
+    input  event float drive     [[ name: "Drive",     min: 0,  max: 1,     init: 0 ]];
+    input  event int32 slope     [[ name: "Slope",     min: 0,  max: 1,     init: 1 ]];   // 0=y2 1=y4
 
-    float g, z;
+    float g, G, r;
     bool  dirty = true;
-    float cutoff = 1000.0f;
-    event cutoffHz (float v) { cutoff = v; dirty = true; }
+    float cutoff = 1000.0f, res = 0.0f, drv = 0.0f;
+    int32 slopeSel = 1;
+    float s1, s2, s3, s4;                 // stage integrator states
 
-    void recompute() { let sr = float (processor.frequency);
-                       g = tan (float (pi) * clamp (cutoff, 16.0f, sr * 0.45f) / sr); dirty = false; }
-    void main()
-    {
+    event cutoffHz  (float v) { cutoff = v; dirty = true; }
+    event resonance (float v) { res = v;    dirty = true; }
+    event drive     (float v) { drv = v; }
+    event slope     (int32 v) { slopeSel = v; }
+
+    void recompute() {
+        let sr = float (processor.frequency);
+        g = tan (float (pi) * clamp (cutoff, 16.0f, sr * 0.45f) / sr);
+        G = g / (1.0f + g);
+        r = clamp (res, 0.0f, 1.0f) * 4.0f;     // taper -> r in [0,4]; refined in Task 3
+        dirty = false;
+    }
+
+    void main() {
         loop {
             if (dirty) recompute();
-            let G = g / (1.0f + g);
-            let v = (in - z) * G;
-            let y = v + z;
-            z = y + v;            // trapezoidal one-pole LP
-            out <- y;
+            // Exact one-step (delay-free) linear ZDF ladder solve (Zavalishin ch.4).
+            // TPT one-pole: y_i = G*u_i + (1-G)*s_i ; s_i' = 2*y_i - s_i.
+            // Cascade with global feedback u_1 = in - r*y_4 has a closed-form y_4:
+            let b1 = (1.0f - G) * s1; let b2 = (1.0f - G) * s2;
+            let b3 = (1.0f - G) * s3; let b4 = (1.0f - G) * s4;
+            let G2 = G * G; let G3 = G2 * G; let G4 = G2 * G2;
+            let B  = G3 * b1 + G2 * b2 + G * b3 + b4;        // state feed-through to y4
+            let y4cf = (G4 * in + B) / (1.0f + r * G4);      // closed-form, no unit delay
+            let u1 = in - r * y4cf;
+            let y1 = G * (u1 - s1) + s1; s1 = 2.0f * y1 - s1;
+            let y2 = G * (y1 - s2) + s2; s2 = 2.0f * y2 - s2;
+            let y3 = G * (y2 - s3) + s3; s3 = 2.0f * y3 - s3;
+            let y4 = G * (y3 - s4) + s4; s4 = 2.0f * y4 - s4;
+            out <- (slopeSel == 0) ? y2 : y4;                // y2 = 12 dB tap, y4 = 24 dB
             advance();
         }
     }

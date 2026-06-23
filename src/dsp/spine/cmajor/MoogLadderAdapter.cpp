@@ -23,6 +23,14 @@ void MoogLadderAdapter::prepare(double sr) noexcept {
 void MoogLadderAdapter::reset() noexcept { gen(storage_)->reset(); }
 void MoogLadderAdapter::setCutoff(float hz) noexcept { gen(storage_)->addEvent_cutoffHz(hz); }
 
+void MoogLadderAdapter::setParams(float c, float r, float dr, int slope) noexcept {
+    auto* d = gen(storage_);
+    d->addEvent_cutoffHz(c);
+    d->addEvent_resonance(r);
+    d->addEvent_drive(dr);
+    d->addEvent_slope((int32_t) slope);
+}
+
 void MoogLadderAdapter::process(float* mono, int numSamples) noexcept {
     auto* d = gen(storage_);
     const int cap = (int) Generated::maxFramesPerBlock;

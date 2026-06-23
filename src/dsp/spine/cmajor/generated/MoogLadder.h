@@ -39,7 +39,7 @@ struct MoogLadder
     };
 
     //==============================================================================
-    static constexpr uint32_t numInputEndpoints  = 2;
+    static constexpr uint32_t numInputEndpoints  = 5;
     static constexpr uint32_t numOutputEndpoints = 1;
 
     static constexpr uint32_t maxFramesPerBlock  = 32;
@@ -49,28 +49,37 @@ struct MoogLadder
 
     enum class EndpointHandles
     {
-        in       = 1,
-        out      = 3,
-        cutoffHz = 2
+        in        = 1,
+        out       = 6,
+        cutoffHz  = 2,
+        resonance = 3,
+        drive     = 4,
+        slope     = 5
     };
 
     static constexpr uint32_t getEndpointHandleForName (std::string_view endpointName)
     {
-        if (endpointName == "in")        return static_cast<uint32_t> (EndpointHandles::in);
-        if (endpointName == "out")       return static_cast<uint32_t> (EndpointHandles::out);
-        if (endpointName == "cutoffHz")  return static_cast<uint32_t> (EndpointHandles::cutoffHz);
+        if (endpointName == "in")         return static_cast<uint32_t> (EndpointHandles::in);
+        if (endpointName == "out")        return static_cast<uint32_t> (EndpointHandles::out);
+        if (endpointName == "cutoffHz")   return static_cast<uint32_t> (EndpointHandles::cutoffHz);
+        if (endpointName == "resonance")  return static_cast<uint32_t> (EndpointHandles::resonance);
+        if (endpointName == "drive")      return static_cast<uint32_t> (EndpointHandles::drive);
+        if (endpointName == "slope")      return static_cast<uint32_t> (EndpointHandles::slope);
         return 0;
     }
 
     static constexpr EndpointInfo inputEndpoints[] =
     {
-        { 1,  "in",        EndpointType::stream },
-        { 2,  "cutoffHz",  EndpointType::event  }
+        { 1,  "in",         EndpointType::stream },
+        { 2,  "cutoffHz",   EndpointType::event  },
+        { 3,  "resonance",  EndpointType::event  },
+        { 4,  "drive",      EndpointType::event  },
+        { 5,  "slope",      EndpointType::event  }
     };
 
     static constexpr EndpointInfo outputEndpoints[] =
     {
-        { 3,  "out",  EndpointType::stream }
+        { 6,  "out",  EndpointType::stream }
     };
 
     //==============================================================================
@@ -93,14 +102,20 @@ struct MoogLadder
 
     static constexpr std::array inputEvents
     {
-        inputEndpoints[1]
+        inputEndpoints[1],
+        inputEndpoints[2],
+        inputEndpoints[3],
+        inputEndpoints[4]
     };
 
     static constexpr std::array<EndpointInfo, 0> inputMIDIEvents {};
 
     static constexpr std::array inputParameters
     {
-        inputEndpoints[1]
+        inputEndpoints[1],
+        inputEndpoints[2],
+        inputEndpoints[3],
+        inputEndpoints[4]
     };
 
     static constexpr const char* programDetailsJSON =
@@ -127,6 +142,48 @@ struct MoogLadder
             "        \"min\": 16,\n"
             "        \"max\": 20000,\n"
             "        \"init\": 1000\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"resonance\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"float32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"Resonance\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 1,\n"
+            "        \"init\": 0\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"drive\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"float32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"Drive\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 1,\n"
+            "        \"init\": 0\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"slope\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"int32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"Slope\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 1,\n"
+            "        \"init\": 1\n"
             "      },\n"
             "      \"purpose\": \"parameter\"\n"
             "    }\n"
@@ -390,9 +447,17 @@ struct MoogLadder
     struct _MoogLadder_State
     {
         float g = {};
-        float z = {};
+        float G = {};
+        float r = {};
         bool dirty = {};
         float cutoff = {};
+        float res = {};
+        float drv = {};
+        int32_t slopeSel = {};
+        float s1 = {};
+        float s2 = {};
+        float s3 = {};
+        float s4 = {};
         int32_t _sessionID = {};
         double _frequency = {};
         int32_t _resumeIndex = {};
@@ -457,7 +522,7 @@ struct MoogLadder
 
     void copyOutputFrames (EndpointHandle endpointHandle, void* dest, uint32_t numFramesToCopy)
     {
-        if (endpointHandle == 3) { std::memcpy (reinterpret_cast<char*> (dest), std::addressof (cmajIO.out), 4 * numFramesToCopy); std::memset (reinterpret_cast<char*> (std::addressof (cmajIO.out)), 0, 4 * numFramesToCopy); return; }
+        if (endpointHandle == 6) { std::memcpy (reinterpret_cast<char*> (dest), std::addressof (cmajIO.out), 4 * numFramesToCopy); std::memset (reinterpret_cast<char*> (std::addressof (cmajIO.out)), 0, 4 * numFramesToCopy); return; }
         throw std::runtime_error ("Unknown stream endpointHandle:" + std::to_string (endpointHandle));
     }
 
@@ -504,6 +569,21 @@ struct MoogLadder
         _sendEvent_cutoffHz (cmajState, event);
     }
 
+    void addEvent_resonance (float event)
+    {
+        _sendEvent_resonance (cmajState, event);
+    }
+
+    void addEvent_drive (float event)
+    {
+        _sendEvent_drive (cmajState, event);
+    }
+
+    void addEvent_slope (int32_t event)
+    {
+        _sendEvent_slope (cmajState, event);
+    }
+
     void addEvent (EndpointHandle endpointHandle, uint32_t typeIndex, const unsigned char* eventData)
     {
         (void) endpointHandle; (void) typeIndex; (void) eventData;
@@ -514,6 +594,30 @@ struct MoogLadder
             memcpy (&value, eventData, 4);
             eventData += 4;
             return addEvent_cutoffHz (value);
+        }
+
+        if (endpointHandle == 3)
+        {
+            float value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_resonance (value);
+        }
+
+        if (endpointHandle == 4)
+        {
+            float value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_drive (value);
+        }
+
+        if (endpointHandle == 5)
+        {
+            int32_t value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_slope (value);
         }
     }
 
@@ -552,6 +656,37 @@ struct MoogLadder
         _state.dirty = true;
     }
 
+    void _sendEvent_resonance (MoogLadder_State& _state, float value) noexcept
+    {
+        _MoogLadder__resonance (_state._state, value);
+    }
+
+    void _MoogLadder__resonance (_MoogLadder_State& _state, float v) noexcept
+    {
+        _state.res = v;
+        _state.dirty = true;
+    }
+
+    void _sendEvent_drive (MoogLadder_State& _state, float value) noexcept
+    {
+        _MoogLadder__drive (_state._state, value);
+    }
+
+    void _MoogLadder__drive (_MoogLadder_State& _state, float v) noexcept
+    {
+        _state.drv = v;
+    }
+
+    void _sendEvent_slope (MoogLadder_State& _state, int32_t value) noexcept
+    {
+        _MoogLadder__slope (_state._state, value);
+    }
+
+    void _MoogLadder__slope (_MoogLadder_State& _state, int32_t v) noexcept
+    {
+        _state.slopeSel = v;
+    }
+
     void _initialise (MoogLadder_State& _state, int32_t& processorID, int32_t sessionID, double frequency) noexcept
     {
         _MoogLadder___initialise (_state._state, processorID, sessionID, frequency);
@@ -563,6 +698,9 @@ struct MoogLadder
         g__frequency = frequency;
         _state.cutoff = 1000.0f;
         _state.dirty = true;
+        _state.res = 0.0f;
+        _state.drv = 0.0f;
+        _state.slopeSel = int32_t {1};
     }
 
     void _advance (MoogLadder_State& _state, MoogLadder_IO& _io, int32_t _frames) noexcept
@@ -586,9 +724,20 @@ struct MoogLadder
 
     void _MoogLadder__main (_MoogLadder_State& _state, _MoogLadder_IO& _io) noexcept
     {
-        float  G;
-        float  v;
-        float  y;
+        float  b1;
+        float  b2;
+        float  b3;
+        float  b4;
+        float  G2;
+        float  G3;
+        float  G4;
+        float  B;
+        float  y4cf;
+        float  u1;
+        float  y1;
+        float  y2;
+        float  y3;
+        float  y4;
 
         for (;;)
         {
@@ -596,11 +745,25 @@ struct MoogLadder
             {
                 _MoogLadder__recompute (_state);
             }
-            G = _state.g / (1.0f + _state.g);
-            v = (_io.in - _state.z) * G;
-            y = v + _state.z;
-            _state.z = (y + v);
-            _io.out = (_io.out + y);
+            b1 = (1.0f - _state.G) * _state.s1;
+            b2 = (1.0f - _state.G) * _state.s2;
+            b3 = (1.0f - _state.G) * _state.s3;
+            b4 = (1.0f - _state.G) * _state.s4;
+            G2 = _state.G * _state.G;
+            G3 = G2 * _state.G;
+            G4 = G2 * G2;
+            B = (((G3 * b1) + (G2 * b2)) + (_state.G * b3)) + b4;
+            y4cf = ((G4 * _io.in) + B) / (1.0f + (_state.r * G4));
+            u1 = _io.in - (_state.r * y4cf);
+            y1 = (_state.G * (u1 - _state.s1)) + _state.s1;
+            _state.s1 = ((2.0f * y1) - _state.s1);
+            y2 = (_state.G * (y1 - _state.s2)) + _state.s2;
+            _state.s2 = ((2.0f * y2) - _state.s2);
+            y3 = (_state.G * (y2 - _state.s3)) + _state.s3;
+            _state.s3 = ((2.0f * y3) - _state.s3);
+            y4 = (_state.G * (y3 - _state.s4)) + _state.s4;
+            _state.s4 = ((2.0f * y4) - _state.s4);
+            _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2 : y4));
             return;
         }
     }
@@ -611,6 +774,8 @@ struct MoogLadder
 
         sr = static_cast<float> (1.0 * g__frequency);
         _state.g = intrinsics::tan ((3.1415927f * intrinsics::clamp (_state.cutoff, 16.0f, sr * 0.45f)) / sr);
+        _state.G = (_state.g / (1.0f + _state.g));
+        _state.r = (intrinsics::clamp (_state.res, 0.0f, 1.0f) * 4.0f);
         _state.dirty = false;
     }
 
