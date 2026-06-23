@@ -458,6 +458,7 @@ struct MoogLadder
         float s2 = {};
         float s3 = {};
         float s4 = {};
+        float yp4 = {};
         int32_t _sessionID = {};
         double _frequency = {};
         int32_t _resumeIndex = {};
@@ -485,6 +486,7 @@ struct MoogLadder
     using std_intrinsics_T_0 = float;
     using std_intrinsics_T_1 = float;
     using std_intrinsics_T_2 = float;
+    using std_intrinsics_T_3 = float;
 
     //==============================================================================
     double getMaxFrequency() const
@@ -724,6 +726,11 @@ struct MoogLadder
 
     void _MoogLadder__main (_MoogLadder_State& _state, _MoogLadder_IO& _io) noexcept
     {
+        bool  nlActive;
+        float  d4;
+        float  gain;
+        float  x_in;
+        float  x_nl;
         float  b1;
         float  b2;
         float  b3;
@@ -738,6 +745,20 @@ struct MoogLadder
         float  y2;
         float  y3;
         float  y4;
+        float  b1_0;
+        float  b2_0;
+        float  b3_0;
+        float  b4_0;
+        float  G2_0;
+        float  G3_0;
+        float  G4_0;
+        float  B_0;
+        float  y4cf_0;
+        float  u1_0;
+        float  y1_0;
+        float  y2_0;
+        float  y3_0;
+        float  y4_0;
 
         for (;;)
         {
@@ -745,25 +766,56 @@ struct MoogLadder
             {
                 _MoogLadder__recompute (_state);
             }
-            b1 = (1.0f - _state.G) * _state.s1;
-            b2 = (1.0f - _state.G) * _state.s2;
-            b3 = (1.0f - _state.G) * _state.s3;
-            b4 = (1.0f - _state.G) * _state.s4;
-            G2 = _state.G * _state.G;
-            G3 = G2 * _state.G;
-            G4 = G2 * G2;
-            B = (((G3 * b1) + (G2 * b2)) + (_state.G * b3)) + b4;
-            y4cf = ((G4 * _io.in) + B) / (1.0f + (_state.r * G4));
-            u1 = _io.in - (_state.r * y4cf);
-            y1 = (_state.G * (u1 - _state.s1)) + _state.s1;
-            _state.s1 = ((2.0f * y1) - _state.s1);
-            y2 = (_state.G * (y1 - _state.s2)) + _state.s2;
-            _state.s2 = ((2.0f * y2) - _state.s2);
-            y3 = (_state.G * (y2 - _state.s3)) + _state.s3;
-            _state.s3 = ((2.0f * y3) - _state.s3);
-            y4 = (_state.G * (y3 - _state.s4)) + _state.s4;
-            _state.s4 = ((2.0f * y4) - _state.s4);
-            _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2 : y4));
+            nlActive = (_state.drv > 0.0f) ? true : (_state.res > 0.0f);
+            if (nlActive)
+            {
+                d4 = _MoogLadder__padTanh (_state.yp4) - _state.yp4;
+                gain = 1.0f + (_state.drv * 3.0f);
+                x_in = (_state.drv > 0.0f) ? _MoogLadder__padTanh (gain * _io.in) : _io.in;
+                x_nl = x_in - d4;
+                b1 = (1.0f - _state.G) * _state.s1;
+                b2 = (1.0f - _state.G) * _state.s2;
+                b3 = (1.0f - _state.G) * _state.s3;
+                b4 = (1.0f - _state.G) * _state.s4;
+                G2 = _state.G * _state.G;
+                G3 = G2 * _state.G;
+                G4 = G2 * G2;
+                B = (((G3 * b1) + (G2 * b2)) + (_state.G * b3)) + b4;
+                y4cf = ((G4 * x_nl) + B) / (1.0f + (_state.r * G4));
+                u1 = x_nl - (_state.r * y4cf);
+                y1 = (_state.G * (u1 - _state.s1)) + _state.s1;
+                _state.s1 = ((2.0f * y1) - _state.s1);
+                y2 = (_state.G * (y1 - _state.s2)) + _state.s2;
+                _state.s2 = ((2.0f * y2) - _state.s2);
+                y3 = (_state.G * (y2 - _state.s3)) + _state.s3;
+                _state.s3 = ((2.0f * y3) - _state.s3);
+                y4 = (_state.G * (y3 - _state.s4)) + _state.s4;
+                _state.s4 = ((2.0f * y4) - _state.s4);
+                _state.yp4 = y4;
+                _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2 : y4));
+            }
+            else
+            {
+                b1_0 = (1.0f - _state.G) * _state.s1;
+                b2_0 = (1.0f - _state.G) * _state.s2;
+                b3_0 = (1.0f - _state.G) * _state.s3;
+                b4_0 = (1.0f - _state.G) * _state.s4;
+                G2_0 = _state.G * _state.G;
+                G3_0 = G2_0 * _state.G;
+                G4_0 = G2_0 * G2_0;
+                B_0 = (((G3_0 * b1_0) + (G2_0 * b2_0)) + (_state.G * b3_0)) + b4_0;
+                y4cf_0 = ((G4_0 * _io.in) + B_0) / (1.0f + (_state.r * G4_0));
+                u1_0 = _io.in - (_state.r * y4cf_0);
+                y1_0 = (_state.G * (u1_0 - _state.s1)) + _state.s1;
+                _state.s1 = ((2.0f * y1_0) - _state.s1);
+                y2_0 = (_state.G * (y1_0 - _state.s2)) + _state.s2;
+                _state.s2 = ((2.0f * y2_0) - _state.s2);
+                y3_0 = (_state.G * (y2_0 - _state.s3)) + _state.s3;
+                _state.s3 = ((2.0f * y3_0) - _state.s3);
+                y4_0 = (_state.G * (y3_0 - _state.s4)) + _state.s4;
+                _state.s4 = ((2.0f * y4_0) - _state.s4);
+                _io.out = (_io.out + ((_state.slopeSel == int32_t {0}) ? y2_0 : y4_0));
+            }
             return;
         }
     }
@@ -771,12 +823,24 @@ struct MoogLadder
     void _MoogLadder__recompute (_MoogLadder_State& _state) noexcept
     {
         float  sr;
+        float  fc;
+        float  resClamped;
+        float  rNorm;
 
         sr = static_cast<float> (1.0 * g__frequency);
-        _state.g = intrinsics::tan ((3.1415927f * intrinsics::clamp (_state.cutoff, 16.0f, sr * 0.45f)) / sr);
+        fc = intrinsics::clamp (_state.cutoff, 16.0f, sr * 0.45f);
+        _state.g = intrinsics::tan ((3.1415927f * fc) / sr);
+        resClamped = intrinsics::clamp (_state.res, 0.0f, 1.0f);
+        _state.r = (((resClamped * resClamped) * intrinsics::sqrt (resClamped)) * 4.0f);
+        rNorm = _state.r * 0.25f;
+        _state.g = (_state.g * (1.0f + (((_state.g * _state.g) * 0.5f) * intrinsics::sqrt (rNorm))));
         _state.G = (_state.g / (1.0f + _state.g));
-        _state.r = (intrinsics::clamp (_state.res, 0.0f, 1.0f) * 4.0f);
         _state.dirty = false;
+    }
+
+    float std__intrinsics__clamp (float value, float minimum, float maximum) noexcept
+    {
+        return (value > maximum) ? maximum : ((value < minimum) ? minimum : value);
     }
 
     float std__intrinsics__tan (float n) noexcept
@@ -800,9 +864,19 @@ struct MoogLadder
         }
     }
 
-    float std__intrinsics__clamp (float value, float minimum, float maximum) noexcept
+    float std__intrinsics__sqrt (float n) noexcept
     {
-        return (value > maximum) ? maximum : ((value < minimum) ? minimum : value);
+        {
+            return 0.0f;
+        }
+    }
+
+    float _MoogLadder__padTanh (float x) noexcept
+    {
+        float  x2;
+
+        x2 = x * x;
+        return intrinsics::clamp ((x * (27.0f + x2)) / (27.0f + (9.0f * x2)), -1.0f, 1.0f);
     }
 
     //==============================================================================
