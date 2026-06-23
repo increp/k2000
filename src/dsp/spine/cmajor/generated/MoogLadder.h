@@ -39,7 +39,7 @@ struct MoogLadder
     };
 
     //==============================================================================
-    static constexpr uint32_t numInputEndpoints  = 5;
+    static constexpr uint32_t numInputEndpoints  = 6;
     static constexpr uint32_t numOutputEndpoints = 1;
 
     static constexpr uint32_t maxFramesPerBlock  = 32;
@@ -50,11 +50,12 @@ struct MoogLadder
     enum class EndpointHandles
     {
         in        = 1,
-        out       = 6,
+        out       = 7,
         cutoffHz  = 2,
         resonance = 3,
         drive     = 4,
-        slope     = 5
+        slope     = 5,
+        mode      = 6
     };
 
     static constexpr uint32_t getEndpointHandleForName (std::string_view endpointName)
@@ -65,6 +66,7 @@ struct MoogLadder
         if (endpointName == "resonance")  return static_cast<uint32_t> (EndpointHandles::resonance);
         if (endpointName == "drive")      return static_cast<uint32_t> (EndpointHandles::drive);
         if (endpointName == "slope")      return static_cast<uint32_t> (EndpointHandles::slope);
+        if (endpointName == "mode")       return static_cast<uint32_t> (EndpointHandles::mode);
         return 0;
     }
 
@@ -74,12 +76,13 @@ struct MoogLadder
         { 2,  "cutoffHz",   EndpointType::event  },
         { 3,  "resonance",  EndpointType::event  },
         { 4,  "drive",      EndpointType::event  },
-        { 5,  "slope",      EndpointType::event  }
+        { 5,  "slope",      EndpointType::event  },
+        { 6,  "mode",       EndpointType::event  }
     };
 
     static constexpr EndpointInfo outputEndpoints[] =
     {
-        { 6,  "out",  EndpointType::stream }
+        { 7,  "out",  EndpointType::stream }
     };
 
     //==============================================================================
@@ -105,7 +108,8 @@ struct MoogLadder
         inputEndpoints[1],
         inputEndpoints[2],
         inputEndpoints[3],
-        inputEndpoints[4]
+        inputEndpoints[4],
+        inputEndpoints[5]
     };
 
     static constexpr std::array<EndpointInfo, 0> inputMIDIEvents {};
@@ -115,7 +119,8 @@ struct MoogLadder
         inputEndpoints[1],
         inputEndpoints[2],
         inputEndpoints[3],
-        inputEndpoints[4]
+        inputEndpoints[4],
+        inputEndpoints[5]
     };
 
     static constexpr const char* programDetailsJSON =
@@ -184,6 +189,20 @@ struct MoogLadder
             "        \"min\": 0,\n"
             "        \"max\": 1,\n"
             "        \"init\": 1\n"
+            "      },\n"
+            "      \"purpose\": \"parameter\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"endpointID\": \"mode\",\n"
+            "      \"endpointType\": \"event\",\n"
+            "      \"dataType\": {\n"
+            "        \"type\": \"int32\"\n"
+            "      },\n"
+            "      \"annotation\": {\n"
+            "        \"name\": \"Mode\",\n"
+            "        \"min\": 0,\n"
+            "        \"max\": 2,\n"
+            "        \"init\": 0\n"
             "      },\n"
             "      \"purpose\": \"parameter\"\n"
             "    }\n"
@@ -455,6 +474,7 @@ struct MoogLadder
         float res = {};
         float drv = {};
         int32_t slopeSel = {};
+        int32_t modeSel = {};
         float s1 = {};
         float s2 = {};
         float s3 = {};
@@ -530,7 +550,7 @@ struct MoogLadder
 
     void copyOutputFrames (EndpointHandle endpointHandle, void* dest, uint32_t numFramesToCopy)
     {
-        if (endpointHandle == 6) { std::memcpy (reinterpret_cast<char*> (dest), std::addressof (cmajIO.out), 4 * numFramesToCopy); std::memset (reinterpret_cast<char*> (std::addressof (cmajIO.out)), 0, 4 * numFramesToCopy); return; }
+        if (endpointHandle == 7) { std::memcpy (reinterpret_cast<char*> (dest), std::addressof (cmajIO.out), 4 * numFramesToCopy); std::memset (reinterpret_cast<char*> (std::addressof (cmajIO.out)), 0, 4 * numFramesToCopy); return; }
         throw std::runtime_error ("Unknown stream endpointHandle:" + std::to_string (endpointHandle));
     }
 
@@ -592,6 +612,11 @@ struct MoogLadder
         _sendEvent_slope (cmajState, event);
     }
 
+    void addEvent_mode (int32_t event)
+    {
+        _sendEvent_mode (cmajState, event);
+    }
+
     void addEvent (EndpointHandle endpointHandle, uint32_t typeIndex, const unsigned char* eventData)
     {
         (void) endpointHandle; (void) typeIndex; (void) eventData;
@@ -626,6 +651,14 @@ struct MoogLadder
             memcpy (&value, eventData, 4);
             eventData += 4;
             return addEvent_slope (value);
+        }
+
+        if (endpointHandle == 6)
+        {
+            int32_t value;
+            memcpy (&value, eventData, 4);
+            eventData += 4;
+            return addEvent_mode (value);
         }
     }
 
@@ -695,6 +728,16 @@ struct MoogLadder
         _state.slopeSel = v;
     }
 
+    void _sendEvent_mode (MoogLadder_State& _state, int32_t value) noexcept
+    {
+        _MoogLadder__mode (_state._state, value);
+    }
+
+    void _MoogLadder__mode (_MoogLadder_State& _state, int32_t v) noexcept
+    {
+        _state.modeSel = v;
+    }
+
     void _initialise (MoogLadder_State& _state, int32_t& processorID, int32_t sessionID, double frequency) noexcept
     {
         _MoogLadder___initialise (_state._state, processorID, sessionID, frequency);
@@ -709,6 +752,7 @@ struct MoogLadder
         _state.res = 0.0f;
         _state.drv = 0.0f;
         _state.slopeSel = int32_t {1};
+        _state.modeSel = int32_t {0};
         _state.dcR = 0.998953f;
         _state.dcx1 = 0.0f;
         _state.dcy1 = 0.0f;
@@ -816,7 +860,7 @@ struct MoogLadder
                 _state.yp2 = y2;
                 _state.yp3 = y3;
                 _state.yp4 = y4;
-                tapOut = (_state.slopeSel == int32_t {0}) ? y2 : y4;
+                tapOut = (_state.modeSel == int32_t {1}) ? ((((g_CALIB_BP_W1 * y1) + (g_CALIB_BP_W2 * y2)) + (g_CALIB_BP_W3 * y3)) + (g_CALIB_BP_W4 * y4)) : ((_state.modeSel == int32_t {2}) ? (g_CALIB_HP_SCALE * ((((u1 - (4.0f * y1)) + (6.0f * y2)) - (4.0f * y3)) + y4)) : ((_state.slopeSel == int32_t {0}) ? y2 : y4));
                 limOut = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (tapOut / g_CALIB_LIM_CEIL);
                 dcOut = (limOut - _state.dcx1) + (_state.dcR * _state.dcy1);
                 _state.dcx1 = limOut;
@@ -843,7 +887,7 @@ struct MoogLadder
                 _state.s3 = ((2.0f * y3_0) - _state.s3);
                 y4_0 = (_state.G * (y3_0 - _state.s4)) + _state.s4;
                 _state.s4 = ((2.0f * y4_0) - _state.s4);
-                tapOut_0 = (_state.slopeSel == int32_t {0}) ? y2_0 : y4_0;
+                tapOut_0 = (_state.modeSel == int32_t {1}) ? ((((g_CALIB_BP_W1 * y1_0) + (g_CALIB_BP_W2 * y2_0)) + (g_CALIB_BP_W3 * y3_0)) + (g_CALIB_BP_W4 * y4_0)) : ((_state.modeSel == int32_t {2}) ? (g_CALIB_HP_SCALE * ((((u1_0 - (4.0f * y1_0)) + (6.0f * y2_0)) - (4.0f * y3_0)) + y4_0)) : ((_state.slopeSel == int32_t {0}) ? y2_0 : y4_0));
                 limOut_0 = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (tapOut_0 / g_CALIB_LIM_CEIL);
                 dcOut_0 = (limOut_0 - _state.dcx1) + (_state.dcR * _state.dcy1);
                 _state.dcx1 = limOut_0;
@@ -925,6 +969,11 @@ struct MoogLadder
     int32_t g__sessionID {};
     double g__frequency {};
     static constexpr float g_CALIB_NL { 1.0f };
+    static constexpr float g_CALIB_BP_W1 { 0.0f };
+    static constexpr float g_CALIB_BP_W2 { 4.0f };
+    static constexpr float g_CALIB_BP_W3 { -4.0f };
+    static constexpr float g_CALIB_BP_W4 { 0.0f };
+    static constexpr float g_CALIB_HP_SCALE { 1.0f };
     static constexpr float g_CALIB_LIM_CEIL { 1.5f };
 
     //==============================================================================

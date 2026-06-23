@@ -15,8 +15,9 @@ void MoogLadder::reset(State& s) const noexcept {
 void MoogLadder::processStereo(State& s, float* left, float* right, int n) const noexcept {
     auto& vs = static_cast<VoiceState&>(s);
     const int slope = (slope_ == Slope::db12) ? 0 : 1;
-    vs.l.setParams(cutoffHz_, resonance_, drive_, slope);
-    vs.r.setParams(cutoffHz_, resonance_, drive_, slope);
+    const int mode  = static_cast<int>(mode_);
+    vs.l.setParams(cutoffHz_, resonance_, drive_, slope, mode);
+    vs.r.setParams(cutoffHz_, resonance_, drive_, slope, mode);
     vs.l.process(left,  n);
     vs.r.process(right, n);
 }

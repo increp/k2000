@@ -14,12 +14,14 @@ processor MoogLadder
     input  event float resonance [[ name: "Resonance", min: 0,  max: 1,     init: 0 ]];
     input  event float drive     [[ name: "Drive",     min: 0,  max: 1,     init: 0 ]];
     input  event int32 slope     [[ name: "Slope",     min: 0,  max: 1,     init: 1 ]];   // 0=y2 1=y4
+    input  event int32 mode      [[ name: "Mode",      min: 0,  max: 2,     init: 0 ]];   // 0=LP 1=BP 2=HP
 
     float g, G, r;
     float dcR = 0.998953f;        // DC-blocker pole (updated in recompute from actual SR)
     bool  dirty = true;
     float cutoff = 1000.0f, res = 0.0f, drv = 0.0f;
     int32 slopeSel = 1;
+    int32 modeSel  = 0;           // 0=LP 1=BP 2=HP
     float s1, s2, s3, s4;       // stage integrator states
     float yp1, yp2, yp3, yp4;   // previous outputs of each stage (per-stage tanh delta)
     float dcx1 = 0.0f, dcy1 = 0.0f;  // DC-blocker one-pole state (x_{n-1}, y_{n-1})
@@ -42,10 +44,30 @@ processor MoogLadder
     // R = 1 - 2*pi*fc_dc/sr. Corner ~8 Hz is well below the audio band.
     let CALIB_DC_FC = 8.0f;
 
+    // CALIB: Pole-mix weights for BP and HP modes (Oberheim Xpander family).
+    // LP mode uses the slope tap (y2 or y4) unchanged — no change from Tasks 2-4.
+    //
+    // BP mode: band-pass from pole-mix of adjacent taps.
+    //   mix = y1 * BP_W1 + y2 * BP_W2 + y3 * BP_W3 + y4 * BP_W4
+    // The classic Xpander BP2 formula is 4*(y2 - y3). Using y1..y4 weights:
+    //   (0, 4, -4, 0) gives a 2nd-order BP centered near fc.
+    // CALIB values tuned so mid-band (fc) passes louder than low and high.
+    let CALIB_BP_W1 =  0.0f;
+    let CALIB_BP_W2 =  4.0f;
+    let CALIB_BP_W3 = -4.0f;
+    let CALIB_BP_W4 =  0.0f;
+
+    // HP mode: binomial HP (y0 - 4*y1 + 6*y2 - 4*y3 + y4) where y0 is the
+    // pre-ladder input (the u1 feedback-combined signal). This is the 4th-order
+    // binomial difference applied to the stage outputs — the Xpander HP4 formula.
+    // CALIB: scale factor on the full mix to keep output level comparable to LP.
+    let CALIB_HP_SCALE = 1.0f;
+
     event cutoffHz  (float v) { cutoff = v; dirty = true; }
     event resonance (float v) { res = v;    dirty = true; }
     event drive     (float v) { drv = v; }
     event slope     (int32 v) { slopeSel = v; }
+    event mode      (int32 v) { modeSel  = v; }
 
     // Project-standard fast tanh approximation (Pade [3/3], monotone, bounded).
     // Reused from NlSvfDrive.cmajor — do NOT modify independently.
@@ -132,9 +154,14 @@ processor MoogLadder
 
                 yp1 = y1; yp2 = y2; yp3 = y3; yp4 = y4;   // store for next sample
 
-                // --- Task 4: output limiter + DC blocker ---
-                // Tap output from slope selector.
-                let tapOut = (slopeSel == 0) ? y2 : y4;
+                // --- Task 4/5: mode tap + output limiter + DC blocker ---
+                // LP: slope selector (y2=12dB or y4=24dB); BP/HP: pole-mix.
+                // y0 (pre-feedback ladder input) is u1 (already computed above).
+                let tapOut = (modeSel == 1)
+                    ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)
+                    : (modeSel == 2)
+                        ? CALIB_HP_SCALE * (u1 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
+                        : (slopeSel == 0) ? y2 : y4;   // LP path
                 // Pirkle-style bounded soft ceiling: transparent for small signals,
                 // saturates smoothly as amplitude approaches CALIB_LIM_CEIL.
                 let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
@@ -157,9 +184,13 @@ processor MoogLadder
                 let y2 = G * (y1 - s2) + s2; s2 = 2.0f * y2 - s2;
                 let y3 = G * (y2 - s3) + s3; s3 = 2.0f * y3 - s3;
                 let y4 = G * (y3 - s4) + s4; s4 = 2.0f * y4 - s4;
-                // Linear path: signals are small (normal level), limiter is transparent.
-                // DC blocker applied identically for consistency.
-                let tapOut = (slopeSel == 0) ? y2 : y4;
+                // Linear path: mode tap (same logic as NL path).
+                let tapOut = (modeSel == 1)
+                    ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)
+                    : (modeSel == 2)
+                        ? CALIB_HP_SCALE * (u1 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
+                        : (slopeSel == 0) ? y2 : y4;   // LP path
+                // Limiter + DC blocker applied identically for consistency.
                 let limOut = CALIB_LIM_CEIL * padTanh (tapOut / CALIB_LIM_CEIL);
                 let dcOut = limOut - dcx1 + dcR * dcy1;
                 dcx1 = limOut; dcy1 = dcOut;

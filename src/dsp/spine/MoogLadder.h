@@ -8,6 +8,7 @@
 class MoogLadder : public FilterModel {
 public:
     enum class Slope { db12, db24 };
+    enum class Mode  { LP = 0, BP = 1, HP = 2 };
 
     struct VoiceState : public FilterModel::State {
         MoogLadderAdapter l, r;
@@ -23,6 +24,7 @@ public:
         cutoffHz_ = cutoffHz; resonance_ = resonance; drive_ = drive;
     }
     void setSlope(Slope s) noexcept { slope_ = s; }
+    void setMode(Mode m)   noexcept { mode_  = m; }
     void setSeparation(float) noexcept { /* no analog in a single ladder */ }
 
     void processStereo(State& s, float* left, float* right, int numSamples) const noexcept override;
@@ -31,4 +33,5 @@ private:
     double sampleRate_ = 48000.0;
     float  cutoffHz_ = 1000.0f, resonance_ = 0.0f, drive_ = 0.0f;
     Slope  slope_ = Slope::db24;
+    Mode   mode_  = Mode::LP;
 };

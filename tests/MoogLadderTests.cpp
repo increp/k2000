@@ -24,6 +24,18 @@ struct MoogLadderTests : public juce::UnitTest {
         return std::sqrt(e / 8192.0) * std::sqrt(2.0);   // ~amplitude of a unit sine
     }
 
+    // Like mag() but with a specific Mode set. Resets state each call. Linear path (res=0, drv=0).
+    static double magMode(MoogLadder& m, FilterModel::State& st, double fc, double probe, MoogLadder::Mode mode) {
+        m.setCommon((float) fc, 0.0f, 0.0f); m.setMode(mode); m.reset(st);
+        std::vector<float> l(16384), r(16384);
+        for (int i = 0; i < (int) l.size(); ++i)
+            l[(size_t)i] = r[(size_t)i] = (float) std::sin(2.0*juce::MathConstants<double>::pi*probe*i/kSR);
+        m.processStereo(st, l.data(), r.data(), (int) l.size());
+        double e = 0; for (int i = 8192; i < (int) l.size(); ++i) e += double(l[(size_t)i])*l[(size_t)i];
+        m.setMode(MoogLadder::Mode::LP);   // restore default
+        return std::sqrt(e / 8192.0) * std::sqrt(2.0);
+    }
+
     // Like mag() but holds the resonance and drive already set on `m` via setCommon().
     // Used by the resonance-peak test where mag() would clobber the resonance.
     static double magR(MoogLadder& m, FilterModel::State& st, double probe) {
@@ -167,6 +179,35 @@ struct MoogLadderTests : public juce::UnitTest {
             expect(dPeak < 1.5f, "self-osc peak exceeded limiter ceiling: " + juce::String(dPeak, 4));
             expect(dCrestFactor > 1.3f && dCrestFactor < 1.6f,
                    "self-osc crest factor outside near-sine band: " + juce::String(dCrestFactor, 4));
+        }
+
+        beginTest("HP mode: low-frequency magnitude attenuated vs LP");
+        {
+            MoogLadder mh; mh.prepare(kSR); mh.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sh(mh.makeState());
+            // fc=1000 Hz; probe far below (100 Hz). LP should pass, HP should strongly attenuate.
+            const double lpLow = magMode(mh, *sh, 1000.0, 100.0, MoogLadder::Mode::LP);
+            const double hpLow = magMode(mh, *sh, 1000.0, 100.0, MoogLadder::Mode::HP);
+            logMessage("HP test: LP@100Hz=" + juce::String(lpLow,4) + " HP@100Hz=" + juce::String(hpLow,4));
+            // HP must attenuate lows by >6 dB (factor 0.5) relative to LP
+            expect(hpLow < lpLow * 0.5,
+                   "HP mode did not attenuate lows vs LP: LP=" + juce::String(lpLow,4) + " HP=" + juce::String(hpLow,4));
+        }
+
+        beginTest("BP mode: mid-band probe exceeds both low and high probes");
+        {
+            MoogLadder mb2; mb2.prepare(kSR); mb2.setSlope(MoogLadder::Slope::db24);
+            std::unique_ptr<FilterModel::State> sb2(mb2.makeState());
+            // fc=1000 Hz; low probe=100 Hz, band probe=1000 Hz, high probe=8000 Hz.
+            const double bpLow  = magMode(mb2, *sb2, 1000.0,  100.0, MoogLadder::Mode::BP);
+            const double bpMid  = magMode(mb2, *sb2, 1000.0, 1000.0, MoogLadder::Mode::BP);
+            const double bpHigh = magMode(mb2, *sb2, 1000.0, 8000.0, MoogLadder::Mode::BP);
+            logMessage("BP test: low=" + juce::String(bpLow,4) + " mid=" + juce::String(bpMid,4) + " high=" + juce::String(bpHigh,4));
+            // BP mid-band peak must exceed both low and high by >3 dB (factor 1.41)
+            expect(bpMid > bpLow  * 1.41,
+                   "BP mid not > low by >3 dB: mid=" + juce::String(bpMid,4) + " low=" + juce::String(bpLow,4));
+            expect(bpMid > bpHigh * 1.41,
+                   "BP mid not > high by >3 dB: mid=" + juce::String(bpMid,4) + " high=" + juce::String(bpHigh,4));
         }
     }
 };
