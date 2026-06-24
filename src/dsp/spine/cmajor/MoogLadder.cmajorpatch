@@ -1,0 +1,9 @@
+{
+    "CmajorVersion": 1,
+    "ID": "dev.bernie.moogladder",
+    "version": "1.0",
+    "name": "MoogLadder",
+    "description": "Moog transistor-ladder filter (production Cmajor block, Spec 1)",
+    "mainProcessor": "MoogLadder",
+    "source": [ "MoogLadder.cmajor" ]
+}

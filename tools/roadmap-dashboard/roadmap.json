@@ -159,6 +159,17 @@
             "tooling"
           ],
           "summary": "Tooling to load + measure external reference VSTs (e.g. Arturia Mini V) and capture golden response data — magnitude/phase grids, self-osc pitch tracking, driven harmonic snapshots — for filter-model validation and A/B. Directly unblocks the Moog Arturia-match calibration gate (2026-06-22-moog-cmajor-dsp-design.md, Spec 1) and any future model-vs-reference comparison."
+        },
+        {
+          "id": "v5-filter-sweep-standard",
+          "title": "v5 — Filter-validation standard: 7000-pt log dual-sweep",
+          "status": "planned",
+          "kind": "point",
+          "tags": [
+            "tooling",
+            "testing"
+          ],
+          "summary": "STANDARD (set 2026-06-23): every spine filter validated by a 7000-point LOG sweep 10 Hz–25 kHz, in BOTH forms — (1) frequency-response magnitude |H(f)| (rolloff + resonant peak; the Arturia-comparison format) and (2) self-osc pitch-tracking (±3% gate only ≤~4 kHz, measure-report above due to base-rate delay drift). Log-spaced, in a SEPARATE opt-in test target (too slow for every build; fast suite keeps a ~7-point subset). Applies to all models. Deliverable: the reusable dual-sweep harness + BACK-TEST Huggett against it."
         }
       ]
     },
