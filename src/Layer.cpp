@@ -19,6 +19,8 @@ void Layer::prepare(double sr, int maxBlock) {
     }
     currentModelId_ = 0;
     huggett_ = dynamic_cast<HuggettFilter*>(models_[0].get());
+    moog_ = nullptr;
+    for (auto& m : models_) if (auto* mg = dynamic_cast<MoogLadder*>(m.get())) moog_ = mg;
     hpStage_.prepare(sr);
 }
 
@@ -47,6 +49,12 @@ void Layer::updateParameters(const ParamSnapshot& s) {
         huggett_->setSlope(s.spineSlope == 0 ? HuggettFilter::Slope::db12 : HuggettFilter::Slope::db24);
         huggett_->setSeparation(s.spineSeparationOct);
         huggett_->setPostDrive(s.huggettPostDrive);
+    }
+    if (moog_) {
+        moog_->setMode (static_cast<MoogLadder::Mode>(s.moogMode));
+        moog_->setSlope(s.spineSlope == 0 ? MoogLadder::Slope::db12 : MoogLadder::Slope::db24);
+        moog_->setBass (s.moogBassAmount, s.moogBassWave, s.moogBassOctave);
+        moog_->setSeparation(s.spineSeparationOct);   // no-op, for symmetry
     }
     hpStage_.setParams(s.hpCutoffHz, s.hpResonance,
                        s.hpSlope == 0 ? HuggettHpStage::Slope::db12 : HuggettHpStage::Slope::db24);

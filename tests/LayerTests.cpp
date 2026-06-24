@@ -5,6 +5,7 @@
 #include "../src/Voice.h"
 #include "../src/params/ParamSnapshot.h"
 #include "../src/dsp/spine/HuggettHpStage.h"
+#include "../src/dsp/spine/MoogLadder.h"
 
 // End-to-end coverage of the Layer-driven audio path: build a Layer, prepare
 // it, drive a Voice through it with a known snapshot, assert audio characteristics.
@@ -70,6 +71,18 @@ public:
             expect(m0a != nullptr, "model 0 not built");
             expect(m0a == m0b, "model instance was rebuilt on update (should be pre-built/stable)");
             expect(layer.spineModel() == m0a, "current model should be id 0");
+        }
+
+        beginTest("Layer routes Moog params to the Moog instance and processes through it");
+        {
+            Layer layer; layer.prepare(48000.0, 64);
+            ParamSnapshot s;                       // defaults
+            s.spineModel = 1;                      // Moog
+            s.svfCutoffHz = 1200.0f; s.svfResonance = 0.4f; s.moogMode = 0; s.spineSlope = 1;
+            layer.updateParameters(s);
+            expect(layer.spineModel() != nullptr, "no spine model");
+            // the active model is Moog (index 1)
+            expect(dynamic_cast<const MoogLadder*>(layer.spineModel()) != nullptr, "active model is not Moog");
         }
 
         beginTest("Lowering the cutoff drops high-note energy");
