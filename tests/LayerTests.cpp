@@ -75,14 +75,62 @@ public:
 
         beginTest("Layer routes Moog params to the Moog instance and processes through it");
         {
-            Layer layer; layer.prepare(48000.0, 64);
-            ParamSnapshot s;                       // defaults
-            s.spineModel = 1;                      // Moog
-            s.svfCutoffHz = 1200.0f; s.svfResonance = 0.4f; s.moogMode = 0; s.spineSlope = 1;
+            // Block size and sample rate used throughout this test
+            const double testSr = 48000.0;
+            const int    testN  = 512;
+
+            Layer layer; layer.prepare(testSr, testN);
+            ParamSnapshot s;
+            s.spineModel   = 1;          // select Moog
+            s.svfCutoffHz  = 1000.0f;    // cutoff well above the test tone (100 Hz)
+            s.svfResonance = 0.2f;
+
+            // -- Type check: active model is a MoogLadder --
+            s.moogMode = 0;
             layer.updateParameters(s);
-            expect(layer.spineModel() != nullptr, "no spine model");
-            // the active model is Moog (index 1)
-            expect(dynamic_cast<const MoogLadder*>(layer.spineModel()) != nullptr, "active model is not Moog");
+            expect(layer.spineModel() != nullptr, "no spine model after selecting Moog");
+            auto* mgLP = dynamic_cast<const MoogLadder*>(layer.spineModel());
+            expect(mgLP != nullptr, "active model is not MoogLadder");
+
+            // Helper: compute RMS of a 100 Hz sine processed through the given model
+            // using a fresh state.  Uses enough samples to let the filter settle.
+            auto computeRms = [&](const MoogLadder* mg) -> float {
+                const int warmup = testN / 2;   // discard first half (transient)
+                std::vector<float> L(testN), R(testN);
+                for (int i = 0; i < testN; ++i) {
+                    float x = std::sin(2.0 * juce::MathConstants<double>::pi * 100.0 * i / testSr);
+                    L[i] = x; R[i] = x;
+                }
+                std::unique_ptr<FilterModel::State> st(mg->makeState());
+                mg->reset(*st);
+                mg->processStereo(*st, L.data(), R.data(), testN);
+                float sum = 0.0f;
+                for (int i = warmup; i < testN; ++i)
+                    sum += L[i] * L[i];
+                return std::sqrt(sum / float(testN - warmup));
+            };
+
+            // -- HP mode: 100 Hz (well below 1 kHz cutoff) should be strongly attenuated --
+            s.moogMode = 2;              // HP
+            layer.updateParameters(s);
+            auto* mgHP = dynamic_cast<const MoogLadder*>(layer.spineModel());
+            expect(mgHP != nullptr, "Moog not present after HP mode update");
+            const float rmsHP = computeRms(mgHP);
+
+            // -- LP mode: 100 Hz (well below 1 kHz cutoff) should pass through --
+            s.moogMode = 0;              // LP
+            layer.updateParameters(s);
+            auto* mgLP2 = dynamic_cast<const MoogLadder*>(layer.spineModel());
+            expect(mgLP2 != nullptr, "Moog not present after LP mode update");
+            const float rmsLP = computeRms(mgLP2);
+
+            // LP should pass the low tone; HP should reject it.
+            // If the dispatch block is removed, setMode() is never called and both
+            // runs produce identical output -> rmsHP == rmsLP -> assertion fails.
+            expect(rmsLP > 1e-4f, "LP mode must pass 100 Hz tone (rmsLP=" + juce::String(rmsLP) + ")");
+            expect(rmsHP < rmsLP * 0.5f,
+                "HP must attenuate 100 Hz vs LP: rmsHP=" + juce::String(rmsHP)
+                + " rmsLP=" + juce::String(rmsLP));
         }
 
         beginTest("Lowering the cutoff drops high-note energy");
