@@ -49,6 +49,10 @@ LayerIds buildIds(int layer) {
     id.spineHpSlope     = p + "spine.hp.slope";
     id.spinePostDrive       = p + "spine.huggett.postDrive";
     id.spineHuggettRouting  = p + "spine.huggett.routing";
+    id.spineMoogMode       = p + "spine.moog.mode";
+    id.spineMoogBassAmount = p + "spine.moog.bassAmount";
+    id.spineMoogBassWave   = p + "spine.moog.bassWave";
+    id.spineMoogBassOctave = p + "spine.moog.bassOctave";
     return id;
 }
 
@@ -185,6 +189,17 @@ APVTS::ParameterLayout createLayout() {
             juce::StringArray{ "LP", "BP", "HP",
                                util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
                                "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 0));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogMode, 1},
+            "Moog Mode " + juce::String(i), juce::StringArray{"LP", "BP", "HP"}, 0));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineMoogBassAmount, 1},
+            "Moog Bass " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogBassWave, 1},
+            "Moog Bass Wave " + juce::String(i),
+            juce::StringArray{"Sine", "Triangle", "Saw"}, 0));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogBassOctave, 1},
+            "Moog Bass Octave " + juce::String(i),
+            juce::StringArray{"0", "-1 oct", "-2 oct"}, 0));
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
@@ -225,6 +240,10 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.hpSlope         = (int) raw(apvts, id.spineHpSlope);
     s.huggettPostDrive = raw(apvts, id.spinePostDrive);
     s.huggettRouting = (int) raw(apvts, id.spineHuggettRouting);
+    s.moogMode       = (int) raw(apvts, id.spineMoogMode);
+    s.moogBassAmount =       raw(apvts, id.spineMoogBassAmount);
+    s.moogBassWave   = (int) raw(apvts, id.spineMoogBassWave);
+    s.moogBassOctave = (int) raw(apvts, id.spineMoogBassOctave);
     return s;
 }
 

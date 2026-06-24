@@ -52,4 +52,10 @@ struct ParamSnapshot {
     // 0=LP 1=BP 2=HP, 3..5 series LP->HP/LP->BP/HP->BP, 6..8 parallel LP+HP/LP+BP/HP+BP,
     // 9..11 parallel LP+LP/BP+BP/HP+HP.
     int huggettRouting = 0;
+
+    // Moog bank (spine.moog.*)
+    int   moogMode       = 0;   // 0=LP 1=BP 2=HP
+    float moogBassAmount = 0.0f;
+    int   moogBassWave   = 0;   // 0=Sine 1=Triangle 2=Saw
+    int   moogBassOctave = 0;   // 0=unison 1=-1oct 2=-2oct
 };

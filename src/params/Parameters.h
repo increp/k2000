@@ -17,7 +17,8 @@ struct LayerIds {
                  enable, keyLo, keyHi, velLo, velHi, channel, level,
                  spineModel, spineSeparation, spineSlope, spineDrive, spineOutput,
                  spineHpEnable, spineHpCutoff, spineHpResonance, spineHpSlope,
-                 spinePostDrive, spineHuggettRouting;
+                 spinePostDrive, spineHuggettRouting,
+                 spineMoogMode, spineMoogBassAmount, spineMoogBassWave, spineMoogBassOctave;
 };
 
 // Returns a reference to the (statically built) ids for the given layer.

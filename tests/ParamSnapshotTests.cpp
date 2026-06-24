@@ -105,6 +105,17 @@ public:
             s = params::snapshot(apvts, 0);
             expectWithinAbsoluteError(s.spineModelFadeMs, 60.0f, 0.1f);
         }
+
+        beginTest("Moog bank params exist with correct defaults");
+        {
+            const auto& id = params::layerIds(0);
+            expect(apvts.getParameter(id.spineMoogMode)       != nullptr, "spine.moog.mode missing");
+            expect(apvts.getParameter(id.spineMoogBassAmount) != nullptr, "spine.moog.bassAmount missing");
+            expect(apvts.getParameter(id.spineMoogBassWave)   != nullptr, "spine.moog.bassWave missing");
+            expect(apvts.getParameter(id.spineMoogBassOctave) != nullptr, "spine.moog.bassOctave missing");
+            s = params::snapshot(apvts, 0);
+            expect(s.moogMode == 0 && std::fpclassify(s.moogBassAmount) == FP_ZERO, "moog defaults wrong");
+        }
     }
 };
 
