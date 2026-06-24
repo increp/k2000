@@ -53,6 +53,10 @@ private:
     juce::Label        hpSlopeLbl_;
     LabeledKnob        hpCutoff_{ "HP Cut" }, hpReso_{ "HP Reso" };
     LabeledKnob        spinePostDrive_{ "Post Drv" };
+    // Moog-only controls (shown when spine model == Moog, hidden otherwise)
+    juce::Label    moogModeLbl_, moogWaveLbl_, moogOctaveLbl_;
+    juce::ComboBox moogMode_, moogWave_, moogOctave_;
+    LabeledKnob    moogBass_{ "Bass" };
 
     Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
     Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
@@ -83,8 +87,9 @@ private:
     // control members above and must be detached while those controls are still alive.
     ParamBinder binder_{ processorRef.apvts() };
 
-    void buildStaticControls();   // combos' item lists, labels, child attach (once)
-    void bindLayer(int layer);    // (re)bind every per-layer control via binder_
+    void buildStaticControls();      // combos' item lists, labels, child attach (once)
+    void bindLayer(int layer);       // (re)bind every per-layer control via binder_
+    void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
     void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)

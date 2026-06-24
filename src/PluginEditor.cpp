@@ -76,13 +76,35 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(spineSlope_);
     filterSection_.addAndMakeVisible(spineSeparation_);
     filterSection_.addAndMakeVisible(spinePostDrive_);
-    spineRoutingLbl_.setText("Routing", juce::dontSendNotification);
+    spineRoutingLbl_.setText("Filter Routing", juce::dontSendNotification);
     spineRoutingLbl_.setJustificationType(juce::Justification::centred);
     spineRouting_.addItemList(juce::StringArray{ "LP", "BP", "HP", "Notch",
         util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
         "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 1);
     filterSection_.addAndMakeVisible(spineRoutingLbl_);
     filterSection_.addAndMakeVisible(spineRouting_);
+
+    // Moog-only controls (hidden until the Moog model is selected)
+    moogModeLbl_.setText("Mode", juce::dontSendNotification);
+    moogModeLbl_.setJustificationType(juce::Justification::centred);
+    moogMode_.addItemList(juce::StringArray{ "LP", "BP", "HP" }, 1);
+    filterSection_.addAndMakeVisible(moogModeLbl_);
+    filterSection_.addAndMakeVisible(moogMode_);
+    moogWaveLbl_.setText("Wave", juce::dontSendNotification);
+    moogWaveLbl_.setJustificationType(juce::Justification::centred);
+    moogWave_.addItemList(juce::StringArray{ "Sine", "Triangle", "Saw" }, 1);
+    filterSection_.addAndMakeVisible(moogWaveLbl_);
+    filterSection_.addAndMakeVisible(moogWave_);
+    moogOctaveLbl_.setText("Octave", juce::dontSendNotification);
+    moogOctaveLbl_.setJustificationType(juce::Justification::centred);
+    moogOctave_.addItemList(juce::StringArray{ "0", "-1 oct", "-2 oct" }, 1);
+    filterSection_.addAndMakeVisible(moogOctaveLbl_);
+    filterSection_.addAndMakeVisible(moogOctave_);
+    filterSection_.addAndMakeVisible(moogBass_);
+
+    // Wire model-selection visibility switching
+    spineModel_.onChange = [this] { updateModelVisibility(); resized(); };
+    updateModelVisibility();
 
     // HP pre-filter band controls
     hpSectionLbl_.setText("HP PRE", juce::dontSendNotification);
@@ -180,6 +202,10 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(spineSlope_,               ids.spineSlope);
     binder_.bind(spineRouting_,             ids.spineHuggettRouting);
     binder_.bind(spineSeparation_.slider(), ids.spineSeparation);
+    binder_.bind(moogMode_,                 ids.spineMoogMode);
+    binder_.bind(moogWave_,                 ids.spineMoogBassWave);
+    binder_.bind(moogOctave_,               ids.spineMoogBassOctave);
+    binder_.bind(moogBass_.slider(),        ids.spineMoogBassAmount);
 
     binder_.bind(hpEnable_,               ids.spineHpEnable);
     binder_.bind(hpCutoff_.slider(),      ids.spineHpCutoff);
@@ -213,6 +239,22 @@ void K2000AudioProcessorEditor::timerCallback() {
     if (safetyLimiter_.getToggleState() != processorRef.isLimiterEnabled())
         safetyLimiter_.setToggleState(processorRef.isLimiterEnabled(), juce::dontSendNotification);
     limitIndicator_.repaint();
+}
+
+void K2000AudioProcessorEditor::updateModelVisibility() {
+    const bool moog = (spineModel_.getSelectedItemIndex() == 1);
+    // Moog-only controls
+    juce::Component* moogControls[] = { &moogModeLbl_,  &moogMode_,
+                                        &moogWaveLbl_,  &moogWave_,
+                                        &moogOctaveLbl_, &moogOctave_,
+                                        &moogBass_ };
+    for (auto* c : moogControls)
+        c->setVisible(moog);
+    // Huggett-only controls
+    juce::Component* huggettControls[] = { &spineRoutingLbl_, &spineRouting_,
+                                           &spineSeparation_,  &spinePostDrive_ };
+    for (auto* c : huggettControls)
+        c->setVisible(!moog);
 }
 
 void K2000AudioProcessorEditor::resized() {
@@ -307,11 +349,18 @@ void K2000AudioProcessorEditor::resized() {
             auto mainTop = fc.removeFromTop(mainH);
             layoutCells(mainTop, { { nullptr, &filterCutoff_ },
                                     { nullptr, &filterRes_ } });
+            // Both model-specific rows share the same cell rectangle;
+            // updateModelVisibility() ensures only the active group is shown.
             layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
                                 { &spineModelLbl_,  &spineModel_ },
                                 { &spineSlopeLbl_,  &spineSlope_ },
                                 { nullptr,          &spineSeparation_ },
                                 { nullptr,          &spinePostDrive_ } });
+            layoutCells(fc,  { { &moogModeLbl_,    &moogMode_ },
+                                { &moogWaveLbl_,    &moogWave_ },
+                                { &moogOctaveLbl_,  &moogOctave_ },
+                                { nullptr,          &moogBass_ } });
+            updateModelVisibility();
         }
     }
     area.removeFromTop(8);
