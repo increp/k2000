@@ -1,6 +1,9 @@
 #include <juce_core/juce_core.h>
 #include "../src/dsp/spine/SpineFilterSlot.h"
 #include "../src/dsp/spine/SpineState.h"
+#include "../src/Voice.h"
+#include "../src/Layer.h"
+#include "../src/params/ParamSnapshot.h"
 #include "fixtures/CountingFilterModel.h"
 #include <vector>
 #include <cmath>
@@ -76,6 +79,26 @@ struct ModelHotSwapTests : public juce::UnitTest {
             s4.bind(&a, nullptr);   // steal mid-fade back to A: frees B -> base+1
             expect(CountingFilterModel::liveStates() == base + 1,
                    "live after bind = " + juce::String(CountingFilterModel::liveStates() - base));
+        }
+
+        beginTest("live crossfade Huggett <-> Moog stays finite and bounded");
+        {
+            static constexpr int kHotBlock = 512;
+            Layer hotLayer; hotLayer.prepare(48000.0, kHotBlock);
+            Voice hotVoice; hotVoice.setLayer(&hotLayer); hotVoice.prepare(48000.0, kHotBlock);
+            // svfResonance: Huggett maps resonance to Q = 0.5 + r^2*49.5; use 0.1
+            // (Q ≈ 1.0) so the saw's harmonics near the resonant peak stay bounded.
+            ParamSnapshot ps; ps.spineModel = 0; ps.svfCutoffHz = 800.0f; ps.svfResonance = 0.1f; ps.spineModelFadeMs = 25.0f;
+            hotLayer.updateParameters(ps); hotVoice.noteOn(60, 1.0f);
+            std::vector<float> lBuf(kHotBlock), rBuf(kHotBlock); bool finite = true; float peak = 0;
+            auto blockRun = [&]{ std::fill(lBuf.begin(),lBuf.end(),0.0f); std::fill(rBuf.begin(),rBuf.end(),0.0f);
+                hotVoice.render(lBuf.data(), rBuf.data(), kHotBlock);
+                for (float x : lBuf) { finite = finite && std::isfinite(x); peak = std::max(peak, std::abs(x)); } };
+            blockRun();
+            ps.spineModel = 1; hotLayer.updateParameters(ps);            // switch to Moog -> fade
+            for (int blk = 0; blk < 8; ++blk) blockRun();
+            expect(finite, "non-finite across Huggett->Moog crossfade");
+            expect(peak < 4.0f, "crossfade output blew up: " + juce::String(peak));
         }
     }
 };

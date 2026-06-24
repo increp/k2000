@@ -129,9 +129,10 @@
         {
           "id": "v5.4",
           "title": "v5.4 — Moog ladder (2nd filter model)",
-          "status": "specced",
+          "status": "shipped",
           "kind": "point",
-          "summary": "4-pole self-oscillating; pole-mix BP/HP; bassComp; DC blocker. Gated on hot-swap + OS tiers.",
+          "shipped": "2026-06-24",
+          "summary": "SHIPPED: 4-pole self-oscillating Moog ladder as the 2nd live filter model; Cmajor DSP block, pole-mix BP/HP, bassComp sub-osc, DC blocker; registered in FilterModelLibrary + Layer dispatch + setVoiceContext + played-note plumbing; Huggett↔Moog hot-swap regression guard. Notch routing moved to Huggett bank; dead 'Type' param removed; filter section renamed to 'Filter Routing'. 197 tests, 0 failed.",
           "specLinks": [
             "docs/specs/2026-06-20-moog-ladder-design.md"
           ]
