@@ -1,5 +1,6 @@
 #include "FilterModelLibrary.h"
 #include "HuggettFilter.h"
+#include "MoogLadder.h"
 #include "../../util/Utf8.h"
 #include "SpineState.h"
 // Q18 governance: every registered model's State must fit the per-voice slot.
@@ -7,6 +8,10 @@ static_assert(sizeof(HuggettFilter::VoiceState)  <= kMaxSpineStateBytes,
               "HuggettFilter::VoiceState exceeds kMaxSpineStateBytes — bump it (Q18) or slim the model");
 static_assert(alignof(HuggettFilter::VoiceState) <= kSpineStateAlign,
               "HuggettFilter::VoiceState over-aligned for the spine slot");
+static_assert(sizeof(MoogLadder::VoiceState)  <= kMaxSpineStateBytes,
+              "MoogLadder::VoiceState exceeds kMaxSpineStateBytes — bump it (Q18) or slim the model");
+static_assert(alignof(MoogLadder::VoiceState) <= kSpineStateAlign,
+              "MoogLadder::VoiceState over-aligned for the spine slot");
 
 namespace {
 struct Entry {
@@ -16,6 +21,7 @@ struct Entry {
 };
 const Entry kEntries[] = {
     { "huggett", "Huggett", []() -> std::unique_ptr<FilterModel> { return std::make_unique<HuggettFilter>(); } },
+    { "moog", "Moog", []() -> std::unique_ptr<FilterModel> { return std::make_unique<MoogLadder>(); } },
 };
 }  // namespace
 

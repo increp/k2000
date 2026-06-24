@@ -51,7 +51,9 @@ target_sources(k2000 PRIVATE
     src/dsp/spine/HuggettFilter.cpp
     src/dsp/spine/FilterModelLibrary.cpp
     src/dsp/spine/SpineFilterSlot.cpp
-    src/dsp/spine/HuggettHpStage.cpp)
+    src/dsp/spine/HuggettHpStage.cpp
+    src/dsp/spine/MoogLadder.cpp
+    src/dsp/spine/cmajor/MoogLadderAdapter.cpp)
 
 target_compile_definitions(k2000 PUBLIC
     JUCE_WEB_BROWSER=0
