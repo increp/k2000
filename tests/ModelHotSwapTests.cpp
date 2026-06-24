@@ -90,15 +90,20 @@ struct ModelHotSwapTests : public juce::UnitTest {
             // (Q ≈ 1.0) so the saw's harmonics near the resonant peak stay bounded.
             ParamSnapshot ps; ps.spineModel = 0; ps.svfCutoffHz = 800.0f; ps.svfResonance = 0.1f; ps.spineModelFadeMs = 25.0f;
             hotLayer.updateParameters(ps); hotVoice.noteOn(60, 1.0f);
-            std::vector<float> lBuf(kHotBlock), rBuf(kHotBlock); bool finite = true; float peak = 0;
-            auto blockRun = [&]{ std::fill(lBuf.begin(),lBuf.end(),0.0f); std::fill(rBuf.begin(),rBuf.end(),0.0f);
+            std::vector<float> lBuf(kHotBlock), rBuf(kHotBlock); bool finite = true;
+            // finite is tracked over every block; the peak magnitude is accumulated into
+            // whichever accumulator the caller passes, so the bound can be measured over the
+            // crossfade window ALONE (not Huggett's pre-switch steady state).
+            auto blockRun = [&](float& peakAccum) {
+                std::fill(lBuf.begin(),lBuf.end(),0.0f); std::fill(rBuf.begin(),rBuf.end(),0.0f);
                 hotVoice.render(lBuf.data(), rBuf.data(), kHotBlock);
-                for (float x : lBuf) { finite = finite && std::isfinite(x); peak = std::max(peak, std::abs(x)); } };
-            blockRun();
+                for (float x : lBuf) { finite = finite && std::isfinite(x); peakAccum = std::max(peakAccum, std::abs(x)); } };
+            float huggettPeak = 0.0f, crossfadePeak = 0.0f;
+            blockRun(huggettPeak);                                       // pre-switch: Huggett alone
             ps.spineModel = 1; hotLayer.updateParameters(ps);            // switch to Moog -> fade
-            for (int blk = 0; blk < 8; ++blk) blockRun();
+            for (int blk = 0; blk < 8; ++blk) blockRun(crossfadePeak);   // the crossfade + settle
             expect(finite, "non-finite across Huggett->Moog crossfade");
-            expect(peak < 4.0f, "crossfade output blew up: " + juce::String(peak));
+            expect(crossfadePeak < 4.0f, "crossfade output blew up: " + juce::String(crossfadePeak));
         }
     }
 };
