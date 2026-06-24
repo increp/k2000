@@ -19,7 +19,7 @@ public:
             auto vs = f.makeVoiceState();
             f.resetVoice(*vs);
             ParamSnapshot s;
-            s.svfType = 0; s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
+            s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK, 1.0f);  // DC = 1
             f.process(*vs, buf.data(), BLOCK);
@@ -34,7 +34,7 @@ public:
             auto vs = f.makeVoiceState();
             f.resetVoice(*vs);
             ParamSnapshot s;
-            s.svfType = 0; s.svfCutoffHz = 200.0f; s.svfResonance = 0.0f;
+            s.svfCutoffHz = 200.0f; s.svfResonance = 0.0f;
             f.updateParameters(s);
 
             const int N = 8 * BLOCK;
@@ -59,8 +59,9 @@ public:
             f.prepare(SR, BLOCK);
             auto vs = f.makeVoiceState();
             f.resetVoice(*vs);
+            f.setType(1);  // HP
             ParamSnapshot s;
-            s.svfType = 1; s.svfCutoffHz = 200.0f; s.svfResonance = 0.0f;
+            s.svfCutoffHz = 200.0f; s.svfResonance = 0.0f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK * 8, 1.0f);
             f.process(*vs, buf.data(), int(buf.size()));
@@ -75,7 +76,7 @@ public:
             auto vs = f.makeVoiceState();
             f.resetVoice(*vs);
             ParamSnapshot s;
-            s.svfType = 0; s.svfCutoffHz = 1000.0f; s.svfResonance = 0.99f;
+            s.svfCutoffHz = 1000.0f; s.svfResonance = 0.99f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK);
             for (int i = 0; i < BLOCK; ++i)
@@ -92,7 +93,7 @@ public:
             auto vs = f.makeVoiceState();
             f.resetVoice(*vs);
             ParamSnapshot s;
-            s.svfType = 0; s.svfCutoffHz = 1000.0f; s.svfResonance = 0.5f;
+            s.svfCutoffHz = 1000.0f; s.svfResonance = 0.5f;
             f.updateParameters(s);
             std::vector<float> buf(BLOCK, 1.0f);
             f.process(*vs, buf.data(), BLOCK);

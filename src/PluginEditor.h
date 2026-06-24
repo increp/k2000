@@ -40,8 +40,6 @@ private:
     Section mixerSection_{ "Mixer", /*spine*/ true, /*reserved*/ true };
 
     Section filterSection_{ "Filter", /*spine*/ true };
-    juce::ComboBox filterType_;
-    juce::Label    filterTypeLbl_;
     LabeledKnob    filterCutoff_{ "Cutoff" }, filterRes_{ "Reso" };
     juce::ComboBox spineModel_, spineSlope_;
     juce::Label    spineModelLbl_, spineSlopeLbl_;

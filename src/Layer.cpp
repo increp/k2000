@@ -39,13 +39,7 @@ void Layer::updateParameters(const ParamSnapshot& s) {
         m->setCommon(s.svfCutoffHz, s.svfResonance, s.spineDrive);
 
     if (huggett_) {
-        int routingIdx = s.huggettRouting;
-        if (routingIdx == 0) {
-            switch (s.svfType) { case 1: routingIdx = 2; break;
-                                 case 2: routingIdx = 1; break;
-                                 default: routingIdx = 0; break; }
-        }
-        huggett_->setRouting(static_cast<HuggettFilter::Routing>(routingIdx));
+        huggett_->setRouting(static_cast<HuggettFilter::Routing>(s.huggettRouting));
         huggett_->setSlope(s.spineSlope == 0 ? HuggettFilter::Slope::db12 : HuggettFilter::Slope::db24);
         huggett_->setSeparation(s.spineSeparationOct);
         huggett_->setPostDrive(s.huggettPostDrive);

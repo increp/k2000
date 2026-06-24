@@ -22,7 +22,6 @@ LayerIds buildIds(int layer) {
     id.oscWaveform     = p + "osc.waveform";
     id.oscCoarse       = p + "osc.coarse";
     id.oscFine         = p + "osc.fine";
-    id.filterType      = p + "filter.type";
     id.filterCutoff    = p + "filter.cutoff";
     id.filterResonance = p + "filter.resonance";
     id.shaperDrive     = p + "shaper.drive";
@@ -106,9 +105,6 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.oscFine, 1},
             "Osc Fine " + juce::String(i),
             juce::NormalisableRange<float>{-100.0f, 100.0f, 0.1f}, 0.0f));
-        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.filterType, 1},
-            "Filter Type " + juce::String(i),
-            juce::StringArray{"LP", "HP", "BP", "Notch"}, 0));
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.filterCutoff, 1},
             "Filter Cutoff " + juce::String(i),
             juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 1000.0f));
@@ -217,7 +213,6 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.oscWaveform  = (int) raw(apvts, id.oscWaveform);
     s.oscCoarse    = raw(apvts, id.oscCoarse);
     s.oscFine      = raw(apvts, id.oscFine);
-    s.svfType      = (int) raw(apvts, id.filterType);
     s.svfCutoffHz  = raw(apvts, id.filterCutoff);
     s.svfResonance = raw(apvts, id.filterResonance);
     s.wsDrive      = raw(apvts, id.shaperDrive);

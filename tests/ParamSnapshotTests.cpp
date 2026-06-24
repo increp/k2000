@@ -45,7 +45,6 @@ public:
         expectWithinAbsoluteError(s.ampSustain, 0.8f, 1e-6f);
         expectWithinAbsoluteError(s.masterGainDb, -9.0f, 1e-3f);
         expect(s.oscWaveform == 0);
-        expect(s.svfType == 0);
 
         beginTest("setting a parameter changes the snapshot");
         if (auto* p = apvts.getParameter(params::layerIds(0).filterCutoff))

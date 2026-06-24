@@ -62,11 +62,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
 
     // Filter section
     addAndMakeVisible(filterSection_);
-    filterTypeLbl_.setText("Type", juce::dontSendNotification);
-    filterTypeLbl_.setJustificationType(juce::Justification::centred);
-    filterType_.addItemList(juce::StringArray{ "LP", "HP", "BP", "Notch" }, 1);
-    filterSection_.addAndMakeVisible(filterTypeLbl_);
-    filterSection_.addAndMakeVisible(filterType_);
     filterSection_.addAndMakeVisible(filterCutoff_);
     filterSection_.addAndMakeVisible(filterRes_);
     spineModelLbl_.setText("Filter", juce::dontSendNotification);
@@ -178,7 +173,6 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(shaperDrive_.slider(),ids.shaperDrive);
     binder_.bind(shaperMix_.slider(),  ids.shaperMix);
 
-    binder_.bind(filterType_,          ids.filterType);
     binder_.bind(filterCutoff_.slider(),ids.filterCutoff);
     binder_.bind(filterRes_.slider(),  ids.filterResonance);
 
@@ -311,9 +305,8 @@ void K2000AudioProcessorEditor::resized() {
             // Main filter rows — split remaining height equally
             const int mainH = (fc.getHeight()) / 2;
             auto mainTop = fc.removeFromTop(mainH);
-            layoutCells(mainTop, { { &filterTypeLbl_, &filterType_ },
-                                    { nullptr,         &filterCutoff_ },
-                                    { nullptr,         &filterRes_ } });
+            layoutCells(mainTop, { { nullptr, &filterCutoff_ },
+                                    { nullptr, &filterRes_ } });
             layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
                                 { &spineModelLbl_,  &spineModel_ },
                                 { &spineSlopeLbl_,  &spineSlope_ },

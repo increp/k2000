@@ -13,7 +13,6 @@ struct ParamSnapshot {
     float oscFine       = 0.0f; // cents
 
     // Filter block (layer.filter.*)
-    int   svfType       = 0;   // 0=LP 1=HP 2=BP 3=Notch
     float svfCutoffHz   = 1000.0f;
     float svfResonance  = 0.2f;
 

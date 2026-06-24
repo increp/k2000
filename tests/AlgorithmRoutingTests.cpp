@@ -23,7 +23,7 @@ public:
     static ParamSnapshot base() {
         ParamSnapshot s;
         s.oscWaveform = 0;                 // saw — harmonically rich
-        s.svfType = 0; s.svfCutoffHz = 800.0f; s.svfResonance = 0.2f;
+        s.svfCutoffHz = 800.0f; s.svfResonance = 0.2f;
         s.wsDrive = 0.9f; s.wsMix = 1.0f;  // strong shaping so order matters
         s.ampAttackS = 0.0001f; s.ampDecayS = 0.05f;
         s.ampSustain = 1.0f; s.ampReleaseS = 0.05f;

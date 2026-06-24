@@ -16,6 +16,9 @@ public:
     juce::String getTypeId() const override { return "svf_filter"; }
     std::vector<ParamSpec> getParamSpecs() const override;
     void updateParameters(const ParamSnapshot& snapshot) override;
+    // Sets the filter mode directly (0=LP 1=HP 2=BP 3=Notch). Used by tests
+    // since the filter.type APVTS param was removed in Spec 2.
+    void setType(int t) { type_ = t; }
 
 private:
     double sampleRate_ = 44100.0;

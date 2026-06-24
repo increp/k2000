@@ -18,7 +18,6 @@ void SVFFilter::resetVoice(DSPBlock::VoiceState& s) {
 }
 
 void SVFFilter::updateParameters(const ParamSnapshot& s) {
-    if (s.svfType != type_) { type_ = s.svfType; }
     if (s.svfCutoffHz != cutoffHz_ || s.svfResonance != resonance_) {
         cutoffHz_ = s.svfCutoffHz;
         resonance_ = s.svfResonance;
