@@ -19,16 +19,14 @@ public:
                 expect(juce::String(AlgorithmLibrary::byIndex(i).id)
                        != juce::String(AlgorithmLibrary::byIndex(j).id));
 
-        beginTest("every algorithm is well-formed: known types, no duplicate type, no SvfFilter (moved to spine)");
+        beginTest("every algorithm is well-formed: known types, no duplicate type");
         for (std::size_t i = 0; i < AlgorithmLibrary::count(); ++i) {
             const Algorithm& a = AlgorithmLibrary::byIndex(i);
             expect(a.slotCount <= Algorithm::kMaxSlots);
-            bool seen[kNumBlockTypes] = {false, false, false};
+            bool seen[kNumBlockTypes] = {false, false};
             for (std::size_t s = 0; s < a.slotCount; ++s) {
                 const int t = (int) a.blockTypePerSlot[s];
                 expect(t > 0 && t < (int) kNumBlockTypes, "block type in palette");
-                expect(a.blockTypePerSlot[s] != BlockTypeId::SvfFilter,
-                       "SvfFilter must not appear in any algorithm (v5: filter lives in the spine)");
                 expect(!seen[t], "no duplicate block type within an algorithm");
                 seen[t] = true;
             }

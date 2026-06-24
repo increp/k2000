@@ -1,9 +1,7 @@
 #include "Layer.h"
-#include "dsp/blocks/SVFFilter.h"
 #include "dsp/blocks/Waveshaper.h"
 
 Layer::Layer() {
-    palette_[(int) BlockTypeId::SvfFilter]  = std::make_unique<SVFFilter>();
     palette_[(int) BlockTypeId::Waveshaper] = std::make_unique<Waveshaper>();
 }
 

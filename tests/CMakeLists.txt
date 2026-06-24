@@ -4,7 +4,6 @@ add_executable(k2000_tests
     ParamSnapshotTests.cpp
     OscillatorTests.cpp
     EnvelopeTests.cpp
-    SVFFilterTests.cpp
     WaveshaperTests.cpp
     VoiceTests.cpp
     VoiceManagerTests.cpp
@@ -54,7 +53,6 @@ add_executable(k2000_tests
     ../src/gui/ParamBinder.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
-    ../src/dsp/blocks/SVFFilter.cpp
     ../src/dsp/blocks/Waveshaper.cpp
     ../src/dsp/AlgorithmLibrary.cpp
     ../src/dsp/spine/HuggettFilter.cpp
