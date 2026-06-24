@@ -14,7 +14,7 @@ struct ModelHotSwapTests : public juce::UnitTest {
                       std::vector<float>& l, std::vector<float>& r) {
         std::fill(l.begin(), l.end(), 0.5f);
         std::fill(r.begin(), r.end(), 0.5f);
-        slot.processStereo(nullptr, false, m, fadeMs, l.data(), r.data(), (int) l.size());
+        slot.processStereo(nullptr, false, m, fadeMs, 0.0f, l.data(), r.data(), (int) l.size());
     }
 
     void runTest() override {
@@ -63,7 +63,7 @@ struct ModelHotSwapTests : public juce::UnitTest {
             SpineFilterSlot s3; s3.prepare(kSR, 64, &a, nullptr);
             s3.bind(&b, nullptr);   // note-start onto model B (a stolen voice's new layer)
             std::fill(l.begin(), l.end(), 0.5f); std::fill(r.begin(), r.end(), 0.5f);
-            s3.processStereo(nullptr, false, &b, 25.0f, l.data(), r.data(), 64);
+            s3.processStereo(nullptr, false, &b, 25.0f, 0.0f, l.data(), r.data(), 64);
             expect(std::isfinite(l[63]), "non-finite output after bind");
             expect(std::abs(l[63] - 0.125f) < 5e-3f, "bind did not snap to B (0.5*0.25)");
         }
@@ -72,7 +72,7 @@ struct ModelHotSwapTests : public juce::UnitTest {
         {
             const int base = CountingFilterModel::liveStates();
             SpineFilterSlot s4; s4.prepare(kSR, 64, &a, nullptr);   // base+1 (A)
-            s4.processStereo(nullptr, false, &b, 25.0f, l.data(), r.data(), 64);  // start A->B: base+2
+            s4.processStereo(nullptr, false, &b, 25.0f, 0.0f, l.data(), r.data(), 64);  // start A->B: base+2
             s4.bind(&a, nullptr);   // steal mid-fade back to A: frees B -> base+1
             expect(CountingFilterModel::liveStates() == base + 1,
                    "live after bind = " + juce::String(CountingFilterModel::liveStates() - base));

@@ -56,7 +56,7 @@ void SpineFilterSlot::bind(const FilterModel* model, const HuggettHpStage* hp) n
 }
 
 void SpineFilterSlot::processStereo(const HuggettHpStage* hp, bool hpEnabled,
-                                    const FilterModel* current, float fadeMs,
+                                    const FilterModel* current, float fadeMs, float fundamentalHz,
                                     float* l, float* r, int n) noexcept {
     if (hpEnabled && hp && hpState_) hp->processStereo(*hpState_, l, r, n);
     if (current == nullptr) return;
@@ -71,6 +71,7 @@ void SpineFilterSlot::processStereo(const HuggettHpStage* hp, bool hpEnabled,
 
     // steady
     if (fadePos_ == 0) {
+        if (state_[active_]) model_[active_]->setVoiceContext(*state_[active_], fundamentalHz);
         if (state_[active_]) model_[active_]->processStereo(*state_[active_], l, r, n);
         return;
     }
@@ -79,7 +80,9 @@ void SpineFilterSlot::processStereo(const HuggettHpStage* hp, bool hpEnabled,
     const int other = 1 - active_;
     std::copy(l, l + n, scratchL_.data());
     std::copy(r, r + n, scratchR_.data());
+    if (state_[other]) model_[other]->setVoiceContext(*state_[other], fundamentalHz);
     model_[other ]->processStereo(*state_[other ], l, r, n);
+    if (state_[active_]) model_[active_]->setVoiceContext(*state_[active_], fundamentalHz);
     model_[active_]->processStereo(*state_[active_], scratchL_.data(), scratchR_.data(), n);
 
     constexpr float kHalfPi = 1.57079632679f;

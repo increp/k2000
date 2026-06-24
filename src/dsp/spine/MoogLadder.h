@@ -35,6 +35,7 @@ public:
         bassAmount_ = amount; bassWave_ = wave; bassOctave_ = octave;
     }
     void setFundamental(State& s, float hz) const noexcept;
+    void setVoiceContext(State& s, float fundamentalHz) const noexcept override { setFundamental(s, fundamentalHz); }
 
     void processStereo(State& s, float* left, float* right, int numSamples) const noexcept override;
 
