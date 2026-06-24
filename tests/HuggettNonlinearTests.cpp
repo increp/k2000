@@ -17,6 +17,22 @@ public:
         return (float) std::sqrt(s / v.size());
     }
 
+    // Steady-state peak magnitude of a HuggettFilter at probe frequency (Hz).
+    // Filter h must already be prepare()'d. State st is reset before measurement.
+    static double hmag(HuggettFilter& h, FilterModel::State& st, double probeHz) {
+        h.reset(st);
+        const int warm = 8192, meas = 4096;
+        double peak = 0.0;
+        const double sr = 48000.0;
+        for (int i = 0; i < warm + meas; ++i) {
+            float x = 0.3f * (float) std::sin(2.0 * juce::MathConstants<double>::pi * probeHz * i / sr);
+            float l = x, r = x;
+            h.processStereo(st, &l, &r, 1);
+            if (i >= warm) peak = std::max(peak, std::abs((double) l));
+        }
+        return peak;
+    }
+
     void runTest() override {
         beginTest("AsymSaturator: disengaged at zero drive, engaged when driven");
         {
@@ -142,6 +158,21 @@ public:
             // crude harmonic-change proxy: driven differs materially from clean
             double diff = 0; for (size_t i = 0; i < clean.size(); ++i) diff += std::abs(dirty[i] - clean[i]);
             expect(diff / (double) clean.size() > 0.01, "drive changes the signal");
+        }
+
+        beginTest("Huggett Notch attenuates the band around cutoff vs LP passband");
+        {
+            const double sr = 48000.0; HuggettFilter h; h.prepare(sr);
+            std::unique_ptr<FilterModel::State> st(h.makeState());
+            h.setCommon(1000.0f, 0.2f, 0.0f); h.setSlope(HuggettFilter::Slope::db12);
+            auto magAt = [&](HuggettFilter::Routing r, double probe) {
+                h.setRouting(r); h.reset(*st);
+                return hmag(h, *st, probe);   // existing magnitude helper in this file; mirror its name
+            };
+            const double notchCentre = magAt(HuggettFilter::Routing::Notch, 1000.0);
+            const double lpLow       = magAt(HuggettFilter::Routing::LP,    100.0);
+            expect(notchCentre < lpLow * 0.5, "Notch did not attenuate the centre band: "
+                   + juce::String(notchCentre,4) + " vs " + juce::String(lpLow,4));
         }
     }
 };

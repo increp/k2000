@@ -83,7 +83,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(spinePostDrive_);
     spineRoutingLbl_.setText("Routing", juce::dontSendNotification);
     spineRoutingLbl_.setJustificationType(juce::Justification::centred);
-    spineRouting_.addItemList(juce::StringArray{ "LP", "BP", "HP",
+    spineRouting_.addItemList(juce::StringArray{ "LP", "BP", "HP", "Notch",
         util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
         "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 1);
     filterSection_.addAndMakeVisible(spineRoutingLbl_);

@@ -186,7 +186,7 @@ APVTS::ParameterLayout createLayout() {
             juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineHuggettRouting, 1},
             "Spine Routing " + juce::String(i),
-            juce::StringArray{ "LP", "BP", "HP",
+            juce::StringArray{ "LP", "BP", "HP", "Notch",
                                util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
                                "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 0));
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogMode, 1},
