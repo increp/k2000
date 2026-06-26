@@ -15,7 +15,7 @@ public:
     void runTest() override {
         ParamSnapshot s;
         s.oscWaveform = 3;  // sine for clean test signal
-        s.svfType = 0; s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
+        s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
         s.wsDrive = 0.0f; s.wsMix = 0.0f;
         s.ampAttackS = 0.001f; s.ampDecayS = 0.01f;
         s.ampSustain = 1.0f; s.ampReleaseS = 0.01f;

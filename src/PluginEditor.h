@@ -40,8 +40,6 @@ private:
     Section mixerSection_{ "Mixer", /*spine*/ true, /*reserved*/ true };
 
     Section filterSection_{ "Filter", /*spine*/ true };
-    juce::ComboBox filterType_;
-    juce::Label    filterTypeLbl_;
     LabeledKnob    filterCutoff_{ "Cutoff" }, filterRes_{ "Reso" };
     juce::ComboBox spineModel_, spineSlope_;
     juce::Label    spineModelLbl_, spineSlopeLbl_;
@@ -50,11 +48,14 @@ private:
     LabeledKnob    spineSeparation_{ "Sep" };
     // HP pre-filter band (Layout B)
     juce::Label        hpSectionLbl_;
-    juce::ToggleButton hpEnable_;
     juce::ComboBox     hpSlope_;
     juce::Label        hpSlopeLbl_;
     LabeledKnob        hpCutoff_{ "HP Cut" }, hpReso_{ "HP Reso" };
     LabeledKnob        spinePostDrive_{ "Post Drv" };
+    // Moog-only controls (shown when spine model == Moog, hidden otherwise)
+    juce::Label    moogModeLbl_, moogWaveLbl_, moogOctaveLbl_;
+    juce::ComboBox moogMode_, moogWave_, moogOctave_;
+    LabeledKnob    moogBass_{ "Bass" };
 
     Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
     Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
@@ -85,8 +86,9 @@ private:
     // control members above and must be detached while those controls are still alive.
     ParamBinder binder_{ processorRef.apvts() };
 
-    void buildStaticControls();   // combos' item lists, labels, child attach (once)
-    void bindLayer(int layer);    // (re)bind every per-layer control via binder_
+    void buildStaticControls();      // combos' item lists, labels, child attach (once)
+    void bindLayer(int layer);       // (re)bind every per-layer control via binder_
+    void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
     void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)

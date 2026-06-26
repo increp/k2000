@@ -20,7 +20,7 @@ public:
                  const FilterModel* modelForState, const HuggettHpStage* hpForState);
     void reset(const FilterModel* model, const HuggettHpStage* hp) noexcept;
     void processStereo(const HuggettHpStage* hp, bool hpEnabled,
-                       const FilterModel* current, float fadeMs,
+                       const FilterModel* current, float fadeMs, float fundamentalHz,
                        float* left, float* right, int numSamples) noexcept;
     void bind(const FilterModel* model, const HuggettHpStage* hp) noexcept;  // note-start; snap, no fade
 

@@ -9,7 +9,7 @@
 namespace {
 ParamSnapshot dspBase() {
     ParamSnapshot s;
-    s.oscWaveform = 3; s.svfType = 0; s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
+    s.oscWaveform = 3; s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
     s.wsDrive = 0.0f; s.wsMix = 0.0f;
     s.ampAttackS = 0.0001f; s.ampDecayS = 0.05f; s.ampSustain = 1.0f; s.ampReleaseS = 0.05f;
     return s;
@@ -136,21 +136,21 @@ public:
             // Set up layer 0 with a sine oscillator and the main filter wide open.
             // Render note 36 (C2, ~65 Hz) — a low note whose fundamental is well below
             // a 4 kHz HP cutoff.  Compare energy with HP disabled vs. enabled.
-            auto makeSnap = [](int hpEnable, float hpCutoffHz) {
+            // HP on/off is now derived from cutoff: 0 = off (bypassed), >0 = on.
+            auto makeSnap = [](float hpCutoffHz) {
                 ParamSnapshot s = dspBase();
                 s.spineModel  = 0;
                 s.svfCutoffHz = 18000.0f;   // main filter wide open
                 s.svfResonance = 0.0f;
-                s.hpEnable    = hpEnable;
                 s.hpCutoffHz  = hpCutoffHz;
                 s.hpResonance = 0.0f;
                 s.hpSlope     = 0;          // 12 dB — enough to cut low end
                 return s;
             };
 
-            auto renderNote36 = [&](int hpEnable, float hpCutoffHz) {
+            auto renderNote36 = [&](float hpCutoffHz) {
                 Program prog; prog.prepare(SR, N);
-                prog.slot(0).layer.updateParameters(makeSnap(hpEnable, hpCutoffHz));
+                prog.slot(0).layer.updateParameters(makeSnap(hpCutoffHz));
                 prog.slot(0).routing = LayerRouting{true, 0, 127, 1, 127, 0};
                 prog.slot(0).layer.setLevel(1.0f);
                 prog.slot(1).routing = LayerRouting{false, 0, 127, 1, 127, 0};
@@ -162,8 +162,8 @@ public:
                 return energy(outL);
             };
 
-            const double eOff = renderNote36(0, 4000.0f);   // HP disabled — full low-end
-            const double eOn  = renderNote36(1, 4000.0f);   // HP at 4 kHz — low end cut
+            const double eOff = renderNote36(0.0f);      // HP off (cutoff 0) — full low-end
+            const double eOn  = renderNote36(4000.0f);   // HP at 4 kHz — low end cut
 
             expect(eOff > 1e-9, "HP-off render must be non-silent: " + juce::String(eOff));
             expect(eOn < eOff,

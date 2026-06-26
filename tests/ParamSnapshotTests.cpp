@@ -45,7 +45,6 @@ public:
         expectWithinAbsoluteError(s.ampSustain, 0.8f, 1e-6f);
         expectWithinAbsoluteError(s.masterGainDb, -9.0f, 1e-3f);
         expect(s.oscWaveform == 0);
-        expect(s.svfType == 0);
 
         beginTest("setting a parameter changes the snapshot");
         if (auto* p = apvts.getParameter(params::layerIds(0).filterCutoff))
@@ -71,10 +70,9 @@ public:
             auto& apvts = p.apvts();
             auto s = params::snapshot(apvts, 0);
             // New v5.0 HP + post-drive params default sanely
-            expect(s.hpEnable == 0, "HP disabled by default");
+            expectWithinAbsoluteError(s.hpCutoffHz, 0.0f, 1.0e-6f);   // HP off by default (cutoff at 0)
             expectWithinAbsoluteError(s.huggettPostDrive, 0.0f, 1.0e-6f);
             expect(s.hpSlope == 0, "HP slope defaults 12 dB");
-            expectWithinAbsoluteError(s.hpCutoffHz, 20.0f, 1e-3f);
             expectWithinAbsoluteError(s.hpResonance, 0.0f, 1e-6f);
 
             // HP resonance is capped: the knob's max maps to 0.15 (full-range
@@ -91,9 +89,9 @@ public:
             expect(s.huggettRouting == 0, "default routing is 0 (LP)");
 
             if (auto* p = apvts.getParameter(params::layerIds(0).spineHuggettRouting))
-                p->setValueNotifyingHost(p->convertTo0to1(6.0f));
+                p->setValueNotifyingHost(p->convertTo0to1(7.0f));
             s = params::snapshot(apvts, 0);
-            expect(s.huggettRouting == 6, "routing param round-trips to 6 (LP+HP)");
+            expect(s.huggettRouting == 7, "routing param round-trips to 7 (LP+HP)");
         }
 
         beginTest("spine.modelFadeMs default reaches the snapshot (25 ms) and round-trips");
@@ -104,6 +102,17 @@ public:
                 p->setValueNotifyingHost(p->convertTo0to1(60.0f));
             s = params::snapshot(apvts, 0);
             expectWithinAbsoluteError(s.spineModelFadeMs, 60.0f, 0.1f);
+        }
+
+        beginTest("Moog bank params exist with correct defaults");
+        {
+            const auto& id = params::layerIds(0);
+            expect(apvts.getParameter(id.spineMoogMode)       != nullptr, "spine.moog.mode missing");
+            expect(apvts.getParameter(id.spineMoogBassAmount) != nullptr, "spine.moog.bassAmount missing");
+            expect(apvts.getParameter(id.spineMoogBassWave)   != nullptr, "spine.moog.bassWave missing");
+            expect(apvts.getParameter(id.spineMoogBassOctave) != nullptr, "spine.moog.bassOctave missing");
+            s = params::snapshot(apvts, 0);
+            expect(s.moogMode == 0 && std::fpclassify(s.moogBassAmount) == FP_ZERO, "moog defaults wrong");
         }
     }
 };

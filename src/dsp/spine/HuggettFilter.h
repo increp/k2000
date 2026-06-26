@@ -11,11 +11,11 @@ class HuggettFilter : public FilterModel {
 public:
     enum class Mode  { LP, BP, HP };
     enum class Slope { db12, db24 };
-    enum class Routing {           // index — STABLE, append-only
-        LP = 0, BP = 1, HP = 2,    // legacy single modes (slope decides 12/24)
-        SeriesLPHP = 3, SeriesLPBP = 4, SeriesHPBP = 5,   // LP->HP, LP->BP, HP->BP
-        ParLPHP    = 6, ParLPBP    = 7, ParHPBP    = 8,   // LP+HP, LP+BP, HP+BP
-        ParLPLP    = 9, ParBPBP    = 10, ParHPHP    = 11  // LP+LP, BP+BP, HP+HP
+    enum class Routing {
+        LP = 0, BP = 1, HP = 2, Notch = 3,            // single modes (slope decides 12/24)
+        SeriesLPHP = 4, SeriesLPBP = 5, SeriesHPBP = 6,
+        ParLPHP    = 7, ParLPBP    = 8, ParHPBP    = 9,
+        ParLPLP    = 10, ParBPBP   = 11, ParHPHP   = 12
     };
 
     struct VoiceState : public FilterModel::State {

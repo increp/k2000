@@ -9,6 +9,7 @@
 #include "dsp/spine/FilterModel.h"
 #include "dsp/spine/SpineFilterSlot.h"
 #include "dsp/spine/HuggettFilter.h"
+#include "dsp/spine/MoogLadder.h"
 #include "dsp/spine/FilterModelLibrary.h"
 #include "dsp/spine/HuggettHpStage.h"
 #include "params/ParamSnapshot.h"
@@ -56,6 +57,7 @@ private:
     std::vector<std::unique_ptr<FilterModel>> models_;   // one per registered model (pre-built)
     std::size_t currentModelId_ = 0;
     HuggettFilter* huggett_ = nullptr;      // non-owning view of the Huggett instance
+    MoogLadder*    moog_    = nullptr;      // non-owning view of the Moog instance
     HuggettHpStage hpStage_;               // fixed HP pre-stage (config shared; per-voice state in the slot)
     double sampleRate_ = 44100.0;
 };

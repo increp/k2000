@@ -29,5 +29,7 @@ public:
 
     virtual void reset(State& s) const noexcept = 0;
     virtual void setCommon(float cutoffHz, float resonance, float drive) noexcept = 0;
+    // Per-voice played-note context (e.g. Moog's sub-osc fundamental). Default: ignore.
+    virtual void setVoiceContext(State&, float /*fundamentalHz*/) const noexcept {}
     virtual void processStereo(State& s, float* left, float* right, int numSamples) const noexcept = 0;
 };

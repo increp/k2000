@@ -82,6 +82,20 @@ processor MoogLadder
     // CALIB: scale factor on the full mix to keep output level comparable to LP.
     let CALIB_HP_SCALE = 1.0f;
 
+    // --- Spec 2: 12/24 dB slope is meaningful in BP and HP too ---
+    // BP4 (slope==1, 24 dB): a 4-pole (4th-order) band-pass pole-mix giving a
+    // STEEPER skirt than the 2-pole BP2 (the existing 4(y2-y3)). The 2nd binomial
+    // difference 8(y2 - 2y3 + y4) is a band-pass with two extra poles of skirt;
+    // the weight 8 lifts the narrow peak back to a sane passband level so the
+    // existing "BP mid > low/high by >3 dB" test stays green while the 250 Hz skirt
+    // (two octaves below fc) is rejected >=4 dB harder than BP2.
+    let CALIB_BP4_W1 =   0.0f;  let CALIB_BP4_W2 =   8.0f;
+    let CALIB_BP4_W3 = -16.0f;  let CALIB_BP4_W4 =   8.0f;   // CALIB: 8(y2 - 2y3 + y4)
+    // HP2 (slope==0, 12 dB): a 2-pole high-pass — the 2nd binomial difference on the
+    // CLEAN y0 (y0 - 2y1 + y2). 12 dB/oct rolls off the lows GENTLER than the 24 dB
+    // HP4 binomial, so a probe one octave below fc passes >=4 dB MORE low energy.
+    let CALIB_HP2_SCALE = 1.0f;
+
     event cutoffHz  (float v) { cutoff = v; dirty = true; }
     event resonance (float v) { res = v;    dirty = true; }
     event drive     (float v) { drv = v; }
@@ -250,14 +264,18 @@ processor MoogLadder
 
                 yp1 = y1; yp2 = y2; yp3 = y3; yp4 = y4;   // store for next sample
 
-                // --- Task 4/5: mode tap + output limiter + DC blocker ---
-                // LP: slope selector (y2=12dB or y4=24dB); BP/HP: pole-mix.
+                // --- Task 4/5 + Spec 2: mode tap + output limiter + DC blocker ---
+                // LP: slope selector (y2=12dB or y4=24dB); BP/HP: slope-keyed pole-mix.
                 // HP uses y0 (clean pre-feedback input, computed above WITHOUT o1).
-                let tapOut = (modeSel == 1)
-                    ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)
-                    : (modeSel == 2)
-                        ? CALIB_HP_SCALE * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
-                        : (slopeSel == 0) ? y2 : y4;   // LP path
+                let bp = (slopeSel == 0)
+                    ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)        // BP2 (12 dB)
+                    : (CALIB_BP4_W1 * y1 + CALIB_BP4_W2 * y2 + CALIB_BP4_W3 * y3 + CALIB_BP4_W4 * y4);   // BP4 (24 dB)
+                let hp = (slopeSel == 0)
+                    ? (CALIB_HP2_SCALE * (y0 - 2.0f * y1 + y2))                                          // HP2 (12 dB)
+                    : (CALIB_HP_SCALE  * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4));                 // HP4 (24 dB)
+                let tapOut = (modeSel == 1) ? bp
+                           : (modeSel == 2) ? hp
+                           : ((slopeSel == 0) ? y2 : y4);   // LP path
                 // Task 6: sum the clean sub-osc BEFORE the limiter so it shares the
                 // output ceiling but is unshaped by the ladder. bass==0 when bassAmt==0.
                 let preLim = tapOut + bass;
@@ -283,12 +301,16 @@ processor MoogLadder
                 let y2 = G * (y1 - s2) + s2; s2 = 2.0f * y2 - s2;
                 let y3 = G * (y2 - s3) + s3; s3 = 2.0f * y3 - s3;
                 let y4 = G * (y3 - s4) + s4; s4 = 2.0f * y4 - s4;
-                // Linear path: mode tap (same logic as NL path).
-                let tapOut = (modeSel == 1)
-                    ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)
-                    : (modeSel == 2)
-                        ? CALIB_HP_SCALE * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4)
-                        : (slopeSel == 0) ? y2 : y4;   // LP path
+                // Linear path: slope-keyed mode tap (same logic as NL path).
+                let bp = (slopeSel == 0)
+                    ? (CALIB_BP_W1 * y1 + CALIB_BP_W2 * y2 + CALIB_BP_W3 * y3 + CALIB_BP_W4 * y4)        // BP2 (12 dB)
+                    : (CALIB_BP4_W1 * y1 + CALIB_BP4_W2 * y2 + CALIB_BP4_W3 * y3 + CALIB_BP4_W4 * y4);   // BP4 (24 dB)
+                let hp = (slopeSel == 0)
+                    ? (CALIB_HP2_SCALE * (y0 - 2.0f * y1 + y2))                                          // HP2 (12 dB)
+                    : (CALIB_HP_SCALE  * (y0 - 4.0f * y1 + 6.0f * y2 - 4.0f * y3 + y4));                 // HP4 (24 dB)
+                let tapOut = (modeSel == 1) ? bp
+                           : (modeSel == 2) ? hp
+                           : ((slopeSel == 0) ? y2 : y4);   // LP path
                 // Task 6: sum the clean sub-osc BEFORE the limiter (same as NL branch).
                 let preLim = tapOut + bass;
                 // Limiter + DC blocker applied identically for consistency.

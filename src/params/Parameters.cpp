@@ -22,7 +22,6 @@ LayerIds buildIds(int layer) {
     id.oscWaveform     = p + "osc.waveform";
     id.oscCoarse       = p + "osc.coarse";
     id.oscFine         = p + "osc.fine";
-    id.filterType      = p + "filter.type";
     id.filterCutoff    = p + "filter.cutoff";
     id.filterResonance = p + "filter.resonance";
     id.shaperDrive     = p + "shaper.drive";
@@ -43,12 +42,15 @@ LayerIds buildIds(int layer) {
     id.spineSlope      = p + "spine.slope";
     id.spineDrive      = p + "spine.drive";
     id.spineOutput     = p + "spine.output";
-    id.spineHpEnable    = p + "spine.hp.enable";
     id.spineHpCutoff    = p + "spine.hp.cutoff";
     id.spineHpResonance = p + "spine.hp.resonance";
     id.spineHpSlope     = p + "spine.hp.slope";
     id.spinePostDrive       = p + "spine.huggett.postDrive";
     id.spineHuggettRouting  = p + "spine.huggett.routing";
+    id.spineMoogMode       = p + "spine.moog.mode";
+    id.spineMoogBassAmount = p + "spine.moog.bassAmount";
+    id.spineMoogBassWave   = p + "spine.moog.bassWave";
+    id.spineMoogBassOctave = p + "spine.moog.bassOctave";
     return id;
 }
 
@@ -102,9 +104,6 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.oscFine, 1},
             "Osc Fine " + juce::String(i),
             juce::NormalisableRange<float>{-100.0f, 100.0f, 0.1f}, 0.0f));
-        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.filterType, 1},
-            "Filter Type " + juce::String(i),
-            juce::StringArray{"LP", "HP", "BP", "Notch"}, 0));
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.filterCutoff, 1},
             "Filter Cutoff " + juce::String(i),
             juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 1000.0f));
@@ -164,11 +163,12 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineOutput, 1},
             "Spine Output " + juce::String(i),
             juce::NormalisableRange<float>{-24.0f, 24.0f, 0.0f}, 0.0f));
-        layout.add(std::make_unique<BoolParam>(juce::ParameterID{id.spineHpEnable, 1},
-            "Spine HP Enable " + juce::String(i), false));
+        // HP pre-filter has no separate enable: cutoff at the knob's 0 position = OFF
+        // (bypassed); any cutoff > 0 engages it. Range starts at 0 so the bottom of the
+        // knob is the off position. Default 0 = off.
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpCutoff, 1},
             "Spine HP Cutoff " + juce::String(i),
-            juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 20.0f));
+            juce::NormalisableRange<float>{0.0f, 20000.0f, 0.0f, 0.25f}, 0.0f));
         // HP resonance capped at 0.15: the OTA HP self-oscillates too hot across
         // its full range, so the knob's full travel maps to 0..0.15 (knob max ==
         // what 15% used to give) for a musically useful range.
@@ -182,9 +182,20 @@ APVTS::ParameterLayout createLayout() {
             juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineHuggettRouting, 1},
             "Spine Routing " + juce::String(i),
-            juce::StringArray{ "LP", "BP", "HP",
+            juce::StringArray{ "LP", "BP", "HP", "Notch",
                                util::u8("LP\xE2\x86\x92" "HP"), util::u8("LP\xE2\x86\x92" "BP"), util::u8("HP\xE2\x86\x92" "BP"),
                                "LP+HP", "LP+BP", "HP+BP", "LP+LP", "BP+BP", "HP+HP" }, 0));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogMode, 1},
+            "Moog Mode " + juce::String(i), juce::StringArray{"LP", "BP", "HP"}, 0));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineMoogBassAmount, 1},
+            "Moog Bass " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogBassWave, 1},
+            "Moog Bass Wave " + juce::String(i),
+            juce::StringArray{"Sine", "Triangle", "Saw"}, 0));
+        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.spineMoogBassOctave, 1},
+            "Moog Bass Octave " + juce::String(i),
+            juce::StringArray{"0", "-1 oct", "-2 oct"}, 0));
     }
 
     layout.add(std::make_unique<FloatParam>(juce::ParameterID{masterGain, 1},
@@ -202,7 +213,6 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.oscWaveform  = (int) raw(apvts, id.oscWaveform);
     s.oscCoarse    = raw(apvts, id.oscCoarse);
     s.oscFine      = raw(apvts, id.oscFine);
-    s.svfType      = (int) raw(apvts, id.filterType);
     s.svfCutoffHz  = raw(apvts, id.filterCutoff);
     s.svfResonance = raw(apvts, id.filterResonance);
     s.wsDrive      = raw(apvts, id.shaperDrive);
@@ -219,12 +229,15 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.spineSlope         = (int) raw(apvts, id.spineSlope);
     s.spineDrive         = raw(apvts, id.spineDrive);
     s.spineOutputDb      = raw(apvts, id.spineOutput);
-    s.hpEnable        = (int) raw(apvts, id.spineHpEnable);
     s.hpCutoffHz      = raw(apvts, id.spineHpCutoff);
     s.hpResonance     = raw(apvts, id.spineHpResonance);
     s.hpSlope         = (int) raw(apvts, id.spineHpSlope);
     s.huggettPostDrive = raw(apvts, id.spinePostDrive);
     s.huggettRouting = (int) raw(apvts, id.spineHuggettRouting);
+    s.moogMode       = (int) raw(apvts, id.spineMoogMode);
+    s.moogBassAmount =       raw(apvts, id.spineMoogBassAmount);
+    s.moogBassWave   = (int) raw(apvts, id.spineMoogBassWave);
+    s.moogBassOctave = (int) raw(apvts, id.spineMoogBassOctave);
     return s;
 }
 

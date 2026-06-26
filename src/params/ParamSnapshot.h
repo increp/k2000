@@ -13,7 +13,6 @@ struct ParamSnapshot {
     float oscFine       = 0.0f; // cents
 
     // Filter block (layer.filter.*)
-    int   svfType       = 0;   // 0=LP 1=HP 2=BP 3=Notch
     float svfCutoffHz   = 1000.0f;
     float svfResonance  = 0.2f;
 
@@ -41,9 +40,9 @@ struct ParamSnapshot {
     float spineOutputDb      = 0.0f;
     float spineModelFadeMs   = 25.0f;   // global: spine.modelFadeMs (2..100 ms)
 
-    // HP pre-filter (always-available, before the main model)
-    int   hpEnable      = 0;      // 0=off 1=on
-    float hpCutoffHz    = 20.0f;
+    // HP pre-filter (always-available, before the main model).
+    // No enable flag: cutoff == 0 (knob at bottom) = OFF/bypassed; cutoff > 0 engages it.
+    float hpCutoffHz    = 0.0f;   // 0 = off
     float hpResonance   = 0.0f;
     int   hpSlope       = 0;      // 0=12 dB, 1=24 dB
     // Main Huggett post-filter drive (Huggett bank)
@@ -52,4 +51,10 @@ struct ParamSnapshot {
     // 0=LP 1=BP 2=HP, 3..5 series LP->HP/LP->BP/HP->BP, 6..8 parallel LP+HP/LP+BP/HP+BP,
     // 9..11 parallel LP+LP/BP+BP/HP+HP.
     int huggettRouting = 0;
+
+    // Moog bank (spine.moog.*)
+    int   moogMode       = 0;   // 0=LP 1=BP 2=HP
+    float moogBassAmount = 0.0f;
+    int   moogBassWave   = 0;   // 0=Sine 1=Triangle 2=Saw
+    int   moogBassOctave = 0;   // 0=unison 1=-1oct 2=-2oct
 };

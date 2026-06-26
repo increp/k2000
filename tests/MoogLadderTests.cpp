@@ -366,6 +366,40 @@ struct MoogLadderTests : public juce::UnitTest {
             expect(std::memcmp(aR.data(), bR.data(), (size_t) kN * sizeof(float)) == 0,
                    "bassAmount=0 perturbed the ladder output (right) vs ladder-only");
         }
+
+        beginTest("slope is meaningful in BP and HP (BP24 steeper than BP12; HP12 gentler than HP24)");
+        {
+            const double sr = 48000.0; MoogLadder m; m.prepare(sr);
+            std::unique_ptr<FilterModel::State> st(m.makeState());
+            m.setCommon(1000.0f, 0.3f, 0.0f);
+            auto skirtDb = [&](MoogLadder::Mode mode, MoogLadder::Slope sl, double probe) {
+                m.setMode(mode); m.setSlope(sl);
+                return 20.0 * std::log10(std::max(1e-6, mag(m, *st, 1000.0, probe)));   // mag() = existing helper
+            };
+            // BP: compare skirt steepness two octaves below centre (250 Hz) — BP4 rejects more than BP2
+            const double bp12 = skirtDb(MoogLadder::Mode::BP, MoogLadder::Slope::db12, 250.0);
+            const double bp24 = skirtDb(MoogLadder::Mode::BP, MoogLadder::Slope::db24, 250.0);
+            expect(bp24 < bp12 - 4.0, "BP24 not steeper than BP12 @250Hz: " + juce::String(bp24,1) + " vs " + juce::String(bp12,1));
+            // HP: one octave below cutoff (500 Hz) — HP2 passes more low than HP4
+            const double hp12 = skirtDb(MoogLadder::Mode::HP, MoogLadder::Slope::db12, 500.0);
+            const double hp24 = skirtDb(MoogLadder::Mode::HP, MoogLadder::Slope::db24, 500.0);
+            expect(hp12 > hp24 + 4.0, "HP12 not gentler than HP24 @500Hz: " + juce::String(hp12,1) + " vs " + juce::String(hp24,1));
+        }
+
+        beginTest("setVoiceContext drives the sub-osc fundamental (base no-op; Moog override)");
+        {
+            const double sr_vc = 48000.0; MoogLadder mvc; mvc.prepare(sr_vc);
+            std::unique_ptr<FilterModel::State> st_vc(mvc.makeState());
+            mvc.setCommon(1500.0f, 0.0f, 0.0f); mvc.setBass(0.8f, /*sine*/0, /*oct*/0);
+            mvc.reset(*st_vc);
+            mvc.setVoiceContext(*st_vc, 110.0f);                 // polymorphic hook
+            std::vector<float> l_vc(16384,0.0f), r_vc(16384,0.0f);  // silent input
+            mvc.processStereo(*st_vc, l_vc.data(), r_vc.data(), (int) l_vc.size());
+            double e_vc = 0; for (float v : l_vc) e_vc += double(v)*v;
+            expect(e_vc > 1.0, "setVoiceContext did not drive the sub-osc");
+            // base default is a no-op: a FilterModel& whose dynamic type ignores it must not crash/alter
+            FilterModel& base_vc = mvc; base_vc.setVoiceContext(*st_vc, 220.0f);   // compiles + safe
+        }
     }
 };
 static MoogLadderTests moogLadderTestsInstance;

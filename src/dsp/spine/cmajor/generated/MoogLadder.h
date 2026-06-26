@@ -1022,6 +1022,8 @@ struct MoogLadder
         float  y2;
         float  y3;
         float  y4;
+        float  bp;
+        float  hp;
         float  tapOut;
         float  preLim;
         float  limOut;
@@ -1040,6 +1042,8 @@ struct MoogLadder
         float  y2_0;
         float  y3_0;
         float  y4_0;
+        float  bp_0;
+        float  hp_0;
         float  tapOut_0;
         float  preLim_0;
         float  limOut_0;
@@ -1093,7 +1097,9 @@ struct MoogLadder
                 _state.yp2 = y2;
                 _state.yp3 = y3;
                 _state.yp4 = y4;
-                tapOut = (_state.modeSel == int32_t {1}) ? ((((g_CALIB_BP_W1 * y1) + (g_CALIB_BP_W2 * y2)) + (g_CALIB_BP_W3 * y3)) + (g_CALIB_BP_W4 * y4)) : ((_state.modeSel == int32_t {2}) ? (g_CALIB_HP_SCALE * ((((y0 - (4.0f * y1)) + (6.0f * y2)) - (4.0f * y3)) + y4)) : ((_state.slopeSel == int32_t {0}) ? y2 : y4));
+                bp = (_state.slopeSel == int32_t {0}) ? ((((g_CALIB_BP_W1 * y1) + (g_CALIB_BP_W2 * y2)) + (g_CALIB_BP_W3 * y3)) + (g_CALIB_BP_W4 * y4)) : ((((g_CALIB_BP4_W1 * y1) + (g_CALIB_BP4_W2 * y2)) + (g_CALIB_BP4_W3 * y3)) + (g_CALIB_BP4_W4 * y4));
+                hp = (_state.slopeSel == int32_t {0}) ? (g_CALIB_HP2_SCALE * ((y0 - (2.0f * y1)) + y2)) : (g_CALIB_HP_SCALE * ((((y0 - (4.0f * y1)) + (6.0f * y2)) - (4.0f * y3)) + y4));
+                tapOut = (_state.modeSel == int32_t {1}) ? bp : ((_state.modeSel == int32_t {2}) ? hp : ((_state.slopeSel == int32_t {0}) ? y2 : y4));
                 preLim = tapOut + bass;
                 limOut = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (preLim / g_CALIB_LIM_CEIL);
                 dcOut = (limOut - _state.dcx1) + (_state.dcR * _state.dcy1);
@@ -1121,7 +1127,9 @@ struct MoogLadder
                 _state.s3 = ((2.0f * y3_0) - _state.s3);
                 y4_0 = (_state.G * (y3_0 - _state.s4)) + _state.s4;
                 _state.s4 = ((2.0f * y4_0) - _state.s4);
-                tapOut_0 = (_state.modeSel == int32_t {1}) ? ((((g_CALIB_BP_W1 * y1_0) + (g_CALIB_BP_W2 * y2_0)) + (g_CALIB_BP_W3 * y3_0)) + (g_CALIB_BP_W4 * y4_0)) : ((_state.modeSel == int32_t {2}) ? (g_CALIB_HP_SCALE * ((((y0_0 - (4.0f * y1_0)) + (6.0f * y2_0)) - (4.0f * y3_0)) + y4_0)) : ((_state.slopeSel == int32_t {0}) ? y2_0 : y4_0));
+                bp_0 = (_state.slopeSel == int32_t {0}) ? ((((g_CALIB_BP_W1 * y1_0) + (g_CALIB_BP_W2 * y2_0)) + (g_CALIB_BP_W3 * y3_0)) + (g_CALIB_BP_W4 * y4_0)) : ((((g_CALIB_BP4_W1 * y1_0) + (g_CALIB_BP4_W2 * y2_0)) + (g_CALIB_BP4_W3 * y3_0)) + (g_CALIB_BP4_W4 * y4_0));
+                hp_0 = (_state.slopeSel == int32_t {0}) ? (g_CALIB_HP2_SCALE * ((y0_0 - (2.0f * y1_0)) + y2_0)) : (g_CALIB_HP_SCALE * ((((y0_0 - (4.0f * y1_0)) + (6.0f * y2_0)) - (4.0f * y3_0)) + y4_0));
+                tapOut_0 = (_state.modeSel == int32_t {1}) ? bp_0 : ((_state.modeSel == int32_t {2}) ? hp_0 : ((_state.slopeSel == int32_t {0}) ? y2_0 : y4_0));
                 preLim_0 = tapOut_0 + bass;
                 limOut_0 = g_CALIB_LIM_CEIL * _MoogLadder__padTanh (preLim_0 / g_CALIB_LIM_CEIL);
                 dcOut_0 = (limOut_0 - _state.dcx1) + (_state.dcR * _state.dcy1);
@@ -1282,6 +1290,11 @@ struct MoogLadder
     static constexpr float g_CALIB_BP_W2 { 4.0f };
     static constexpr float g_CALIB_BP_W3 { -4.0f };
     static constexpr float g_CALIB_BP_W4 { 0.0f };
+    static constexpr float g_CALIB_BP4_W1 { 0.0f };
+    static constexpr float g_CALIB_BP4_W2 { 8.0f };
+    static constexpr float g_CALIB_BP4_W3 { -16.0f };
+    static constexpr float g_CALIB_BP4_W4 { 8.0f };
+    static constexpr float g_CALIB_HP2_SCALE { 1.0f };
     static constexpr float g_CALIB_HP_SCALE { 1.0f };
     static constexpr float g_CALIB_LIM_CEIL { 1.5f };
 

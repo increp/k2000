@@ -69,7 +69,7 @@ public:
             for (int i = 0; i < N; ++i) {
                 float x = std::sin(2.0 * juce::MathConstants<double>::pi * 8000.0 * i / 48000.0);
                 float l = x, r = x;
-                slot.processStereo(nullptr, false, &h, 25.0f, &l, &r, 1);
+                slot.processStereo(nullptr, false, &h, 25.0f, 0.0f, &l, &r, 1);
                 if (i > N / 2) peak = std::max(peak, std::abs(l));
             }
             expect(peak < 0.1f, "high freq cut by spine: " + juce::String(peak));

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(k2000 VERSION 5.2.0 LANGUAGES C CXX)
+project(k2000 VERSION 5.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,13 +45,14 @@ target_sources(k2000 PRIVATE
     src/gui/Section.cpp
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp
-    src/dsp/blocks/SVFFilter.cpp
     src/dsp/blocks/Waveshaper.cpp
     src/dsp/AlgorithmLibrary.cpp
     src/dsp/spine/HuggettFilter.cpp
     src/dsp/spine/FilterModelLibrary.cpp
     src/dsp/spine/SpineFilterSlot.cpp
-    src/dsp/spine/HuggettHpStage.cpp)
+    src/dsp/spine/HuggettHpStage.cpp
+    src/dsp/spine/MoogLadder.cpp
+    src/dsp/spine/cmajor/MoogLadderAdapter.cpp)
 
 target_compile_definitions(k2000 PUBLIC
     JUCE_WEB_BROWSER=0

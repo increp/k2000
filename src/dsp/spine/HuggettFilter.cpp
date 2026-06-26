@@ -38,6 +38,9 @@ HuggettFilter::Resolved HuggettFilter::resolve() const noexcept {
         case Routing::BP:
             // a@cutA = HP (low edge) -> b@cutB = LP (high edge); separation = bandwidth.
             return { N::HP, N::LP, true, false, 1.0f };
+        case Routing::Notch:
+            // single cell, notch tap — attenuates the band around cutoff.
+            return { N::Notch, N::LP, false, true, 1.0f };
         // --- Summit dual routings: slope ignored, both sections at cutA/cutB ---
         case Routing::SeriesLPHP: return { N::LP, N::HP, true,  false, 1.0f };
         case Routing::SeriesLPBP: return { N::LP, N::BP, true,  false, 1.0f };

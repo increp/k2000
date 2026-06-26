@@ -6,13 +6,12 @@
 // New entries appended to the end as block types are added in v5+.
 enum class BlockTypeId : int {
     None        = 0,
-    SvfFilter   = 1,
-    Waveshaper  = 2,
+    Waveshaper  = 1,
 };
 
 // Number of BlockTypeId values (used to size per-type arrays indexed by the
 // enum value). Bump when a new BlockTypeId is appended.
-inline constexpr std::size_t kNumBlockTypes = 3;
+inline constexpr std::size_t kNumBlockTypes = 2;
 
 // Passive data describing a per-voice DSP topology: an ordered list of block
 // TYPES. Order is the array order (blockTypePerSlot[0..slotCount)). The Voice

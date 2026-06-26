@@ -13,7 +13,6 @@ constexpr struct { const char* from; const char* to; } kV1ToV2Renames[] = {
     {"osc.waveform",    "layer.osc.waveform"},
     {"osc.coarse",      "layer.osc.coarse"},
     {"osc.fine",        "layer.osc.fine"},
-    {"slot0.type",      "layer.slot0.type"},
     {"slot0.cutoff",    "layer.slot0.cutoff"},
     {"slot0.resonance", "layer.slot0.resonance"},
     {"slot1.drive",     "layer.slot1.drive"},
@@ -27,7 +26,6 @@ constexpr struct { const char* from; const char* to; } kV1ToV2Renames[] = {
 // v2 layer.slot* IDs → v3 block-type IDs. master.gain, layer.osc.*, layer.amp.*,
 // layer.algorithm are unchanged across v2→v3.
 constexpr struct { const char* from; const char* to; } kV2ToV3Renames[] = {
-    {"layer.slot0.type",      "layer.filter.type"},
     {"layer.slot0.cutoff",    "layer.filter.cutoff"},
     {"layer.slot0.resonance", "layer.filter.resonance"},
     {"layer.slot1.drive",     "layer.shaper.drive"},

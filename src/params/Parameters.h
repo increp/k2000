@@ -11,13 +11,14 @@ inline constexpr int kNumLayers = 2;
 // snapshot()/routing() read via stable ids with no per-block string building.
 struct LayerIds {
     juce::String algorithm, oscWaveform, oscCoarse, oscFine,
-                 filterType, filterCutoff, filterResonance,
+                 filterCutoff, filterResonance,
                  shaperDrive, shaperMix,
                  ampAttack, ampDecay, ampSustain, ampRelease,
                  enable, keyLo, keyHi, velLo, velHi, channel, level,
                  spineModel, spineSeparation, spineSlope, spineDrive, spineOutput,
-                 spineHpEnable, spineHpCutoff, spineHpResonance, spineHpSlope,
-                 spinePostDrive, spineHuggettRouting;
+                 spineHpCutoff, spineHpResonance, spineHpSlope,
+                 spinePostDrive, spineHuggettRouting,
+                 spineMoogMode, spineMoogBassAmount, spineMoogBassWave, spineMoogBassOctave;
 };
 
 // Returns a reference to the (statically built) ids for the given layer.
