@@ -40,9 +40,9 @@ struct ParamSnapshot {
     float spineOutputDb      = 0.0f;
     float spineModelFadeMs   = 25.0f;   // global: spine.modelFadeMs (2..100 ms)
 
-    // HP pre-filter (always-available, before the main model)
-    int   hpEnable      = 0;      // 0=off 1=on
-    float hpCutoffHz    = 20.0f;
+    // HP pre-filter (always-available, before the main model).
+    // No enable flag: cutoff == 0 (knob at bottom) = OFF/bypassed; cutoff > 0 engages it.
+    float hpCutoffHz    = 0.0f;   // 0 = off
     float hpResonance   = 0.0f;
     int   hpSlope       = 0;      // 0=12 dB, 1=24 dB
     // Main Huggett post-filter drive (Huggett bank)

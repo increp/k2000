@@ -16,7 +16,7 @@ struct LayerIds {
                  ampAttack, ampDecay, ampSustain, ampRelease,
                  enable, keyLo, keyHi, velLo, velHi, channel, level,
                  spineModel, spineSeparation, spineSlope, spineDrive, spineOutput,
-                 spineHpEnable, spineHpCutoff, spineHpResonance, spineHpSlope,
+                 spineHpCutoff, spineHpResonance, spineHpSlope,
                  spinePostDrive, spineHuggettRouting,
                  spineMoogMode, spineMoogBassAmount, spineMoogBassWave, spineMoogBassOctave;
 };

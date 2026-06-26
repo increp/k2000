@@ -48,7 +48,6 @@ private:
     LabeledKnob    spineSeparation_{ "Sep" };
     // HP pre-filter band (Layout B)
     juce::Label        hpSectionLbl_;
-    juce::ToggleButton hpEnable_;
     juce::ComboBox     hpSlope_;
     juce::Label        hpSlopeLbl_;
     LabeledKnob        hpCutoff_{ "HP Cut" }, hpReso_{ "HP Reso" };

@@ -48,7 +48,7 @@ public:
         beginTest("Layer exposes a configured HP stage");
         {
             Layer layer; layer.prepare(48000.0, 256);
-            ParamSnapshot s; s.hpEnable = 1; s.hpCutoffHz = 2000.0f; s.hpResonance = 0.0f;
+            ParamSnapshot s; s.hpCutoffHz = 2000.0f; s.hpResonance = 0.0f;   // cutoff>0 = HP on
             s.hpSlope = 1;
             layer.updateParameters(s);
             expect(layer.hpStage() != nullptr, "hp stage present");

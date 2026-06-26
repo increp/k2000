@@ -87,7 +87,8 @@ void Voice::render(float* outL, float* outR, int numSamples) {
     // Use THIS layer's spine model (fetched fresh, like layer_->block(t) above),
     // so a voice playing layer 1 filters with layer 1's settings, not layer 0's.
     std::copy(tmpL, tmpL + numSamples, tmpR);
-    spine_.processStereo(layer_->hpStage(), s.hpEnable != 0,
+    // HP pre-filter is ON whenever its cutoff knob is off the 0 position (no separate enable).
+    spine_.processStereo(layer_->hpStage(), s.hpCutoffHz > 0.0f,
                          layer_->spineModel(), s.spineModelFadeMs, hz, tmpL, tmpR, numSamples);
 
     const float lvl = layer_->level();

@@ -110,8 +110,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     hpSectionLbl_.setText("HP PRE", juce::dontSendNotification);
     hpSectionLbl_.setJustificationType(juce::Justification::centredLeft);
     filterSection_.addAndMakeVisible(hpSectionLbl_);
-    hpEnable_.setButtonText("on");
-    filterSection_.addAndMakeVisible(hpEnable_);
     hpSlopeLbl_.setText("Slope", juce::dontSendNotification);
     hpSlopeLbl_.setJustificationType(juce::Justification::centred);
     hpSlope_.addItemList(juce::StringArray{ "12 dB", "24 dB" }, 1);
@@ -207,7 +205,6 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(moogOctave_,               ids.spineMoogBassOctave);
     binder_.bind(moogBass_.slider(),        ids.spineMoogBassAmount);
 
-    binder_.bind(hpEnable_,               ids.spineHpEnable);
     binder_.bind(hpCutoff_.slider(),      ids.spineHpCutoff);
     binder_.bind(hpReso_.slider(),        ids.spineHpResonance);
     binder_.bind(hpSlope_,               ids.spineHpSlope);
@@ -332,27 +329,27 @@ void K2000AudioProcessorEditor::resized() {
             // HP pre-filter row
             auto hpRow = fc.removeFromTop(rowH);
             fc.removeFromTop(divGap);  // visual divider gap
-            // HP section label + enable toggle (left column). Width fits the
-            // tick box plus the "on" caption without clipping.
+            // HP section label (left column). No enable toggle — the HP is OFF when its
+            // cutoff knob sits at 0; turning it up engages it.
             const int lblW = 58;
-            const int enW  = 50;
             hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 16);
-            hpEnable_.setBounds(hpRow.getX() + 2, hpRow.getY() + 18, enW, 22);
             hpRow.removeFromLeft(lblW);
             // Remaining cells: HP cut, HP reso, HP slope (HP is clean — no drive)
             layoutCells(hpRow, { { nullptr,      &hpCutoff_ },
                                   { nullptr,      &hpReso_   },
                                   { &hpSlopeLbl_, &hpSlope_  } });
 
-            // Main filter rows — split remaining height equally
+            // Main filter rows — split remaining height equally.
+            // The model selector ("Filter") lives in the main top row so the dropdown is
+            // wide enough for both model names (Huggett/Moog); it is always visible.
             const int mainH = (fc.getHeight()) / 2;
             auto mainTop = fc.removeFromTop(mainH);
-            layoutCells(mainTop, { { nullptr, &filterCutoff_ },
-                                    { nullptr, &filterRes_ } });
+            layoutCells(mainTop, { { &spineModelLbl_, &spineModel_ },
+                                    { nullptr,         &filterCutoff_ },
+                                    { nullptr,         &filterRes_ } });
             // Both model-specific rows share the same cell rectangle;
             // updateModelVisibility() ensures only the active group is shown.
             layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
-                                { &spineModelLbl_,  &spineModel_ },
                                 { &spineSlopeLbl_,  &spineSlope_ },
                                 { nullptr,          &spineSeparation_ },
                                 { nullptr,          &spinePostDrive_ } });

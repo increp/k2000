@@ -42,7 +42,6 @@ LayerIds buildIds(int layer) {
     id.spineSlope      = p + "spine.slope";
     id.spineDrive      = p + "spine.drive";
     id.spineOutput     = p + "spine.output";
-    id.spineHpEnable    = p + "spine.hp.enable";
     id.spineHpCutoff    = p + "spine.hp.cutoff";
     id.spineHpResonance = p + "spine.hp.resonance";
     id.spineHpSlope     = p + "spine.hp.slope";
@@ -164,11 +163,12 @@ APVTS::ParameterLayout createLayout() {
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineOutput, 1},
             "Spine Output " + juce::String(i),
             juce::NormalisableRange<float>{-24.0f, 24.0f, 0.0f}, 0.0f));
-        layout.add(std::make_unique<BoolParam>(juce::ParameterID{id.spineHpEnable, 1},
-            "Spine HP Enable " + juce::String(i), false));
+        // HP pre-filter has no separate enable: cutoff at the knob's 0 position = OFF
+        // (bypassed); any cutoff > 0 engages it. Range starts at 0 so the bottom of the
+        // knob is the off position. Default 0 = off.
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.spineHpCutoff, 1},
             "Spine HP Cutoff " + juce::String(i),
-            juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 20.0f));
+            juce::NormalisableRange<float>{0.0f, 20000.0f, 0.0f, 0.25f}, 0.0f));
         // HP resonance capped at 0.15: the OTA HP self-oscillates too hot across
         // its full range, so the knob's full travel maps to 0..0.15 (knob max ==
         // what 15% used to give) for a musically useful range.
@@ -229,7 +229,6 @@ ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     s.spineSlope         = (int) raw(apvts, id.spineSlope);
     s.spineDrive         = raw(apvts, id.spineDrive);
     s.spineOutputDb      = raw(apvts, id.spineOutput);
-    s.hpEnable        = (int) raw(apvts, id.spineHpEnable);
     s.hpCutoffHz      = raw(apvts, id.spineHpCutoff);
     s.hpResonance     = raw(apvts, id.spineHpResonance);
     s.hpSlope         = (int) raw(apvts, id.spineHpSlope);
