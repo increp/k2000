@@ -26,6 +26,7 @@ add_executable(k2000_tests
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
     SafetyLimiterTests.cpp
+    Halfband2xTests.cpp
     CmajorSvfAdapterTests.cpp
     CmajorSvfEquivalenceTests.cpp
     CmajorFilterModelTests.cpp
