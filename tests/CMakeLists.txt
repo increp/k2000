@@ -27,6 +27,7 @@ add_executable(k2000_tests
     HpPreFilterTests.cpp
     SafetyLimiterTests.cpp
     Halfband2xTests.cpp
+    VoiceOversamplerTests.cpp
     CmajorSvfAdapterTests.cpp
     CmajorSvfEquivalenceTests.cpp
     CmajorFilterModelTests.cpp
