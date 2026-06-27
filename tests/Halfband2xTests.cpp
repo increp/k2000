@@ -47,6 +47,54 @@ public:
             const double db = 20.0 * std::log10(peak + 1e-12);
             expect(db < -80.0, "image rejection >=80 dB (got " + juce::String(db,1) + " dB)");
         }
+
+        beginTest("round-trip reconstructs the input at an integer base-sample delay");
+        {
+            // Feed a low-freq sine through upsample -> downsample and assert the
+            // output equals the input delayed by the (empirically measured) round-
+            // trip latency, within the passband. The delay MUST be an integer number
+            // of base samples (the even-phase decimation guarantees no half-sample
+            // offset). We measure delay by maximizing cross-correlation, then verify
+            // the residual after aligning is tiny.
+            Halfband2x hb; hb.reset();
+            std::vector<float> in(N), up(2*N), out(N);
+            const double f = 200.0 / 48000.0;  // base-rate normalized, well inside passband
+            for (int i = 0; i < N; ++i) in[i] = std::sin(2*M_PI*f*i);
+            hb.upsample(in.data(), N, up.data());
+            hb.downsample(up.data(), N, out.data());
+
+            // Find the integer base-sample delay D that best aligns out[n] ~ in[n-D],
+            // scanning a generous range that covers the ~36-sample group delay.
+            int bestD = -1; double bestCorr = -1.0;
+            for (int D = 0; D <= 80; ++D) {
+                double num = 0.0, den = 0.0;
+                for (int n = D + 200; n < N; ++n) {           // skip warm-up
+                    num += (double) out[(size_t) n] * (double) in[(size_t) (n - D)];
+                    den += (double) in[(size_t) (n - D)] * (double) in[(size_t) (n - D)];
+                }
+                const double corr = (den > 0.0) ? num / den : 0.0;  // ~unity gain at the right D
+                if (std::abs(corr - 1.0) < std::abs(bestCorr - 1.0) || bestD < 0) {
+                    bestCorr = corr; bestD = D;
+                }
+            }
+            // The alignment gain at the best integer delay should be ~1 (passband, unity).
+            expect(bestD >= 0 && std::abs(bestCorr - 1.0) < 0.05,
+                   "round-trip aligns at integer delay D=" + juce::String(bestD)
+                   + " with gain " + juce::String(bestCorr,4));
+
+            // Residual error after aligning out[n] against in[n-bestD], over the steady
+            // region, must be small (good passband reconstruction). Normalize by input RMS.
+            double errSq = 0.0, sigSq = 0.0; int cnt = 0;
+            for (int n = bestD + 300; n < N; ++n) {
+                const double d = (double) out[(size_t) n] - (double) in[(size_t) (n - bestD)];
+                errSq += d * d; sigSq += (double) in[(size_t) (n - bestD)] * (double) in[(size_t) (n - bestD)];
+                ++cnt;
+            }
+            const double nrmseDb = 20.0 * std::log10(std::sqrt(errSq / std::max(1, cnt))
+                                                     / (std::sqrt(sigSq / std::max(1, cnt)) + 1e-12) + 1e-12);
+            expect(nrmseDb < -40.0,
+                   "round-trip reconstruction error <= -40 dB (got " + juce::String(nrmseDb,1) + " dB)");
+        }
     }
 };
 static Halfband2xTests halfband2xTestsInstance;
