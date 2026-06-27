@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <juce_audio_basics/juce_audio_basics.h>   // juce::MidiBuffer
 #include "Voice.h"
 
 class Program;  // forward

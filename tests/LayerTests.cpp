@@ -3,7 +3,7 @@
 #include <vector>
 #include "../src/Layer.h"
 #include "../src/Voice.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 #include "../src/dsp/spine/HuggettHpStage.h"
 #include "../src/dsp/spine/MoogLadder.h"
 

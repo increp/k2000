@@ -10,8 +10,6 @@ public:
     std::unique_ptr<DSPBlock::VoiceState> makeVoiceState() const override;
     void resetVoice(DSPBlock::VoiceState& state) override;
     void process(DSPBlock::VoiceState& state, float* buffer, int numSamples) override;
-    juce::String getTypeId() const override { return "waveshaper"; }
-    std::vector<ParamSpec> getParamSpecs() const override { return {}; }
     void updateParameters(const ParamSnapshot& snapshot) override;
 
 private:

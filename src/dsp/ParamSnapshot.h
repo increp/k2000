@@ -1,5 +1,4 @@
 #pragma once
-#include <juce_core/juce_core.h>
 
 // Plain-old-data snapshot of the v1 parameter state.
 // Built once per audio block on the audio thread by reading the APVTS's

@@ -3,7 +3,7 @@
 #include "../src/Layer.h"
 #include "../src/Voice.h"
 #include "../src/dsp/AlgorithmLibrary.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 
 class AlgorithmRoutingTests : public juce::UnitTest {
 public:

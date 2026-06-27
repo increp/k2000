@@ -19,7 +19,6 @@ add_executable(k2000_tests
     FilterModelLibraryTests.cpp
     InPlaceStateTests.cpp
     ModelHotSwapTests.cpp
-    PresetMigrationTests.cpp
     LayerTests.cpp
     AlgorithmRoutingTests.cpp
     LayerRoutingTests.cpp

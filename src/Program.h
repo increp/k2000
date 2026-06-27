@@ -3,7 +3,7 @@
 #include <cstddef>
 #include "Layer.h"
 #include "LayerRouting.h"
-#include "params/Parameters.h"  // for params::kNumLayers
+#include "params/Config.h"  // for params::kNumLayers (lightweight; no JUCE)
 
 // A Program holds kNumLayers LayerSlots. Each slot = a Layer (DSP config) plus
 // its routing (which notes play it) and is the unit the VoiceManager allocates

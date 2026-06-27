@@ -1,5 +1,4 @@
 #pragma once
-#include <juce_core/juce_core.h>
 #include <cmath>
 #include <algorithm>
 
@@ -70,7 +69,8 @@ private:
         const float cutoff = std::clamp(cutoffHz_, 16.0f, float(sampleRate_ * 0.45));
         const float res    = std::clamp(resonance_, 0.0f, 0.999f);
         const float Q = 0.5f + res * res * 49.5f;      // reaches Q~50 (self-osc) // CALIB
-        g_ = float(std::tan(juce::MathConstants<double>::pi * cutoff / sampleRate_));
+        constexpr double kPi = 3.14159265358979323846;
+        g_ = float(std::tan(kPi * cutoff / sampleRate_));
         k_ = 1.0f / Q;
         a1_ = 1.0f / (1.0f + g_ * (g_ + k_));
         a2_ = g_ * a1_;

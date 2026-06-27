@@ -12,7 +12,7 @@
 #include "dsp/spine/MoogLadder.h"
 #include "dsp/spine/FilterModelLibrary.h"
 #include "dsp/spine/HuggettHpStage.h"
-#include "params/ParamSnapshot.h"
+#include "dsp/ParamSnapshot.h"
 
 // Configuration container. Owns a PALETTE — one DSP block instance per block
 // type — and the currently selected algorithm (an ordered list of block types).
