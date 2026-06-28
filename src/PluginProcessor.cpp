@@ -133,8 +133,8 @@ void K2000AudioProcessor::reprepareForOS() {
     if (lastSR_ > 0.0) {
         program_.prepare(lastSR_, lastBlock_, f);
         voiceManager_.prepare(lastSR_, lastBlock_, f);
+        setLatencySamples(VoiceOversampler::latencyBaseSamples(f));
     }
-    setLatencySamples(VoiceOversampler::latencyBaseSamples(f));
     suspendProcessing(false);
 }
 

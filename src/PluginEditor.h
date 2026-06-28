@@ -31,7 +31,6 @@ private:
     juce::Slider     masterGain_{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
     // Oversampling hamburger button — plain TextButton, not APVTS-bound.
     juce::TextButton menuButton_{ juce::String::fromUTF8("\xE2\x8B\xAE") };
-    void showOversamplingMenu();
 
     // --- Signal row ---
     Section sourceSection_{ "VAST Source / DSP", /*spine*/ false };
@@ -92,6 +91,7 @@ private:
     void buildStaticControls();      // combos' item lists, labels, child attach (once)
     void bindLayer(int layer);       // (re)bind every per-layer control via binder_
     void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
+    void showOversamplingMenu();
     void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)

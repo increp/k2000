@@ -46,7 +46,6 @@ public:
     int  offlineOS()  const { return offlineOS_.load(std::memory_order_relaxed); }
     void setRealtimeOS(int f);   // stores factor and re-prepares via suspendProcessing
     void setOfflineOS(int f);
-    void reprepareForOS();
     int  activeOS() const {
         const int rt  = realtimeOS_.load(std::memory_order_relaxed);
         const int off = offlineOS_.load(std::memory_order_relaxed);
@@ -54,6 +53,8 @@ public:
     }
 
 private:
+    void reprepareForOS();
+
     juce::AudioProcessorValueTreeState apvts_;
     Program program_;
     VoiceManager voiceManager_;

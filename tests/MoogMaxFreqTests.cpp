@@ -19,6 +19,9 @@ public:
             // prepare() at 8x@48k = 384 kHz must not jassert or throw
             adapter.prepare(384000.0);
             expect(true, "prepare(384000) completed without assertion");
+            // prepare() at 8x@96k = 768 kHz must also not jassert or throw
+            adapter.prepare(768000.0);
+            expect(true, "prepare(768000) completed without assertion");
         }
     }
 };

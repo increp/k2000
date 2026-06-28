@@ -77,13 +77,15 @@ public:
             std::fill(f1L.begin(), f1L.end(), 0.0f);
             std::fill(f1R.begin(), f1R.end(), 0.0f);
             f1Voice.render(f1L.data(), f1R.data(), BLOCK);
-            double sumAbs = 0.0;
+            double sumAbsL = 0.0, sumAbsR = 0.0;
             for (int i = 0; i < BLOCK; ++i) {
                 expect(std::isfinite(f1L[i]), "non-finite sample at factor 1");
                 expect(std::isfinite(f1R[i]), "non-finite sample at factor 1 (R)");
-                sumAbs += std::abs(f1L[i]);
+                sumAbsL += std::abs(f1L[i]);
+                sumAbsR += std::abs(f1R[i]);
             }
-            expect(sumAbs > 0.0, "factor 1 voice should produce audible output");
+            expect(sumAbsL > 0.0, "factor 1 voice should produce audible output on L");
+            expect(sumAbsR > 0.0, "factor 1 voice should produce audible output on R");
         }
 
         beginTest("factor 4 render produces finite audible output");
@@ -101,7 +103,7 @@ public:
             s4.ampSustain   = 1.0f;  s4.ampReleaseS = 0.01f;
 
             Layer f4Layer;
-            f4Layer.prepare(SR, BLOCK);
+            f4Layer.prepare(SR * 4, BLOCK * 4);
             f4Layer.updateParameters(s4);
 
             Voice f4Voice;

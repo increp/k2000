@@ -45,7 +45,6 @@ private:
     float velocity_ = 0.0f;
     double sampleRate_ = 44100.0;
     std::vector<float> scratch_;
-    std::vector<float> scratchR_;
     SpineFilterSlot spine_;
 
     VoiceOversampler os_;
