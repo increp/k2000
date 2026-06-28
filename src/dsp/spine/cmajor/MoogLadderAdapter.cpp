@@ -21,6 +21,7 @@ void MoogLadderAdapter::prepare(double sr) noexcept {
     d->initialise(0, sr <= maxF ? sr : maxF);
 }
 void MoogLadderAdapter::reset() noexcept { gen(storage_)->reset(); }
+double MoogLadderAdapter::getMaxFrequency() const noexcept { return gen(const_cast<unsigned char*>(storage_))->getMaxFrequency(); }
 void MoogLadderAdapter::setCutoff(float hz) noexcept { gen(storage_)->addEvent_cutoffHz(hz); }
 
 void MoogLadderAdapter::setParams(float c, float r, float dr, int slope, int mode) noexcept {
