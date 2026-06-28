@@ -41,6 +41,16 @@ public:
     void  setLimiterEnabled(bool on) { limiterEnabled_.store(on, std::memory_order_relaxed); }
     float gainReductionDb() const { return gainReductionDb_.load(std::memory_order_relaxed); }
 
+    int  realtimeOS() const { return realtimeOS_.load(std::memory_order_relaxed); }
+    int  offlineOS()  const { return offlineOS_.load(std::memory_order_relaxed); }
+    void setRealtimeOS(int f);   // defined in .cpp (triggers re-prepare in Task 7)
+    void setOfflineOS(int f);
+    int  activeOS() const {
+        const int rt  = realtimeOS_.load(std::memory_order_relaxed);
+        const int off = offlineOS_.load(std::memory_order_relaxed);
+        return isNonRealtime() ? (off ? off : rt) : rt;
+    }
+
 private:
     juce::AudioProcessorValueTreeState apvts_;
     Program program_;
@@ -49,5 +59,7 @@ private:
     SafetyLimiter      limiter_;
     std::atomic<bool>  limiterEnabled_{ true };   // protected: NOT an APVTS param; defaults ON
     std::atomic<float> gainReductionDb_{ 0.0f };
+    std::atomic<int>   realtimeOS_{ 1 };   // 1 = Off; protected: NOT an APVTS param
+    std::atomic<int>   offlineOS_{ 0 };    // 0 = Same as Realtime; protected: NOT an APVTS param
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessor)
 };
