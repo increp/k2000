@@ -122,9 +122,10 @@
         {
           "id": "v5.3",
           "title": "v5.3 — HQ oversampling tiers + on-screen keyboard",
-          "status": "specced",
+          "status": "shipped",
           "kind": "point",
-          "summary": "Light/Normal/Heavy/Full OS with independent live/render selectors; playable + MIDI-display keyboard."
+          "shipped": "2026-06-27",
+          "summary": "SHIPPED: HQ oversampling tiers (Off/2×/4×/8×) with independent Realtime/Offline selectors; portable halfband FIR cascade; latency reported to host; Moog sample-rate cap guarded at 1,536,000 Hz; hamburger PopupMenu UI with ticked groups; settings persisted; 203 tests, 0 failed."
         },
         {
           "id": "v5.4",
