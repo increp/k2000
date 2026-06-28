@@ -10,13 +10,21 @@ static_assert((int) BlockTypeId::None == 0, "voice state iteration skips index 0
 
 Voice::Voice() = default;
 
-void Voice::prepare(double sr, int maxBlock) {
+void Voice::prepare(double sr, int maxBlock, int osFactor) {
     sampleRate_ = sr;
-    osc_.prepare(sr);
-    amp_.prepare(sr);
+    osFactor_   = (osFactor==2||osFactor==4||osFactor==8) ? osFactor : 1;
+    const double inner = sr * (double) osFactor_;
+    os_.prepare(maxBlock);
+    os_.setFactor(osFactor_);
+    osMono_.assign((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
+    osL_.assign  ((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
+    osR_.assign  ((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
+
+    osc_.prepare(sr);          // base rate (already band-limited)
+    amp_.prepare(sr);          // base rate
     scratch_.assign(maxBlock, 0.0f);
     scratchR_.assign(maxBlock, 0.0f);
-    spine_.prepare(sr, maxBlock, layer_ ? layer_->spineModel() : nullptr,
+    spine_.prepare(inner, maxBlock * osFactor_, layer_ ? layer_->spineModel() : nullptr,
                        layer_ ? layer_->hpStage()    : nullptr);
 
     // One VoiceState per palette block type.

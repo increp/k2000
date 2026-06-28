@@ -62,6 +62,30 @@ public:
             expect(regPeak > 0.0f, "voice produced silence after noteOn");
         }
 
+        beginTest("factor 1 render produces finite audible output");
+        {
+            Layer f1Layer;
+            f1Layer.prepare(SR, BLOCK);
+            f1Layer.updateParameters(s);
+            Voice f1Voice;
+            f1Voice.setLayer(&f1Layer);
+            f1Voice.prepare(SR, BLOCK, 1);  // new 3-arg signature; factor=1 = identity
+            f1Voice.noteOn(69, 1.0f);       // A4
+            std::vector<float> f1L(BLOCK, 0.0f), f1R(BLOCK, 0.0f);
+            // Two blocks to let envelope past attack
+            f1Voice.render(f1L.data(), f1R.data(), BLOCK);
+            std::fill(f1L.begin(), f1L.end(), 0.0f);
+            std::fill(f1R.begin(), f1R.end(), 0.0f);
+            f1Voice.render(f1L.data(), f1R.data(), BLOCK);
+            double sumAbs = 0.0;
+            for (int i = 0; i < BLOCK; ++i) {
+                expect(std::isfinite(f1L[i]), "non-finite sample at factor 1");
+                expect(std::isfinite(f1R[i]), "non-finite sample at factor 1 (R)");
+                sumAbs += std::abs(f1L[i]);
+            }
+            expect(sumAbs > 0.0, "factor 1 voice should produce audible output");
+        }
+
         beginTest("noteOff eventually silences voice");
         v.noteOff();
         for (int i = 0; i < 200; ++i) {
