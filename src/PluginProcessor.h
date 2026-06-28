@@ -5,6 +5,7 @@
 #include "VoiceManager.h"
 #include "params/Parameters.h"
 #include "dsp/SafetyLimiter.h"
+#include "dsp/VoiceOversampler.h"
 
 class K2000AudioProcessor : public juce::AudioProcessor {
 public:
@@ -43,8 +44,9 @@ public:
 
     int  realtimeOS() const { return realtimeOS_.load(std::memory_order_relaxed); }
     int  offlineOS()  const { return offlineOS_.load(std::memory_order_relaxed); }
-    void setRealtimeOS(int f);   // defined in .cpp (triggers re-prepare in Task 7)
+    void setRealtimeOS(int f);   // stores factor and re-prepares via suspendProcessing
     void setOfflineOS(int f);
+    void reprepareForOS();
     int  activeOS() const {
         const int rt  = realtimeOS_.load(std::memory_order_relaxed);
         const int off = offlineOS_.load(std::memory_order_relaxed);
@@ -61,5 +63,8 @@ private:
     std::atomic<float> gainReductionDb_{ 0.0f };
     std::atomic<int>   realtimeOS_{ 1 };   // 1 = Off; protected: NOT an APVTS param
     std::atomic<int>   offlineOS_{ 0 };    // 0 = Same as Realtime; protected: NOT an APVTS param
+    double lastSR_            = 0.0;
+    int    lastBlock_         = 0;
+    bool   lastNonRealtime_   = false;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessor)
 };
