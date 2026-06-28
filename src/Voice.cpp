@@ -23,7 +23,6 @@ void Voice::prepare(double sr, int maxBlock, int osFactor) {
     osc_.prepare(sr);          // base rate (already band-limited)
     amp_.prepare(sr);          // base rate
     scratch_.assign(maxBlock, 0.0f);
-    scratchR_.assign(maxBlock, 0.0f);
     baseL_.assign(maxBlock, 0.0f);
     baseR_.assign(maxBlock, 0.0f);
     spine_.prepare(inner, maxBlock * osFactor_, layer_ ? layer_->spineModel() : nullptr,

@@ -8,13 +8,7 @@
 // Buffers pre-sized for the MAX factor at prepare(); setFactor() only changes the
 // active depth + clears state, never allocates.
 //
-// Latency: each Halfband2x stage has kNumTaps=73 taps, group delay = 36 samples at
-// the 2x rate. The round-trip (up then down) adds one filter delay per stage at
-// the base rate. The cascade latency in base-rate samples is:
-//   2x: 36 (1 stage, delay2x()=36 at 2x => 36/2 base? No — impulse-measured)
-//   4x: see latencyBaseSamples()
-//   8x: see latencyBaseSamples()
-// Values are set to match the measured impulse round-trip peak (see VoiceOversamplerTests).
+// Round-trip latency in base samples; values verified by VoiceOversamplerTests impulse test.
 class VoiceOversampler {
 public:
     static constexpr int kMaxFactor = 8;
