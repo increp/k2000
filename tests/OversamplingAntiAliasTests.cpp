@@ -9,26 +9,33 @@ class OversamplingAntiAliasTests : public juce::UnitTest {
 public:
     OversamplingAntiAliasTests() : juce::UnitTest("OversamplingAntiAlias") {}
 
-    // Sum spectral energy at non-harmonic bins of baseHz across 0..sr/2.
-    // Uses a direct DFT (slow but fine for a test with N=4096).
-    static double aliasEnergy(const std::vector<float>& x, double baseHz, double sr) {
-        double e = 0;
+    // Single direct-DFT pass returning BOTH the inharmonic (alias) energy and the
+    // total spectral energy over bins k=1..N/2-1. The metric we actually gate on is
+    // the alias FRACTION (alias/total): it is amplitude-independent, so a render that
+    // is merely quieter at a higher factor does NOT register as less aliasing — only
+    // a genuine drop in inharmonic content relative to the signal does.
+    // Direct DFT is O(N^2) — fine for N=4096 in a unit test.
+    struct Spectrum { double alias = 0.0; double total = 0.0; };
+    static Spectrum spectrum(const std::vector<float>& x, double baseHz, double sr) {
+        Spectrum out;
         const int N = (int) x.size();
         for (int k = 1; k < N / 2; ++k) {
+            double re = 0, im = 0;
+            for (int n = 0; n < N; ++n) {
+                const double a = 2.0 * M_PI * k * n / N;
+                re += x[(size_t) n] * std::cos(a);
+                im -= x[(size_t) n] * std::sin(a);
+            }
+            const double mag2 = re * re + im * im;
+            out.total += mag2;
+
             const double f     = (double) k * sr / N;
             const double ratio = f / baseHz;
             const double frac  = std::abs(ratio - std::round(ratio));
-            if (frac > 0.1) {   // not near a harmonic
-                double re = 0, im = 0;
-                for (int n = 0; n < N; ++n) {
-                    const double a = 2.0 * M_PI * k * n / N;
-                    re += x[(size_t) n] * std::cos(a);
-                    im -= x[(size_t) n] * std::sin(a);
-                }
-                e += re * re + im * im;
-            }
+            if (frac > 0.1)   // not near an integer harmonic of the fundamental
+                out.alias += mag2;
         }
-        return e;
+        return out;
     }
 
     void runTest() override {
@@ -104,27 +111,37 @@ public:
             expect(rms1 > 0.001, "factor-1 render is not silent (rms=" + juce::String(rms1) + ")");
             expect(rms4 > 0.001, "factor-4 render is not silent (rms=" + juce::String(rms4) + ")");
 
-            // Alias energy: sum DFT energy at bins that are NOT near integer multiples
-            // of the 82.4 Hz fundamental.
-            const double e1 = aliasEnergy(a1, 82.4, sr);
-            const double e4 = aliasEnergy(a4, 82.4, sr);
+            // Alias FRACTION = inharmonic energy / total energy. This is the metric we
+            // gate on: it is amplitude-independent, so it isolates TRUE alias reduction
+            // from a mere overall gain drop (a quieter factor-4 render cancels in the
+            // numerator/denominator). Bins counted are NOT near integer multiples of the
+            // 82.4 Hz fundamental.
+            // SCOPE LIMIT: this gates the oversampling integration / rate-scaling and the
+            // alias FRACTION of the driven filter; it does NOT independently prove the
+            // halfband filter's stopband depth (that is covered by Halfband2x/oversampler
+            // unit tests).
+            const Spectrum s1 = spectrum(a1, 82.4, sr);
+            const Spectrum s4 = spectrum(a4, 82.4, sr);
+            const double frac1 = s1.total > 0 ? s1.alias / s1.total : -1.0;
+            const double frac4 = s4.total > 0 ? s4.alias / s4.total : -1.0;
+            const double fracRatio = frac1 > 0 ? frac4 / frac1 : -1.0;
 
             // Log the measured values so they appear in the test output.
-            juce::Logger::writeToLog("OversamplingAntiAlias: e1=" + juce::String(e1, 3)
-                                     + "  e4=" + juce::String(e4, 3)
-                                     + "  ratio e4/e1=" + juce::String(e1 > 0 ? e4 / e1 : -1.0, 4));
+            juce::Logger::writeToLog("OversamplingAntiAlias: frac1=" + juce::String(frac1, 5)
+                                     + "  frac4=" + juce::String(frac4, 5)
+                                     + "  ratio frac4/frac1=" + juce::String(fracRatio, 4));
 
-            // 4x oversampling must cut non-harmonic (alias) energy materially.
-            // Measured on the driven Huggett LP chain: e4/e1 ~= 0.558 (~1.8x reduction).
-            // Threshold is 0.7 (>1.4x reduction) — strict enough to catch a broken
-            // oversampling path (ratio ~1.0) while tolerating the measured physics.
-            // A ratio near 1.0 means the oversampling path has a bug; do not weaken
-            // this threshold further without re-measuring the actual chain behaviour.
-            expect(e4 < e1 * 0.7,
-                   "4x must cut alias energy materially (>=1.4x, measured ~1.8x)  "
-                   "(e1=" + juce::String(e1)
-                   + "  e4=" + juce::String(e4)
-                   + "  ratio=" + juce::String(e1 > 0 ? e4 / e1 : -1.0) + ")");
+            // 4x oversampling must cut the alias FRACTION materially. Measured on the
+            // driven Huggett LP chain: frac1 ~= 0.5397, frac4 ~= 0.3169, ratio ~= 0.587
+            // (~1.7x reduction in alias fraction). Threshold 0.7 (>1.4x) is strict enough
+            // to catch a broken oversampling path (ratio ~1.0) while honoring the physics.
+            // A ratio near 1.0 means the oversampling path is not reducing aliasing; do
+            // not weaken this threshold without re-measuring the actual chain behaviour.
+            expect(frac4 < frac1 * 0.7,
+                   "4x must cut alias FRACTION materially (>=1.4x)  "
+                   "(frac1=" + juce::String(frac1, 5)
+                   + "  frac4=" + juce::String(frac4, 5)
+                   + "  ratio=" + juce::String(fracRatio, 4) + ")");
         }
     }
 };
