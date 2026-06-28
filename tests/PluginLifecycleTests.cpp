@@ -87,6 +87,19 @@ public:
             expect(q.isLimiterEnabled(), "ON must persist across save/restore");
         }
 
+        beginTest("oversampling settings round-trip and resolve active factor");
+        {
+            K2000AudioProcessor p; p.prepareToPlay(48000.0, 256);
+            p.setRealtimeOS(2); p.setOfflineOS(8);
+            expectEquals(p.realtimeOS(), 2);
+            expectEquals(p.offlineOS(), 8);
+            juce::MemoryBlock mb; p.getStateInformation(mb);
+            K2000AudioProcessor q; q.prepareToPlay(48000.0, 256);
+            q.setStateInformation(mb.getData(), (int) mb.getSize());
+            expectEquals(q.realtimeOS(), 2);
+            expectEquals(q.offlineOS(), 8);
+        }
+
         beginTest("enabled limiter caps a hot processed block; disabled does not");
         {
             // Drive a loud note and confirm enabled output stays under the ceiling.
