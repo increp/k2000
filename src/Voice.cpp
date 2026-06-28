@@ -24,6 +24,8 @@ void Voice::prepare(double sr, int maxBlock, int osFactor) {
     amp_.prepare(sr);          // base rate
     scratch_.assign(maxBlock, 0.0f);
     scratchR_.assign(maxBlock, 0.0f);
+    baseL_.assign(maxBlock, 0.0f);
+    baseR_.assign(maxBlock, 0.0f);
     spine_.prepare(inner, maxBlock * osFactor_, layer_ ? layer_->spineModel() : nullptr,
                        layer_ ? layer_->hpStage()    : nullptr);
 
@@ -78,32 +80,43 @@ void Voice::render(float* outL, float* outR, int numSamples) {
 
     const float tune = s.oscCoarse + s.oscFine * 0.01f;
     const float hz = midiToHz(note_) * std::pow(2.0f, tune / 12.0f);
-    osc_.setFrequency(hz);
     osc_.setWaveform(static_cast<Oscillator::Waveform>(s.oscWaveform));
     amp_.setParameters(s.ampAttackS, s.ampDecayS, s.ampSustain, s.ampReleaseS);
 
     jassert(numSamples <= (int) scratch_.size());
-    float* tmpL = scratch_.data();
-    float* tmpR = scratchR_.data();
-    osc_.processBlock(tmpL, numSamples);
 
+    // --- Base rate: oscillator --------------------------------------------------
+    osc_.setFrequency(hz);
+    osc_.processBlock(scratch_.data(), numSamples);
+
+    // --- Upsample osc to oversampled domain ------------------------------------
+    const int nOs = numSamples * osFactor_;
+    os_.processMonoUp(scratch_.data(), numSamples, osMono_.data());
+
+    // --- Graph blocks run in the oversampled domain (prepared at osFactor_*sr) --
     for (std::size_t i = 0; i < alg.slotCount; ++i) {
         const BlockTypeId t = alg.blockTypePerSlot[i];
-        layer_->block(t).process(*blockStates_[(int) t], tmpL, numSamples);
+        layer_->block(t).process(*blockStates_[(int) t], osMono_.data(), nOs);
     }
-    // Mono graph -> stereo spine input (dual mono; L/R diverge in later phases).
-    // Use THIS layer's spine model (fetched fresh, like layer_->block(t) above),
-    // so a voice playing layer 1 filters with layer 1's settings, not layer 0's.
-    std::copy(tmpL, tmpL + numSamples, tmpR);
-    // HP pre-filter is ON whenever its cutoff knob is off the 0 position (no separate enable).
-    spine_.processStereo(layer_->hpStage(), s.hpCutoffHz > 0.0f,
-                         layer_->spineModel(), s.spineModelFadeMs, hz, tmpL, tmpR, numSamples);
 
-    const float lvl = layer_->level();
+    // --- Mono -> stereo copy; spine runs in oversampled domain -----------------
+    // HP pre-filter is ON whenever its cutoff knob is off the 0 position.
+    std::copy(osMono_.data(), osMono_.data() + nOs, osL_.data());
+    std::copy(osMono_.data(), osMono_.data() + nOs, osR_.data());
+    spine_.processStereo(layer_->hpStage(), s.hpCutoffHz > 0.0f,
+                         layer_->spineModel(), s.spineModelFadeMs, hz,
+                         osL_.data(), osR_.data(), nOs);
+
+    // --- Downsample back to base rate ------------------------------------------
+    os_.processStereoDown(osL_.data(), osR_.data(), numSamples,
+                          baseL_.data(), baseR_.data());
+
+    // --- Envelope/output at base rate ------------------------------------------
+    const float lvl      = layer_->level();
     const float spineOut = juce::Decibels::decibelsToGain(s.spineOutputDb);
     for (int i = 0; i < numSamples; ++i) {
         const float env = amp_.nextSample() * velocity_ * lvl * spineOut;
-        outL[i] += tmpL[i] * env;
-        outR[i] += tmpR[i] * env;
+        outL[i] += baseL_[i] * env;
+        outR[i] += baseR_[i] * env;
     }
 }
