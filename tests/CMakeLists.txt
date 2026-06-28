@@ -41,6 +41,7 @@ add_executable(k2000_tests
     MoogPipelineTests.cpp
     MoogLadderTests.cpp
     MoogMaxFreqTests.cpp
+    OversamplingAntiAliasTests.cpp
     fixtures/SpineShaperHarnessTests.cpp
     fixtures/SpineHuggettHarnessTests.cpp
     fixtures/SpineNlSvfHarnessTests.cpp
