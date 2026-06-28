@@ -45,6 +45,9 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     masterGain_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 52, 22);
     addAndMakeVisible(masterGain_);
 
+    menuButton_.onClick = [this] { showOversamplingMenu(); };
+    addAndMakeVisible(menuButton_);
+
     // Source / DSP section
     addAndMakeVisible(sourceSection_);
     auto addToSource = [this](juce::Component& c) { sourceSection_.addAndMakeVisible(c); };
@@ -238,6 +241,42 @@ void K2000AudioProcessorEditor::timerCallback() {
     limitIndicator_.repaint();
 }
 
+void K2000AudioProcessorEditor::showOversamplingMenu() {
+    const int curRT  = processorRef.realtimeOS();
+    const int curOFF = processorRef.offlineOS();
+
+    juce::PopupMenu osFlat;
+    osFlat.addSectionHeader("Realtime oversampling");
+    osFlat.addItem(101, "Off", true, curRT == 1);
+    osFlat.addItem(102, "2x",  true, curRT == 2);
+    osFlat.addItem(103, "4x",  true, curRT == 4);
+    osFlat.addItem(104, "8x",  true, curRT == 8);
+    osFlat.addSectionHeader("Offline oversampling");
+    osFlat.addItem(201, "Same as Realtime", true, curOFF == 0);
+    osFlat.addItem(202, "2x", true, curOFF == 2);
+    osFlat.addItem(203, "4x", true, curOFF == 4);
+    osFlat.addItem(204, "8x", true, curOFF == 8);
+
+    juce::PopupMenu root;
+    root.addSubMenu("Oversampling: " + juce::String(curRT == 1 ? "Off" : juce::String(curRT) + "x"),
+                    osFlat);
+
+    root.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(menuButton_),
+        [this](int r) {
+            switch (r) {
+                case 101: processorRef.setRealtimeOS(1); break;
+                case 102: processorRef.setRealtimeOS(2); break;
+                case 103: processorRef.setRealtimeOS(4); break;
+                case 104: processorRef.setRealtimeOS(8); break;
+                case 201: processorRef.setOfflineOS(0);  break;
+                case 202: processorRef.setOfflineOS(2);  break;
+                case 203: processorRef.setOfflineOS(4);  break;
+                case 204: processorRef.setOfflineOS(8);  break;
+                default: break;
+            }
+        });
+}
+
 void K2000AudioProcessorEditor::updateModelVisibility() {
     const bool moog = (spineModel_.getSelectedItemIndex() == 1);
     // Moog-only controls
@@ -257,10 +296,11 @@ void K2000AudioProcessorEditor::updateModelVisibility() {
 void K2000AudioProcessorEditor::resized() {
     auto area = getLocalBounds().reduced(10);
 
-    // Top bar (h 40): title | spacer | edit-layer | master gain
+    // Top bar (h 40): title | spacer | edit-layer | master gain | menu button
     {
         auto bar = area.removeFromTop(40);
         title_.setBounds(bar.removeFromLeft(180));
+        menuButton_.setBounds(bar.removeFromRight(34).reduced(3, 6));
         masterGain_.setBounds(bar.removeFromRight(150).reduced(4, 8));
         masterGainLbl_.setBounds(bar.removeFromRight(40).reduced(0, 8));
         editLayerCombo_.setBounds(bar.removeFromRight(110).reduced(0, 8));
