@@ -3,6 +3,7 @@
 #include <cmath>
 #include <algorithm>
 #include "../src/PluginProcessor.h"
+#include "../src/dsp/VoiceOversampler.h"
 
 class PluginLifecycleTest : public juce::UnitTest {
 public:
@@ -98,6 +99,18 @@ public:
             q.setStateInformation(mb.getData(), (int) mb.getSize());
             expectEquals(q.realtimeOS(), 2);
             expectEquals(q.offlineOS(), 8);
+            // In a unit-test context isNonRealtime() is false, so activeOS() returns realtimeOS() = 2
+            expectEquals(q.activeOS(), 2);
+        }
+
+        beginTest("changing realtime OS updates reported latency");
+        {
+            K2000AudioProcessor p; p.prepareToPlay(48000.0, 256);
+            expectEquals(p.getLatencySamples(), 0);
+            p.setRealtimeOS(4);
+            expectEquals(p.getLatencySamples(), VoiceOversampler::latencyBaseSamples(4));
+            p.setRealtimeOS(1);
+            expectEquals(p.getLatencySamples(), 0);
         }
 
         beginTest("enabled limiter caps a hot processed block; disabled does not");
