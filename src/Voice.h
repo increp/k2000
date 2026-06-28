@@ -51,6 +51,7 @@ private:
     VoiceOversampler os_;
     int osFactor_ = 1;
     std::vector<float> osMono_, osL_, osR_;   // oversampled-domain scratch
+    std::vector<float> baseL_, baseR_;        // base-rate stereo scratch (post-downsample)
 
     static float midiToHz(int note);
 };
