@@ -31,4 +31,12 @@ docker run --rm \
     # cmaj runs as root in the container; hand the output back to the host user.
     chown '"$HOST_UID:$HOST_GID"' "'"$OUT"'"
   '
+# Raise the Cmajor max-frequency guard so the spine can be oversampled (the cap is
+# a codegen default, not a DSP limit; the constant only gates initialise()'s throw).
+if ! grep -q 'return 192000.0;' "$OUT"; then
+  echo "error: expected 'return 192000.0;' in $OUT (cmaj output changed?) — review before patching" >&2
+  exit 1
+fi
+sed -i 's/return 192000\.0;/return 1536000.0;/' "$OUT"
+echo "patched max-frequency cap -> 1536000.0 in $OUT"
 echo "generated: $OUT"
