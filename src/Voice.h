@@ -7,6 +7,7 @@
 #include "dsp/DSPBlock.h"
 #include "dsp/Algorithm.h"
 #include "dsp/spine/SpineFilterSlot.h"
+#include "dsp/VoiceOversampler.h"
 
 class Layer;  // forward
 
@@ -19,7 +20,7 @@ public:
     // per-block-type state from the Layer's palette.
     void setLayer(Layer* layer) { layer_ = layer; }
 
-    void prepare(double sampleRate, int maxBlockSize);
+    void prepare(double sampleRate, int maxBlockSize, int osFactor = 1);
     void reset();
 
     void noteOn(int midiNote, float velocity);
@@ -46,6 +47,10 @@ private:
     std::vector<float> scratch_;
     std::vector<float> scratchR_;
     SpineFilterSlot spine_;
+
+    VoiceOversampler os_;
+    int osFactor_ = 1;
+    std::vector<float> osMono_, osL_, osR_;   // oversampled-domain scratch
 
     static float midiToHz(int note);
 };

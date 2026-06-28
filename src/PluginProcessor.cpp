@@ -10,9 +10,9 @@ K2000AudioProcessor::K2000AudioProcessor()
       apvts_(*this, nullptr, "PARAMS", params::createLayout()) {}
 
 void K2000AudioProcessor::prepareToPlay(double sr, int samplesPerBlock) {
-    program_.prepare(sr, samplesPerBlock);
+    program_.prepare(sr, samplesPerBlock, 1);
     voiceManager_.setProgram(&program_);  // bind before voices size state
-    voiceManager_.prepare(sr, samplesPerBlock);
+    voiceManager_.prepare(sr, samplesPerBlock, 1);
     scratchL_.assign(samplesPerBlock, 0.0f);
     scratchR_.assign(samplesPerBlock, 0.0f);
     limiter_.prepare(sr);
