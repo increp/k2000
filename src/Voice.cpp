@@ -14,8 +14,9 @@ void Voice::prepare(double sr, int maxBlock, int osFactor) {
     sampleRate_ = sr;
     osFactor_   = (osFactor==2||osFactor==4||osFactor==8) ? osFactor : 1;
     const double inner = sr * (double) osFactor_;
-    os_.prepare(maxBlock);
-    os_.setFactor(osFactor_);
+    os_ = std::make_unique<VoiceOversampler>();
+    os_->prepare(maxBlock);
+    os_->setFactor(osFactor_);
     osMono_.assign((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
     osL_.assign  ((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
     osR_.assign  ((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
@@ -90,7 +91,7 @@ void Voice::render(float* outL, float* outR, int numSamples) {
 
     // --- Upsample osc to oversampled domain ------------------------------------
     const int nOs = numSamples * osFactor_;
-    os_.processMonoUp(scratch_.data(), numSamples, osMono_.data());
+    os_->processMonoUp(scratch_.data(), numSamples, osMono_.data());
 
     // --- Graph blocks run in the oversampled domain (prepared at osFactor_*sr) --
     for (std::size_t i = 0; i < alg.slotCount; ++i) {
@@ -107,7 +108,7 @@ void Voice::render(float* outL, float* outR, int numSamples) {
                          osL_.data(), osR_.data(), nOs);
 
     // --- Downsample back to base rate ------------------------------------------
-    os_.processStereoDown(osL_.data(), osR_.data(), numSamples,
+    os_->processStereoDown(osL_.data(), osR_.data(), numSamples,
                           baseL_.data(), baseR_.data());
 
     // --- Envelope/output at base rate ------------------------------------------
