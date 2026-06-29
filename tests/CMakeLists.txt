@@ -26,6 +26,8 @@ add_executable(k2000_tests
     ParamBinderTests.cpp
     HpPreFilterTests.cpp
     SafetyLimiterTests.cpp
+    Halfband2xTests.cpp
+    VoiceOversamplerTests.cpp
     CmajorSvfAdapterTests.cpp
     CmajorSvfEquivalenceTests.cpp
     CmajorFilterModelTests.cpp
@@ -38,6 +40,8 @@ add_executable(k2000_tests
     TestDspSelfTests.cpp
     MoogPipelineTests.cpp
     MoogLadderTests.cpp
+    MoogMaxFreqTests.cpp
+    OversamplingAntiAliasTests.cpp
     fixtures/SpineShaperHarnessTests.cpp
     fixtures/SpineHuggettHarnessTests.cpp
     fixtures/SpineNlSvfHarnessTests.cpp

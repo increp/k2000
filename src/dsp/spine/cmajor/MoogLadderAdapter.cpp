@@ -9,7 +9,10 @@ using Generated = MoogLadder;
 static_assert(sizeof(Generated)  <= 512, "MoogLadder generated state exceeds MoogLadderAdapter::kGenBytes — bump it");
 static_assert(alignof(Generated) <= 16,   "MoogLadder generated state over-aligned for the adapter buffer");
 
-namespace { Generated* gen(unsigned char* s) { return reinterpret_cast<Generated*>(s); } }
+namespace {
+    Generated*       gen(unsigned char* s)       { return reinterpret_cast<Generated*>(s); }
+    const Generated* gen(const unsigned char* s) { return reinterpret_cast<const Generated*>(s); }
+}
 
 MoogLadderAdapter::MoogLadderAdapter() noexcept { new (storage_) Generated(); }
 MoogLadderAdapter::~MoogLadderAdapter() { gen(storage_)->~Generated(); }
@@ -17,10 +20,11 @@ MoogLadderAdapter::~MoogLadderAdapter() { gen(storage_)->~Generated(); }
 void MoogLadderAdapter::prepare(double sr) noexcept {
     auto* d = gen(storage_);
     const double maxF = d->getMaxFrequency();
-    jassert(sr <= maxF);                 // spine is base-rate; >192 kHz is exotic and degrades, not crashes
+    jassert(sr <= maxF);                 // above the codegen cap (>1536 kHz) is exotic and degrades, not crashes
     d->initialise(0, sr <= maxF ? sr : maxF);
 }
 void MoogLadderAdapter::reset() noexcept { gen(storage_)->reset(); }
+double MoogLadderAdapter::getMaxFrequency() const noexcept { return gen(storage_)->getMaxFrequency(); }
 void MoogLadderAdapter::setCutoff(float hz) noexcept { gen(storage_)->addEvent_cutoffHz(hz); }
 
 void MoogLadderAdapter::setParams(float c, float r, float dr, int slope, int mode) noexcept {

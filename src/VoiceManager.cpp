@@ -9,9 +9,9 @@ void VoiceManager::setProgram(Program* program) {
         for (auto& v : voices_) v.setLayer(&program_->slot(0).layer);
 }
 
-void VoiceManager::prepare(double sr, int maxBlock) {
+void VoiceManager::prepare(double sr, int maxBlock, int osFactor) {
     if (program_)
-        for (auto& v : voices_) { v.setLayer(&program_->slot(0).layer); v.prepare(sr, maxBlock); }
+        for (auto& v : voices_) { v.setLayer(&program_->slot(0).layer); v.prepare(sr, maxBlock, osFactor); }
     voiceAge_.fill(0);
     voiceSlot_.fill(-1);
     ageCounter_ = 0;

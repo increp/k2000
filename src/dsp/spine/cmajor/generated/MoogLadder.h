@@ -611,7 +611,7 @@ struct MoogLadder
     //==============================================================================
     double getMaxFrequency() const
     {
-        return 192000.0;
+        return 1536000.0;
     }
 
     void initialise (int32_t sessionID, double frequency)

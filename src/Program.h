@@ -18,8 +18,8 @@ class Program {
 public:
     Program() = default;
 
-    void prepare(double sampleRate, int maxBlockSize) {
-        for (auto& s : slots_) s.layer.prepare(sampleRate, maxBlockSize);
+    void prepare(double sampleRate, int maxBlockSize, int osFactor = 1) {
+        for (auto& s : slots_) s.layer.prepare(sampleRate * osFactor, maxBlockSize * osFactor);
     }
 
     static constexpr std::size_t numLayers() { return params::kNumLayers; }

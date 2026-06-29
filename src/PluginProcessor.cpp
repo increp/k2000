@@ -10,13 +10,17 @@ K2000AudioProcessor::K2000AudioProcessor()
       apvts_(*this, nullptr, "PARAMS", params::createLayout()) {}
 
 void K2000AudioProcessor::prepareToPlay(double sr, int samplesPerBlock) {
-    program_.prepare(sr, samplesPerBlock);
+    lastSR_    = sr;
+    lastBlock_ = samplesPerBlock;
+    const int f = activeOS();
+    program_.prepare(sr, samplesPerBlock, f);
     voiceManager_.setProgram(&program_);  // bind before voices size state
-    voiceManager_.prepare(sr, samplesPerBlock);
+    voiceManager_.prepare(sr, samplesPerBlock, f);
     scratchL_.assign(samplesPerBlock, 0.0f);
     scratchR_.assign(samplesPerBlock, 0.0f);
     limiter_.prepare(sr);
     limiter_.reset();
+    setLatencySamples(VoiceOversampler::latencyBaseSamples(f));
 }
 
 void K2000AudioProcessor::releaseResources() {}
@@ -30,6 +34,12 @@ bool K2000AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) con
 void K2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                        juce::MidiBuffer& midi) {
     juce::ScopedNoDenormals noDenormals;
+
+    // Detect Live<->Offline transition and re-prepare at the active factor.
+    // In offline render the host is single-threaded between blocks, so this is safe.
+    const bool nrt = isNonRealtime();
+    if (nrt != lastNonRealtime_) { lastNonRealtime_ = nrt; reprepareForOS(); }
+
     const int n = buffer.getNumSamples();
     const int outCh = buffer.getNumChannels();
 
@@ -91,6 +101,8 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
     root->setAttribute("limiterEnabled", limiterEnabled_.load(std::memory_order_relaxed) ? 1 : 0);
+    root->setAttribute("realtimeOS", realtimeOS_.load(std::memory_order_relaxed));
+    root->setAttribute("offlineOS",  offlineOS_.load(std::memory_order_relaxed));
 
     if (auto state = apvts_.copyState(); state.isValid()) {
         if (auto paramsXml = state.createXml()) {
@@ -107,11 +119,27 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
     if (xml == nullptr) return;
     if (xml->getTagName() != "K2000Root") return;
     limiterEnabled_.store(xml->getBoolAttribute("limiterEnabled", true), std::memory_order_relaxed);  // absent (old project) -> ON
+    realtimeOS_.store((int) xml->getIntAttribute("realtimeOS", 1), std::memory_order_relaxed);
+    offlineOS_.store((int)  xml->getIntAttribute("offlineOS",  0), std::memory_order_relaxed);
 
     if (auto* params = xml->getChildByName("Params"))
         if (auto* paramsRoot = params->getFirstChildElement())
             apvts_.replaceState(juce::ValueTree::fromXml(*paramsRoot));
 }
+
+void K2000AudioProcessor::reprepareForOS() {
+    suspendProcessing(true);
+    const int f = activeOS();
+    if (lastSR_ > 0.0) {
+        program_.prepare(lastSR_, lastBlock_, f);
+        voiceManager_.prepare(lastSR_, lastBlock_, f);
+        setLatencySamples(VoiceOversampler::latencyBaseSamples(f));
+    }
+    suspendProcessing(false);
+}
+
+void K2000AudioProcessor::setRealtimeOS(int f) { realtimeOS_.store(f, std::memory_order_relaxed); reprepareForOS(); }
+void K2000AudioProcessor::setOfflineOS(int f)  { offlineOS_.store(f, std::memory_order_relaxed);  reprepareForOS(); }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
     return new K2000AudioProcessor();

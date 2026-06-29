@@ -15,6 +15,7 @@ public:
 
     void prepare(double sampleRate) noexcept;
     void reset() noexcept;
+    double getMaxFrequency() const noexcept;  // exposes codegen cap; used by tests to verify oversampling headroom
     void setCutoff(float hz) noexcept;
     void setParams(float cutoffHz, float resonance, float drive, int slope, int mode = 0) noexcept;
     // Task 6: sub-osc bass voice. setBass forwards amount/wave/octave; setFundamental

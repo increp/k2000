@@ -12,7 +12,7 @@ public:
     // Bind to the Program whose layers these voices play. Call before prepare().
     void setProgram(Program* program);
 
-    void prepare(double sampleRate, int maxBlockSize);
+    void prepare(double sampleRate, int maxBlockSize, int osFactor = 1);
 
     // RT-safe. Process MIDI at sample positions and mix voices into outL/outR (stereo).
     void renderBlock(float* outL, float* outR, int numSamples, const juce::MidiBuffer& midi);

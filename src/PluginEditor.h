@@ -20,15 +20,17 @@ private:
     SummitLookAndFeel    lnf_;
 
     // --- Top bar ---
-    juce::Label    title_;
-    juce::Label    editLayerLabel_;
-    juce::ComboBox editLayerCombo_;
-    int            editLayer_ = 0;
+    juce::Label      title_;
+    juce::Label      editLayerLabel_;
+    juce::ComboBox   editLayerCombo_;
+    int              editLayer_ = 0;
     // Master gain lives in the thin top utility bar, where a rotary LabeledKnob's
     // stacked value+caption collide; a horizontal slider with a side value reads
     // cleanly at 40 px tall.
-    juce::Label    masterGainLbl_;
-    juce::Slider   masterGain_{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
+    juce::Label      masterGainLbl_;
+    juce::Slider     masterGain_{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
+    // Oversampling hamburger button — plain TextButton, not APVTS-bound.
+    juce::TextButton menuButton_{ juce::String::fromUTF8("\xE2\x8B\xAE") };
 
     // --- Signal row ---
     Section sourceSection_{ "VAST Source / DSP", /*spine*/ false };
@@ -89,6 +91,7 @@ private:
     void buildStaticControls();      // combos' item lists, labels, child attach (once)
     void bindLayer(int layer);       // (re)bind every per-layer control via binder_
     void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
+    void showOversamplingMenu();
     void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)
