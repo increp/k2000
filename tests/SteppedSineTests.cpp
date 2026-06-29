@@ -17,6 +17,7 @@ struct SteppedSineTests : public juce::UnitTest {
             auto r = testdsp::SteppedSine::transfer(p, freqs, sr, 0.1f);
             expect(r.magDb.size() == freqs.size(), "one result per frequency");
             for (double m : r.magDb) expectWithinAbsoluteError(m, 0.0, 0.05);
+            for (double ph : r.phaseRad) expectWithinAbsoluteError(ph, 0.0, 0.01);
         }
 
         beginTest("matches Cytomic LP analytic at fc=1000 (CellAdapter, res=0)");

@@ -30,20 +30,20 @@ struct SteppedSine {
         for (double f : freqs) {
             a.reset();
             const int total = kWarmSamples + kMeasSamples;
-            double I = 0.0, Q = 0.0;            // in-phase / quadrature accumulators
+            double sinCorr = 0.0, cosCorr = 0.0;   // correlate output against sin(wt) and cos(wt) at f
             float buf[1];
             for (int i = 0; i < total; ++i) {
                 const double ph = twoPi * f * i / sr;
                 buf[0] = amp * (float) std::sin(ph);
                 a.process(buf, 1);
                 if (i >= kWarmSamples) {
-                    I += (double) buf[0] * std::sin(ph);
-                    Q += (double) buf[0] * std::cos(ph);
+                    sinCorr += (double) buf[0] * std::sin(ph);
+                    cosCorr += (double) buf[0] * std::cos(ph);
                 }
             }
-            // Lock-in: output sine component amplitude is 2/N * (I + jQ); input amplitude is amp.
+            // Lock-in: output sine component amplitude is 2/N * (sinCorr + j*cosCorr); input amplitude is amp.
             const double scale = 2.0 / (double) kMeasSamples;
-            const double re = I * scale, im = Q * scale;
+            const double re = sinCorr * scale, im = cosCorr * scale;
             const double magLin = std::sqrt(re * re + im * im) / (double) amp;
             out.magDb.push_back(magLin > 0.0 ? 20.0 * std::log10(magLin) : -300.0);
             out.phaseRad.push_back(std::atan2(im, re));
