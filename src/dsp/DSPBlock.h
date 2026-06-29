@@ -1,9 +1,6 @@
 #pragma once
-#include <juce_core/juce_core.h>
 #include <memory>
-#include <vector>
-#include "ParamSpec.h"
-#include "../params/ParamSnapshot.h"
+#include "ParamSnapshot.h"
 
 // Abstract base for swappable per-voice processing units (VAST blocks).
 // See docs/architecture/dsp-block-interface.md for the rationale behind
@@ -40,12 +37,6 @@ public:
 
     // RT-safe. Process numSamples in-place, mono, using the supplied voice state.
     virtual void process(VoiceState& state, float* buffer, int numSamples) = 0;
-
-    // Stable identifier for preset serialisation, e.g. "svf_filter".
-    virtual juce::String getTypeId() const = 0;
-
-    // Parameter descriptors. The processor namespaces these by slot.
-    virtual std::vector<ParamSpec> getParamSpecs() const = 0;
 
     // RT-safe. Called once per audio block before process(). Updates shared
     // configuration (cutoff, drive, etc.) — never per-voice state.

@@ -2,7 +2,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../src/Program.h"
 #include "../src/VoiceManager.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 #include <vector>
 #include <cmath>
 

@@ -1,11 +1,10 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "ParamSnapshot.h"
+#include "Config.h"
+#include "../dsp/ParamSnapshot.h"
 #include "../LayerRouting.h"
 
 namespace params {
-
-inline constexpr int kNumLayers = 2;
 
 // Per-layer parameter IDs. Built once into a static table (juce::Strings), so
 // snapshot()/routing() read via stable ids with no per-block string building.

@@ -1,71 +1,8 @@
 #include "PluginProcessor.h"
-#include "dsp/DSPBlock.h"
 
 #if !K2000_TESTING
   #include "PluginEditor.h"
 #endif
-
-namespace {
-// v1 flat param IDs → v2 layer.* IDs. One row per renamed param; master.gain
-// stays top-level and is intentionally absent. Add rows here as future renames
-// land. See ADR 0007.
-constexpr struct { const char* from; const char* to; } kV1ToV2Renames[] = {
-    {"osc.waveform",    "layer.osc.waveform"},
-    {"osc.coarse",      "layer.osc.coarse"},
-    {"osc.fine",        "layer.osc.fine"},
-    {"slot0.cutoff",    "layer.slot0.cutoff"},
-    {"slot0.resonance", "layer.slot0.resonance"},
-    {"slot1.drive",     "layer.slot1.drive"},
-    {"slot1.mix",       "layer.slot1.mix"},
-    {"amp.attack",      "layer.amp.attack"},
-    {"amp.decay",       "layer.amp.decay"},
-    {"amp.sustain",     "layer.amp.sustain"},
-    {"amp.release",     "layer.amp.release"},
-};
-
-// v2 layer.slot* IDs → v3 block-type IDs. master.gain, layer.osc.*, layer.amp.*,
-// layer.algorithm are unchanged across v2→v3.
-constexpr struct { const char* from; const char* to; } kV2ToV3Renames[] = {
-    {"layer.slot0.cutoff",    "layer.filter.cutoff"},
-    {"layer.slot0.resonance", "layer.filter.resonance"},
-    {"layer.slot1.drive",     "layer.shaper.drive"},
-    {"layer.slot1.mix",       "layer.shaper.mix"},
-};
-
-// Applies a rename table to the APVTS state element (tag "PARAMS") in place.
-template <typename Table>
-void applyRenames(juce::XmlElement& paramsRoot, const Table& table) {
-    for (auto* p : paramsRoot.getChildWithTagNameIterator("PARAM")) {
-        const juce::String pid = p->getStringAttribute("id");
-        for (const auto& r : table)
-            if (pid == r.from) { p->setAttribute("id", r.to); break; }
-    }
-}
-
-// Rewrites old flat PARAM ids to their layer.* names in place. `paramsRoot` is
-// the APVTS state element (tag "PARAMS") holding <PARAM id=.. value=../> kids.
-void migrateV1ToV2(juce::XmlElement& paramsRoot) { applyRenames(paramsRoot, kV1ToV2Renames); }
-
-// Rewrites v2 layer.slot* IDs to their block-type names in place.
-void migrateV2ToV3(juce::XmlElement& paramsRoot) { applyRenames(paramsRoot, kV2ToV3Renames); }
-
-// v3->v4: every Layer-scoped id moves from the single "layer." prefix to
-// "layer0." (the second layer is new and defaults disabled). This is a prefix
-// rewrite, not a 1:1 table. master.gain is untouched (no "layer." prefix).
-void migrateV3ToV4(juce::XmlElement& paramsRoot) {
-    for (auto* p : paramsRoot.getChildWithTagNameIterator("PARAM")) {
-        const juce::String pid = p->getStringAttribute("id");
-        if (pid.startsWith("layer."))
-            p->setAttribute("id", "layer0." + pid.substring(6));
-    }
-}
-
-// v4->v5: filtering moves from the graph SvfFilter into the always-on spine.
-// The reused filter.* ids keep their names (no rename); new spine.* params take
-// their layout defaults. This shim is a marker for the version bump — the
-// algorithm semantics changed in code, and presets keep their stored values.
-void migrateV4ToV5(juce::XmlElement&) { /* no id rewrites needed */ }
-}  // namespace
 
 K2000AudioProcessor::K2000AudioProcessor()
     : juce::AudioProcessor(BusesProperties()
@@ -144,33 +81,19 @@ juce::AudioProcessorEditor* K2000AudioProcessor::createEditor() {
 }
 
 // State format:
-//   <K2000Root>
-//     <Slots>
-//       <Slot index="0" type="svf_filter"/>
-//       <Slot index="1" type="waveshaper"/>
-//     </Slots>
+//   <K2000Root limiterEnabled="1">
 //     <Params> ...APVTS state... </Params>
 //   </K2000Root>
 //
-// v1 ignores the Slots block on load (slot types are fixed) but writes it
-// from day one so v1 presets stay loadable in v4 when the user can change
-// slot types.
+// Preset backward-compatibility is explicitly not a project constraint, so there
+// is no schema version or migration: old projects load on a best-effort basis
+// (matching param ids restore; the rest take their layout defaults).
 void K2000AudioProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto root = std::make_unique<juce::XmlElement>("K2000Root");
-    root->setAttribute("v", 5);  // schema version; gates the cumulative load shim
     root->setAttribute("limiterEnabled", limiterEnabled_.load(std::memory_order_relaxed) ? 1 : 0);
 
-    auto* slots = root->createNewChildElement("Slots");
-    auto* s0 = slots->createNewChildElement("Slot");
-    s0->setAttribute("index", 0);
-    s0->setAttribute("type", "svf_filter");
-    auto* s1 = slots->createNewChildElement("Slot");
-    s1->setAttribute("index", 1);
-    s1->setAttribute("type", "waveshaper");
-
     if (auto state = apvts_.copyState(); state.isValid()) {
-        auto paramsXml = state.createXml();
-        if (paramsXml) {
+        if (auto paramsXml = state.createXml()) {
             auto* wrapper = root->createNewChildElement("Params");
             wrapper->addChildElement(paramsXml.release());
         }
@@ -185,18 +108,9 @@ void K2000AudioProcessor::setStateInformation(const void* data, int size) {
     if (xml->getTagName() != "K2000Root") return;
     limiterEnabled_.store(xml->getBoolAttribute("limiterEnabled", true), std::memory_order_relaxed);  // absent (old project) -> ON
 
-    if (auto* params = xml->getChildByName("Params")) {
-        if (auto* paramsRoot = params->getFirstChildElement()) {
-            // Cumulative migration: apply each shim in order based on stored version.
-            const int v = xml->getIntAttribute("v", 1);
-            if (v < 2) migrateV1ToV2(*paramsRoot);
-            if (v < 3) migrateV2ToV3(*paramsRoot);
-            if (v < 4) migrateV3ToV4(*paramsRoot);
-            if (v < 5) migrateV4ToV5(*paramsRoot);
+    if (auto* params = xml->getChildByName("Params"))
+        if (auto* paramsRoot = params->getFirstChildElement())
             apvts_.replaceState(juce::ValueTree::fromXml(*paramsRoot));
-        }
-    }
-    // Slot type metadata: ignored in v1 (types are fixed); v4 will read it here.
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

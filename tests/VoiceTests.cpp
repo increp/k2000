@@ -1,7 +1,7 @@
 #include <juce_core/juce_core.h>
 #include "../src/Voice.h"
 #include "../src/Layer.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 #include <vector>
 #include <cmath>
 

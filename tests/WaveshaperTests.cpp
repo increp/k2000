@@ -1,6 +1,6 @@
 #include <juce_core/juce_core.h>
 #include "../src/dsp/blocks/Waveshaper.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 #include <vector>
 #include <cmath>
 

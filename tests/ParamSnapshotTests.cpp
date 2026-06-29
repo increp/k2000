@@ -2,7 +2,7 @@
 #include <juce_core/juce_core.h>
 #include "../src/PluginProcessor.h"
 #include "../src/params/Parameters.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 
 class ParamSnapshotTest : public juce::UnitTest {
 public:

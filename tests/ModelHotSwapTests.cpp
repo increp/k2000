@@ -3,7 +3,7 @@
 #include "../src/dsp/spine/SpineState.h"
 #include "../src/Voice.h"
 #include "../src/Layer.h"
-#include "../src/params/ParamSnapshot.h"
+#include "../src/dsp/ParamSnapshot.h"
 #include "fixtures/CountingFilterModel.h"
 #include <vector>
 #include <cmath>
