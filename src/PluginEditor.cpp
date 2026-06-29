@@ -357,10 +357,13 @@ void K2000AudioProcessorEditor::resized() {
         layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
 
         // Filter children: Layout B — HP pre-band + divider + two main rows.
-        // Row 1 (HP band): HP PRE label+enable, HP cutoff, HP reso, HP slope, HP drive.
+        // Row 1 (HP band): HP label, HP cutoff, HP reso, HP slope.
         // [4 px divider gap]
-        // Row 2 (main top): filter type, cutoff, reso.
-        // Row 3 (main bot): spine model, slope, separation, post-drive.
+        // Row 2 (main top, always visible — SHARED params): filter model, cutoff, reso, slope.
+        // Row 3 (main bot, model-specific via updateModelVisibility): Huggett routing/
+        //   separation/post-drive OR Moog mode/wave/octave/bass. Slope is SHARED (applies
+        //   to both models), so it lives in the top row — keeping it in this row would let
+        //   the Moog group overlap and bury it.
         {
             auto fc = filterSection_.contentBounds();
             const int rowH   = fc.getHeight() / 3;
@@ -386,11 +389,11 @@ void K2000AudioProcessorEditor::resized() {
             auto mainTop = fc.removeFromTop(mainH);
             layoutCells(mainTop, { { &spineModelLbl_, &spineModel_ },
                                     { nullptr,         &filterCutoff_ },
-                                    { nullptr,         &filterRes_ } });
+                                    { nullptr,         &filterRes_ },
+                                    { &spineSlopeLbl_, &spineSlope_ } });
             // Both model-specific rows share the same cell rectangle;
             // updateModelVisibility() ensures only the active group is shown.
             layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
-                                { &spineSlopeLbl_,  &spineSlope_ },
                                 { nullptr,          &spineSeparation_ },
                                 { nullptr,          &spinePostDrive_ } });
             layoutCells(fc,  { { &moogModeLbl_,    &moogMode_ },
