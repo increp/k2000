@@ -22,7 +22,7 @@ public:
         for (int k = 1; k < N / 2; ++k) {
             double re = 0, im = 0;
             for (int n = 0; n < N; ++n) {
-                const double a = 2.0 * M_PI * k * n / N;
+                const double a = 2.0 * juce::MathConstants<double>::pi * k * n / N;
                 re += x[(size_t) n] * std::cos(a);
                 im -= x[(size_t) n] * std::sin(a);
             }
