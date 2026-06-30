@@ -28,7 +28,7 @@ cmake --build build --target k2000_tests -j4
 ./build/tests/k2000_tests
 ```
 
-Expected overhead: approximately 45–60 seconds on top of the rest of the test suite (the gate runs two ESS sweeps per model).
+Expected overhead: approximately 5 seconds on top of the rest of the test suite (the gate runs a tiny os1 grid — about three ESS sweeps total across the two models, at a coarse 40-point probe grid). Measured: the full suite is ~76 sec vs ~71 sec without the gate.
 
 ### Refreshing the self-golden baseline
 

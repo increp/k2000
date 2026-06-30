@@ -11,7 +11,7 @@
 //
 // Gate grid: LP24 only, fc=1000 Hz, res={0.0,0.9}, drive=0.0, osFactor=1
 // (Live), hostSR=96000. 40 log-spaced probe freqs 50-20 kHz. ~3 ESS
-// operating points total, adds ~45-60 sec to k2000_tests.
+// operating points total, adds ~5 sec to k2000_tests (measured: 76 vs 71 sec).
 //
 // What the gate asserts per model:
 //  1. Spec: LP24 fc1000 slope_db_oct <= -3.0 (rolling off above the corner).
