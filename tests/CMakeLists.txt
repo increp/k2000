@@ -74,7 +74,9 @@ add_executable(k2000_tests
     ../src/dsp/spine/cmajor/NlSvfLeanAdapter.cpp
     ../src/dsp/spine/cmajor/NlSvfDriveLeanAdapter.cpp
     ../src/dsp/spine/cmajor/MoogLadderAdapter.cpp
-    ../src/dsp/spine/MoogLadder.cpp)
+    ../src/dsp/spine/MoogLadder.cpp
+    FilterUnderTestTests.cpp
+    characterization/FilterUnderTest.cpp)
 
 target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
