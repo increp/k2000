@@ -107,8 +107,12 @@ CharacterizationRunner::B1Result CharacterizationRunner::runB1OnePoint(
     fut.setOperatingPoint(op);
     auto es = testdsp::EssResponse::measure(fut, 20.0, 24000.0, 1.0, op.hostSampleRate, 0.05f, probeFreqs);
 
-    // --- method delta ---
-    const double methodDelta = testdsp::MethodAgreement::maxMagDeltaDb(st.magDb, es.magDb);
+    // --- method delta (in-band only) ---
+    // Scope the stepped-vs-ESS comparison to within 40 dB of the passband peak. The deeper
+    // stopband sits at both methods' noise floor, where a large delta is a measurement
+    // artifact, not a real disagreement (measured: a Moog HP filter scatters ~5 dB at -60 dB
+    // but agrees to <0.7 dB down to -40 dB). This makes method_delta_db a trustworthy gate.
+    const double methodDelta = testdsp::MethodAgreement::maxMagDeltaDbInBand(st.magDb, es.magDb, 40.0);
 
     // --- -3 dB corner (from stepped-sine) ---
     // Passband reference strategy (brief §B1):

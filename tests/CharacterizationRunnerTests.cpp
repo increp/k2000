@@ -1,6 +1,10 @@
 #include <juce_core/juce_core.h>
 #include "characterization/CharacterizationRunner.h"
 #include "characterization/FilterUnderTest.h"
+#include "testdsp/SteppedSine.h"
+#include "testdsp/EssResponse.h"
+#include "testdsp/MethodAgreement.h"
+#include <algorithm>
 
 struct CharacterizationRunnerTests : public juce::UnitTest {
     CharacterizationRunnerTests() : juce::UnitTest("CharacterizationRunner") {}
@@ -103,6 +107,34 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
                    "alias_db@os2 is plausible or sentinel -1: " + juce::String(aliasOs2));
 
             outDir.deleteRecursively();
+        }
+
+        beginTest("Moog HP fc4000: methods agree in-band (deep stopband is noise-limited)");
+        {
+            // Regression for a method-agreement scoping issue. A Moog HP filter's deep stopband
+            // (toward DC) reads ~-60 dB and below, where stepped-sine and ESS both approach
+            // their noise floor and scatter ~5 dB -- so the UNSCOPED max delta is ~90 dB yet
+            // meaningless. The IN-BAND metric (within 40 dB of the passband peak: passband +
+            // corner + initial transition) must show real agreement (< 1 dB). The passband
+            // itself agrees to <0.1 dB; this is what the method-agreement gate validates.
+            const double sr = 96000.0;
+            auto fut = chz::makeMoogFut();
+            chz::OperatingPoint op;
+            op.mode = chz::Mode::HP; op.cutoffHz = 4000.0;
+            op.resonance = 0.0; op.drive = 0.0;
+            op.osFactor = 1; op.osMode = chz::OsMode::Live; op.hostSampleRate = sr;
+            auto freqs = chz::CharacterizationRunner::logFreqs(20.0, 24000.0, 200);
+
+            fut->setOperatingPoint(op);
+            auto st = testdsp::SteppedSine::transfer(*fut, freqs, sr, 0.05f);
+            fut->setOperatingPoint(op);
+            auto es = testdsp::EssResponse::measure(*fut, 20.0, 24000.0, 1.0, sr, 0.05f, freqs);
+
+            const double inBand  = testdsp::MethodAgreement::maxMagDeltaDbInBand(st.magDb, es.magDb);  // default 40 dB
+            const double overall = testdsp::MethodAgreement::maxMagDeltaDb(st.magDb, es.magDb);
+            logMessage("HP fc4000 method delta: in-band(40 dB)=" + juce::String(inBand, 3)
+                       + " dB, overall incl. deep stopband=" + juce::String(overall, 1) + " dB");
+            expect(inBand < 1.0, "HP in-band stepped-vs-ESS agreement: " + juce::String(inBand, 3) + " dB");
         }
     }
 };
