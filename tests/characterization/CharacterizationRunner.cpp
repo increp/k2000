@@ -289,24 +289,36 @@ CharacterizationRunner::B2Result CharacterizationRunner::runB2OnePoint(
     // Capture kCaptureLen samples of the ring-down.
     fut.process(capture.data(), kCaptureLen);
 
-    // FFT-peak pitch
-    const double measuredHz = testdsp::Response::peakFreqHz(capture, op.hostSampleRate);
-
-    if (!std::isfinite(measuredHz) || measuredHz <= 1.0) {
-        juce::Logger::writeToLog("[CharacterizationRunner B2] WARNING: self-osc not detected for "
+    // FIX 3: energy guard — if the capture has no real energy (ring decayed or never
+    // oscillated), store sentinel -1.0 for both fields rather than letting peakFreqHz
+    // pick a noise bin and produce a bogus large cents value treated as valid.
+    if (testdsp::Spectrum::maxAbs(capture) < 1.0e-4f) {
+        juce::Logger::writeToLog("[CharacterizationRunner B2] WARNING: capture has no energy "
+            "(ring decayed / never oscillated) for "
             + modelName + "/" + modeStr + " fc=" + juce::String(op.cutoffHz)
             + " res=" + juce::String(op.resonance, 3));
         result.selfoscHz       = -1.0;
         result.selfoscCentsErr = -1.0;
     } else {
-        result.selfoscHz = measuredHz;
-        result.selfoscCentsErr = 1200.0 * std::log2(measuredHz / op.cutoffHz);
+        // FFT-peak pitch
+        const double measuredHz = testdsp::Response::peakFreqHz(capture, op.hostSampleRate);
 
-        if (op.cutoffHz > 4000.0) {
-            juce::Logger::writeToLog("[CharacterizationRunner B2] INFO: self-osc above 4 kHz "
-                "(report-only): fc=" + juce::String(op.cutoffHz)
-                + " measured=" + juce::String(measuredHz, 1) + " Hz"
-                + " err=" + juce::String(result.selfoscCentsErr, 1) + " cents");
+        if (!std::isfinite(measuredHz) || measuredHz <= 1.0) {
+            juce::Logger::writeToLog("[CharacterizationRunner B2] WARNING: self-osc not detected for "
+                + modelName + "/" + modeStr + " fc=" + juce::String(op.cutoffHz)
+                + " res=" + juce::String(op.resonance, 3));
+            result.selfoscHz       = -1.0;
+            result.selfoscCentsErr = -1.0;
+        } else {
+            result.selfoscHz = measuredHz;
+            result.selfoscCentsErr = 1200.0 * std::log2(measuredHz / op.cutoffHz);
+
+            if (op.cutoffHz > 4000.0) {
+                juce::Logger::writeToLog("[CharacterizationRunner B2] INFO: self-osc above 4 kHz "
+                    "(report-only): fc=" + juce::String(op.cutoffHz)
+                    + " measured=" + juce::String(measuredHz, 1) + " Hz"
+                    + " err=" + juce::String(result.selfoscCentsErr, 1) + " cents");
+            }
         }
     }
 
@@ -326,16 +338,22 @@ CharacterizationRunner::B2Result CharacterizationRunner::runB2OnePoint(
 }
 
 // ---------------------------------------------------------------------------
-// runB3OnePoint — B3: distortion + aliasing at one operating point
-//   THD: Harmonics::thdDb at probeHz with operating point's drive.
-//   Aliasing: drive a bin-aligned tone through the FUT (osFactor is in op),
-//   FFT the output, Metrics::inharmonicDb → alias_db.
-//   Because FUT applies oversampling internally, the output is at base-rate;
-//   higher osFactor pushes aliasing down and is captured PER osFactor in the grid.
+// runB3OnePoint — B3: distortion + aliasing at one operating point.
+//   Called once per (mode, cutoff, osFactor) at the BASE operating point
+//   (base resonance + base drive, osMode=Live, base hostSR). FIX 4.
 //
-//   Drive for aliasing: use drive=1.0 if op.drive==0 so harmonics are actually
-//   generated (aliasing only appears with nonlinear content; at drive=0 a linear
-//   filter won't alias). The THD measurement uses op.drive as-is.
+//   THD measurement: Harmonics::thdDb at (cutoffHz, resonance, drive) from op.
+//   The THD probe tone (probeHz) uses the grid operating point as-is.
+//
+//   Aliasing metric: inharmonic-energy per the design doc B3 (FIX 2).
+//   Uses Spectrum::magnitude + Metrics::inharmonicDb on output from a FIXED
+//   ISOLATION PROBE with a raised cutoff (~0.4*hostSR), drive=1.0, res=0.9,
+//   tone at ~0.35*hostSR so H2 folds above base-rate Nyquist at os1 but NOT
+//   at os2. This probe is INDEPENDENT of op.cutoffHz/drive/resonance — it
+//   fingerprints the OS tier at a fixed condition so alias_db@os<N> is
+//   comparable across OS factors.
+//   Both probe conditions are written to separate distortion.csv columns (FIX 1).
+//
 //   Appends one row to csvRows.
 // ---------------------------------------------------------------------------
 CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
@@ -357,32 +375,28 @@ CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
         result.thdDb = -1.0;
     }
 
-    // --- Aliasing probe: use drive=1.0 and high resonance to ensure nonlinear ---
-    // content is generated. Even if op.drive==0 (linear), we force drive=1 and
-    // resonance=0.9 here so the aliasing probe produces harmonics that fold back
-    // above Nyquist at os1. THD above used op.drive/resonance (faithful to the
-    // operating point); this is a SEPARATE aliasing-only probe.
-    //
-    // Probe tone strategy: pick a frequency such that low-order harmonics fold at
-    // os1 (base-rate Nyquist = hostSR/2) but NOT at os2 (Nyquist = hostSR).
-    // We use probeHz ≈ hostSR * 0.35 so the 2nd harmonic (0.70 * hostSR) folds at
-    // os1 (> Nyquist = 0.5*hostSR) but not at os2 (Nyquist = hostSR). Clamp to
-    // [hostSR*0.30, hostSR*0.42] to stay well into the aliasing zone.
+    // --- Aliasing isolation probe ---
+    // Independent of the grid operating point. Fixed parameters chosen to maximise
+    // foldback contrast between os1 and os2. Cutoff at 0.4*hostSR lets the probe
+    // tone pass the LP filter; res=0.9 and drive=1.0 engage the nonlinear tanh path
+    // so harmonics are generated. Tone at hostSR*0.35 → H2 = hostSR*0.70 which lies
+    // above base-rate Nyquist (0.5*hostSR) at os1 (folds) but below internal Nyquist
+    // (hostSR) at os2 (does not fold). These alias_* parameters are written to the
+    // CSV explicitly so each column unambiguously labels its measurement source.
+    const double aliasCutoffHz  = op.hostSampleRate * 0.4;
+    const double aliasResonance = 0.9;
+    const double aliasDrive     = 1.0;
+
     OperatingPoint aliasOp = op;
-    aliasOp.drive     = 1.0;
-    aliasOp.resonance = 0.9;      // nonlinear feedback tanh boosts harmonic content
-    // Set cutoff well above probe tone so filter doesn't suppress the probe.
-    // Use 80% of Nyquist (= 0.4 * hostSR) as cutoff.
-    aliasOp.cutoffHz  = op.hostSampleRate * 0.4;
+    aliasOp.drive     = aliasDrive;
+    aliasOp.resonance = aliasResonance;
+    aliasOp.cutoffHz  = aliasCutoffHz;
     fut.setOperatingPoint(aliasOp);
     fut.reset();
 
     // Use a power-of-two buffer so Spectrum::magnitude works correctly.
     const int kN = 1 << 14;  // 16384 samples
-    // Probe at hostSR * 0.35: H2 = hostSR * 0.70 > Nyquist at os1, folds back.
-    // At os2, H2 = hostSR * 0.70 < Nyquist (hostSR), does NOT fold.
-    const double nyquistFrac  = 0.35;  // fraction of hostSR
-    const double aliasToneHz  = op.hostSampleRate * nyquistFrac;
+    const double aliasToneHz = op.hostSampleRate * 0.35;
     const int bin = std::max(2, (int) std::lround(aliasToneHz * kN / op.hostSampleRate));
 
     // Warm up
@@ -404,8 +418,11 @@ CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
         result.aliasDb = -1.0;
     }
 
-    // Append CSV row
-    // Header: model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,probeHz,thd_db,alias_db
+    // FIX 1: Honest CSV schema. The THD columns carry the grid operating point;
+    // the alias_* columns carry the isolation probe's ACTUAL parameters.
+    // Header: model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,
+    //         thd_probeHz,thd_db,
+    //         alias_cutoffHz,alias_resonance,alias_drive,alias_toneHz,alias_db
     const double tdb = std::isfinite(result.thdDb)   ? result.thdDb   : -1.0;
     const double adb = std::isfinite(result.aliasDb) ? result.aliasDb : -1.0;
     csvRows += modelName + "," + modeStr + ","
@@ -414,16 +431,21 @@ CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
             + juce::String(op.cutoffHz, 2) + ","
             + juce::String(op.resonance, 4) + ","
             + juce::String(op.drive, 4) + ","
-            + juce::String(aliasToneHz, 4) + ","
+            + juce::String(probeHz, 4) + ","
             + juce::String(tdb, 6) + ","
+            + juce::String(aliasCutoffHz, 2) + ","
+            + juce::String(aliasResonance, 4) + ","
+            + juce::String(aliasDrive, 4) + ","
+            + juce::String(aliasToneHz, 4) + ","
             + juce::String(adb, 6) + "\n";
 
     return result;
 }
 
 // ---------------------------------------------------------------------------
-// run — main entry point for 8a (B1 + B4)
-// B2/B3 seam: add runB2OnePoint / runB3OnePoint helpers and call them here.
+// run — main entry point: B1 (dual-method magnitude + B4 phase/gd) + B2 (self-osc)
+//       + B3 (distortion/aliasing). Writes response.csv, resonance.csv,
+//       distortion.csv to outDir.
 // ---------------------------------------------------------------------------
 Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
                                      const juce::File& outDir) {
@@ -437,8 +459,13 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
     juce::String b2CsvRows;
     b2CsvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,selfoscHz,selfosc_cents_err\n";
 
+    // FIX 1: Honest distortion.csv schema. THD columns carry the grid operating point;
+    // alias_* columns carry the isolation probe parameters (fixed raised cutoff, drive=1.0,
+    // res=0.9, tone at ~0.35*hostSR). Column names unambiguously label their measurement source.
     juce::String b3CsvRows;
-    b3CsvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,probeHz,thd_db,alias_db\n";
+    b3CsvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,"
+                 "thd_probeHz,thd_db,"
+                 "alias_cutoffHz,alias_resonance,alias_drive,alias_toneHz,alias_db\n";
 
     Summary summary;
 
@@ -540,31 +567,35 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
                                     summary[keyBase + "/slope_db_oct"]   = s;
                                     summary[keyBase + "/method_delta_db"]= d;
                                 }
-
-                                // --- B3: one measurement per full operating point ---
-                                // THD uses op.drive; aliasing forces drive=1.0 internally.
-                                // alias_db is recorded per osFactor (Task 11 depends on this).
-                                auto b3r = runB3OnePoint(fut, op, b3MidHz, b3CsvRows);
-
-                                // Store alias_db per osFactor in the summary
-                                // (at base resonance + base drive + Live + baseHost).
-                                const bool isB3Base = (osMode == OsMode::Live)
-                                                   && (std::abs(resonance - baseRes) < 1.0e-9)
-                                                   && (std::abs(drive - baseDrive) < 1.0e-9)
-                                                   && (std::abs(hostRate - baseHost) < 0.5);
-                                if (isB3Base) {
-                                    const double adb = std::isfinite(b3r.aliasDb) ? b3r.aliasDb : -1.0;
-                                    summary[keyBase + "/alias_db@os" + juce::String(osFactor)] = adb;
-
-                                    // THD: only at the osFactor=1 base point (single headline).
-                                    if (osFactor == 1) {
-                                        const double tdb = std::isfinite(b3r.thdDb) ? b3r.thdDb : -1.0;
-                                        summary[keyBase + "/thd_db"] = tdb;
-                                    }
-                                }
                             }
                         }
                     }
+                }
+            }
+
+            // --- FIX 4: B3 once per (mode, cutoff, osFactor) at base conditions ---
+            // Base: baseResonance, baseDrive, osMode=Live, baseHost. This avoids
+            // redundant work from running B3 for every res/drive/osMode/host combo
+            // and eliminates confusing duplicate distortion.csv rows.
+            // alias_db@os<N> summary keys are written for every osFactor.
+            // thd_db is written at osFactor=1 only (single headline per cutoff).
+            for (int osFactor : g.osFactors) {
+                OperatingPoint opB3;
+                opB3.mode           = mode;
+                opB3.cutoffHz       = cutoff;
+                opB3.resonance      = baseRes;
+                opB3.drive          = baseDrive;
+                opB3.osFactor       = osFactor;
+                opB3.osMode         = OsMode::Live;
+                opB3.hostSampleRate = baseHost;
+                auto b3r = runB3OnePoint(fut, opB3, b3MidHz, b3CsvRows);
+
+                const double adb = std::isfinite(b3r.aliasDb) ? b3r.aliasDb : -1.0;
+                summary[keyBase + "/alias_db@os" + juce::String(osFactor)] = adb;
+
+                if (osFactor == 1) {
+                    const double tdb = std::isfinite(b3r.thdDb) ? b3r.thdDb : -1.0;
+                    summary[keyBase + "/thd_db"] = tdb;
                 }
             }
         }

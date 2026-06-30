@@ -74,17 +74,20 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
             expect(summary.count("moog/LP24/fc1000/selfosc_cents_err") > 0,
                    "B2 summary key selfosc_cents_err present");
             const double centsErr = summary.at("moog/LP24/fc1000/selfosc_cents_err");
-            // Sentinel -1.0 (self-osc not detected) or a finite measurement are both valid.
-            // Use tolerance compare instead of == to avoid -Wfloat-equal.
-            expect(std::isfinite(centsErr) || (centsErr < -0.5 && centsErr > -2.0),
-                   "selfosc_cents_err is finite or sentinel -1: " + juce::String(centsErr));
+            // FIX 5: Sentinel -1.0 (self-osc not detected) or a plausible finite value.
+            // isfinite(-1.0) is true, so the old (isfinite || sentinel-range) was dead code —
+            // a bogus value like -5756 would pass. Now: accept either a plausible measurement
+            // (finite AND > -900 cents, i.e. not absurdly flat) OR exactly the sentinel -1.0.
+            expect((std::isfinite(centsErr) && centsErr > -900.0) || std::abs(centsErr - (-1.0)) < 0.01,
+                   "selfosc_cents_err is plausible or sentinel -1: " + juce::String(centsErr));
 
             // B3 THD key must be present.
             expect(summary.count("moog/LP24/fc1000/thd_db") > 0,
                    "B3 summary key thd_db present");
             const double thdDb = summary.at("moog/LP24/fc1000/thd_db");
-            expect(std::isfinite(thdDb) || (thdDb < -0.5 && thdDb > -2.0),
-                   "thd_db is finite or sentinel -1: " + juce::String(thdDb));
+            // FIX 5: same pattern — plausible finite (> -900 dB) OR sentinel -1.0.
+            expect((std::isfinite(thdDb) && thdDb > -900.0) || std::abs(thdDb - (-1.0)) < 0.01,
+                   "thd_db is plausible or sentinel -1: " + juce::String(thdDb));
 
             // B3 aliasing keys for both OS factors.
             expect(summary.count("moog/LP24/fc1000/alias_db@os1") > 0,
@@ -93,10 +96,11 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
                    "B3 summary key alias_db@os2 present");
             const double aliasOs1 = summary.at("moog/LP24/fc1000/alias_db@os1");
             const double aliasOs2 = summary.at("moog/LP24/fc1000/alias_db@os2");
-            expect(std::isfinite(aliasOs1) || (aliasOs1 < -0.5 && aliasOs1 > -2.0),
-                   "alias_db@os1 is finite or sentinel -1: " + juce::String(aliasOs1));
-            expect(std::isfinite(aliasOs2) || (aliasOs2 < -0.5 && aliasOs2 > -2.0),
-                   "alias_db@os2 is finite or sentinel -1: " + juce::String(aliasOs2));
+            // FIX 5: plausible finite OR sentinel -1.0 for both aliasing keys.
+            expect((std::isfinite(aliasOs1) && aliasOs1 > -900.0) || std::abs(aliasOs1 - (-1.0)) < 0.01,
+                   "alias_db@os1 is plausible or sentinel -1: " + juce::String(aliasOs1));
+            expect((std::isfinite(aliasOs2) && aliasOs2 > -900.0) || std::abs(aliasOs2 - (-1.0)) < 0.01,
+                   "alias_db@os2 is plausible or sentinel -1: " + juce::String(aliasOs2));
 
             outDir.deleteRecursively();
         }
