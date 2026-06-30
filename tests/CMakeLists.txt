@@ -76,7 +76,9 @@ add_executable(k2000_tests
     ../src/dsp/spine/cmajor/MoogLadderAdapter.cpp
     ../src/dsp/spine/MoogLadder.cpp
     FilterUnderTestTests.cpp
-    characterization/FilterUnderTest.cpp)
+    CharacterizationRunnerTests.cpp
+    characterization/FilterUnderTest.cpp
+    characterization/CharacterizationRunner.cpp)
 
 target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
