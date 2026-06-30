@@ -45,9 +45,10 @@ struct TransferFunction {
         for (size_t i = 0; i < freqs.size(); ++i) {
             const size_t lo = (i == 0) ? 0 : i - 1;
             const size_t hi = (i + 1 < freqs.size()) ? i + 1 : i;
-            const double dW = twoPi * (freqs[hi] - freqs[lo]) / sr * sr; // = twoPi*(fhi-flo)
+            if (hi == lo) continue;                                // single-point grid: leave at 0
+            const double dW   = twoPi * (freqs[hi] - freqs[lo]);   // delta-omega (rad/s)
             const double dPhi = r.phaseRad[hi] - r.phaseRad[lo];
-            r.groupDelaySec[i] = (dW != 0.0) ? -dPhi / dW : 0.0;
+            r.groupDelaySec[i] = -dPhi / dW;
         }
         return r;
     }
