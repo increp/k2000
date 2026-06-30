@@ -109,6 +109,41 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
             outDir.deleteRecursively();
         }
 
+        beginTest("Huggett runs the same battery (model-agnostic socket) incl. Notch");
+        {
+            auto fut = chz::makeHuggettFut();
+            chz::Grid g;
+            g.modes = { chz::Mode::LP24, chz::Mode::Notch };
+            g.cutoffs = { 1000.0 }; g.resonances = { 0.0 }; g.drives = { 0.0 };
+            g.osFactors = { 1 }; g.osModes = { chz::OsMode::Live }; g.hostRates = { 96000.0 };
+            g.probeFreqs = chz::CharacterizationRunner::logFreqs(50.0, 20000.0, 40);
+
+            auto outDir = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                              .getChildFile("chz_huggett_test");
+            outDir.deleteRecursively(); outDir.createDirectory();
+            auto summary = chz::CharacterizationRunner::run(*fut, g, outDir);
+
+            expect(summary.count("huggett/LP24/fc1000/corner_hz") == 1,
+                   "Huggett LP24 corner present");
+            expect(summary.count("huggett/Notch/fc1000/corner_hz") == 1,
+                   "Huggett Notch ran");
+            expect(outDir.getChildFile("response.csv").existsAsFile(), "response.csv written");
+
+            // Log observed values for the report (model-agnosticism focus; no tight bounds here).
+            if (summary.count("huggett/LP24/fc1000/corner_hz"))
+                logMessage("Huggett LP24 fc1000 corner_hz="
+                           + juce::String(summary.at("huggett/LP24/fc1000/corner_hz"), 1)
+                           + " slope_db_oct="
+                           + juce::String(summary.at("huggett/LP24/fc1000/slope_db_oct"), 2)
+                           + " method_delta_db="
+                           + juce::String(summary.at("huggett/LP24/fc1000/method_delta_db"), 3));
+            if (summary.count("huggett/Notch/fc1000/corner_hz"))
+                logMessage("Huggett Notch fc1000 corner_hz="
+                           + juce::String(summary.at("huggett/Notch/fc1000/corner_hz"), 1));
+
+            outDir.deleteRecursively();
+        }
+
         beginTest("Moog HP fc4000: methods agree in-band (deep stopband is noise-limited)");
         {
             // Regression for a method-agreement scoping issue. A Moog HP filter's deep stopband
