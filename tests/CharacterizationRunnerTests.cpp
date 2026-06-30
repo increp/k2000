@@ -8,7 +8,7 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
         beginTest("coarseGrid is bounded: 96k only, OS {1,2,4,8}, live only");
         {
             auto g = chz::coarseGrid();
-            expect(g.hostRates.size() == 1 && g.hostRates[0] == 96000.0, "single host rate 96k");
+            expect(g.hostRates.size() == 1 && (int) g.hostRates[0] == 96000, "single host rate 96k");
             expect(g.osFactors == (std::vector<int>{1,2,4,8}), "all four OS factors");
             expect(g.osModes.size() == 1 && g.osModes[0] == chz::OsMode::Live, "live only");
         }

@@ -74,7 +74,7 @@ double CharacterizationRunner::interpMag(const std::vector<double>& freqs,
     const double logLo = std::log(freqs[lo]);
     const double logHi = std::log(freqs[hi]);
     const double logT  = std::log(targetHz);
-    if (logHi == logLo) return magDb[lo];
+    if (std::abs(logHi - logLo) < 1.0e-12) return magDb[lo];
     const double t = (logT - logLo) / (logHi - logLo);
     return magDb[lo] + t * (magDb[hi] - magDb[lo]);
 }
@@ -169,7 +169,7 @@ CharacterizationRunner::B1Result CharacterizationRunner::runB1OnePoint(
                     if (st.magDb[i] >= threshold) {
                         const double f0 = st.freqHz[i - 1], f1 = st.freqHz[i];
                         const double m0 = st.magDb[i - 1], m1 = st.magDb[i];
-                        if (m1 != m0) {
+                        if (std::abs(m1 - m0) > 1.0e-12) {
                             const double t = (threshold - m0) / (m1 - m0);
                             cornerHz = f0 * std::pow(f1 / f0, t);
                         } else {
@@ -269,7 +269,8 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
     const double baseRes = g.resonances.empty() ? 0.0 :
                            *std::min_element(g.resonances.begin(), g.resonances.end());
     const double baseHost = [&]() {
-        auto it = std::find(g.hostRates.begin(), g.hostRates.end(), 96000.0);
+        auto it = std::find_if(g.hostRates.begin(), g.hostRates.end(),
+                               [](double r) { return std::abs(r - 96000.0) < 0.5; });
         return (it != g.hostRates.end()) ? 96000.0 : (g.hostRates.empty() ? 96000.0 : g.hostRates[0]);
     }();
 
@@ -301,10 +302,17 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
 
                                 // Only store summary metrics for the base operating point
                                 // to keep keys unique and deterministic.
+                                // NOTE for downstream consumers (Tasks 9-12): corner_hz is the
+                                // measured physical -3 dB point, which for an authentic 4-pole
+                                // Moog ladder at res=0 sits near 0.44*fc (NOT the nominal
+                                // cutoff); slope_db_oct is read one octave above that corner, a
+                                // transition-band slope rather than the asymptotic stopband rate.
+                                // (Grid values are exact literals; tolerance compares avoid
+                                // -Wfloat-equal without changing selection.)
                                 const bool isBase = (osFactor == 1)
                                                  && (osMode == OsMode::Live)
-                                                 && (resonance == baseRes)
-                                                 && (hostRate == baseHost);
+                                                 && (std::abs(resonance - baseRes) < 1.0e-9)
+                                                 && (std::abs(hostRate - baseHost) < 0.5);
                                 if (isBase) {
                                     const double c = std::isfinite(result.cornerHz)     ? result.cornerHz     : -1.0;
                                     const double s = std::isfinite(result.slopeDbOct)   ? result.slopeDbOct   : -1.0;
