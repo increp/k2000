@@ -8,7 +8,7 @@ FilterUnderTest::FilterUnderTest(juce::String name, std::unique_ptr<FilterModel>
                                  Configurator cfg)
     : name_(std::move(name)), model_(std::move(model)), cfg_(std::move(cfg)) {}
 
-bool FilterUnderTest::supports(Mode m) const {
+bool FilterUnderTest::supports(Mode m) {
     // Probe the configurator without disturbing measurement state.
     return cfg_(*model_, m);
 }
@@ -59,8 +59,8 @@ std::unique_ptr<FilterUnderTest> makeMoogFut() {
         switch (m) {
             case Mode::LP12: moog.setMode(MoogLadder::Mode::LP); moog.setSlope(MoogLadder::Slope::db12); return true;
             case Mode::LP24: moog.setMode(MoogLadder::Mode::LP); moog.setSlope(MoogLadder::Slope::db24); return true;
-            case Mode::BP:   moog.setMode(MoogLadder::Mode::BP); return true;
-            case Mode::HP:   moog.setMode(MoogLadder::Mode::HP); return true;
+            case Mode::BP:   moog.setMode(MoogLadder::Mode::BP); moog.setSlope(MoogLadder::Slope::db24); return true;
+            case Mode::HP:   moog.setMode(MoogLadder::Mode::HP); moog.setSlope(MoogLadder::Slope::db24); return true;
             case Mode::Notch: return false;   // Moog ladder has no notch
         }
         return false;
@@ -74,9 +74,9 @@ std::unique_ptr<FilterUnderTest> makeHuggettFut() {
         switch (m) {
             case Mode::LP12: hug.setRouting(HuggettFilter::Routing::LP); hug.setSlope(HuggettFilter::Slope::db12); return true;
             case Mode::LP24: hug.setRouting(HuggettFilter::Routing::LP); hug.setSlope(HuggettFilter::Slope::db24); return true;
-            case Mode::BP:   hug.setRouting(HuggettFilter::Routing::BP); return true;
-            case Mode::HP:   hug.setRouting(HuggettFilter::Routing::HP); return true;
-            case Mode::Notch: hug.setRouting(HuggettFilter::Routing::Notch); return true;
+            case Mode::BP:   hug.setRouting(HuggettFilter::Routing::BP); hug.setSlope(HuggettFilter::Slope::db24); return true;
+            case Mode::HP:   hug.setRouting(HuggettFilter::Routing::HP); hug.setSlope(HuggettFilter::Slope::db24); return true;
+            case Mode::Notch: hug.setRouting(HuggettFilter::Routing::Notch); hug.setSlope(HuggettFilter::Slope::db24); return true;
         }
         return false;
     };

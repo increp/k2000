@@ -23,7 +23,10 @@ public:
     FilterUnderTest(juce::String name, std::unique_ptr<FilterModel> model, Configurator cfg);
 
     juce::String name() const { return name_; }
-    bool supports(Mode m) const;
+    // NOT const: probing the configurator sets the model's mode/slope. setOperatingPoint()
+    // always re-applies mode before measuring, so a prior supports() probe cannot leak into a
+    // measurement — but never call supports() mid-sweep.
+    bool supports(Mode m);
 
     void setOperatingPoint(const OperatingPoint& op);
     void reset();
