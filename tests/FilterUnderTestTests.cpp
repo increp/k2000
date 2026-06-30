@@ -34,6 +34,20 @@ struct FilterUnderTestTests : public juce::UnitTest {
             expect(r.magDb[0] > -3.0, "100 Hz near passband: " + juce::String(r.magDb[0], 1));
             expect(r.magDb[1] < -24.0, "8 kHz strongly attenuated: " + juce::String(r.magDb[1], 1));
         }
+
+        beginTest("OS factors are in-band transparent (LP, probe well below cutoff)");
+        {
+            auto fut = chz::makeMoogFut();
+            auto measAt = [&](int factor) {
+                chz::OperatingPoint op; op.mode = chz::Mode::LP24; op.cutoffHz = 2000.0;
+                op.hostSampleRate = sr; op.osFactor = factor;
+                fut->setOperatingPoint(op);
+                return testdsp::SteppedSine::transfer(*fut, { 200.0 }, sr, 0.05f).magDb[0];
+            };
+            const double base = measAt(1);
+            for (int f : { 2, 4, 8 })
+                expectWithinAbsoluteError(measAt(f), base, 0.5);   // within 0.5 dB of base rate in-band
+        }
     }
 };
 static FilterUnderTestTests filterUnderTestTestsInstance;
