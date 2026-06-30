@@ -77,6 +77,7 @@ add_executable(k2000_tests
     ../src/dsp/spine/MoogLadder.cpp
     FilterUnderTestTests.cpp
     CharacterizationRunnerTests.cpp
+    CharacterizationGateTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp)
 
