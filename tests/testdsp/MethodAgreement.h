@@ -9,8 +9,9 @@
 namespace testdsp {
 
 struct MethodAgreement {
-    // Max |magA[i] - magB[i]| in dB over the shared grid. Both vectors must be the
-    // same length (sampled at identical frequencies).
+    // Max |magA[i] - magB[i]| in dB over the shared grid. Callers pass curves sampled at
+    // identical frequencies; if lengths differ, the comparison is clamped to the shorter
+    // (defensive — a mismatched grid is a caller error, never silently padded).
     static double maxMagDeltaDb(const std::vector<double>& magA,
                                 const std::vector<double>& magB) {
         const size_t n = std::min(magA.size(), magB.size());

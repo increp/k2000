@@ -2,6 +2,7 @@
 #include "Sweep.h"
 #include "TransferFunction.h"
 #include <vector>
+#include <algorithm>
 
 // testdsp::EssResponse — calibrated Farina ESS measurement of an adapter.
 //
@@ -18,6 +19,8 @@
 // removes the amplitude/sinc gain and any measurement-chain coloration.
 //
 // Adapter contract: void reset(); void process(float* buf, int n);  (same as SteppedSine).
+// The adapter must already be prepared/initialized (e.g. sample rate + coefficients set);
+// measure() calls reset() internally before driving the sweep, but does not prepare().
 namespace testdsp {
 
 struct EssResponse {
@@ -40,7 +43,8 @@ struct EssResponse {
         auto sys = TransferFunction::fromImpulse(irSys, sr, freqs);
 
         // Calibrate against the reference so an identity system reads 0 dB / 0 phase.
-        const size_t n = sys.magDb.size();
+        // Clamp to the shorter result defensively; both are sized to freqs by construction.
+        const size_t n = std::min(sys.magDb.size(), ref.magDb.size());
         for (size_t i = 0; i < n; ++i) {
             sys.magDb[i]         -= ref.magDb[i];
             sys.phaseRad[i]      -= ref.phaseRad[i];
