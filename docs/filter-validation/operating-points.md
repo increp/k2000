@@ -1,7 +1,7 @@
 # Operating Points and Grid Structure
 
-Version: 5.01
-Date: 2026-06-30
+**Version:** 5.09
+**Date:** 2026-06-30
 
 This page describes the parameter axes that define an operating point, the two
 grid presets (`coarseGrid` / `fullGrid`), and what `--quick` selects.

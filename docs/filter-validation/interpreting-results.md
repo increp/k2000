@@ -1,7 +1,7 @@
 # Interpreting Filter Characterization Results
 
-Version: 5.01
-Date: 2026-06-30
+**Version:** 5.09
+**Date:** 2026-06-30
 
 This page explains every column and key produced by `k2000_filter_characterization`.
 All CSVs land in `build/characterization/<model>/` after a run.

@@ -1,6 +1,6 @@
 # Running the Filter-Validation Harness
 
-**Version:** 5.01
+**Version:** 5.09
 **Date:** 2026-06-30
 
 ---
@@ -28,7 +28,7 @@ cmake --build build --target k2000_tests -j4
 ./build/tests/k2000_tests
 ```
 
-Expected overhead: approximately 6 seconds on top of the rest of the test suite.
+Expected overhead: approximately 45–60 seconds on top of the rest of the test suite (the gate runs two ESS sweeps per model).
 
 ### Refreshing the self-golden baseline
 

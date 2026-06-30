@@ -1,6 +1,6 @@
 # Filter-Validation Harness — Adding a New Filter Model
 
-**Version:** 5.01
+**Version:** 5.09
 **Audience:** Audio engineer adding a new filter model (e.g. a Buchla, a CS-80 section, a custom SVF).
 
 ---

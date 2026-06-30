@@ -1,6 +1,6 @@
 # Filter-Validation Harness — Concepts
 
-**Version:** 5.01
+**Version:** 5.09
 **Audience:** Audio engineer operating or extending the harness. DSP math is not required.
 
 ---
