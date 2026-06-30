@@ -105,15 +105,30 @@ If this test **fails or crashes**, the runner/socket has a model-specific assump
 
 ## Step 4: Generate and commit the self-golden baseline
 
-Once the smoke test passes, generate the model's full-grid baseline CSV:
+The committed baseline lives at `tests/golden/<model>/baseline.csv` and is produced by the
+fast gate test (see the CI-gate task) through the established `GoldenSet` update workflow —
+not a separate CLI flag:
 
 ```bash
-./build/tests/characterize_main --model buchla --grid coarse --out baselines/buchla/
+BERNIE_UPDATE_GOLDEN=1 ./build/tests/k2000_tests
 ```
 
-Commit the baseline files under `baselines/buchla/`. Future runs compare against this baseline via the `BERNIE_UPDATE_GOLDEN` CI workflow (Task 12 forward-reference). See the workflow dispatch docs for details on running the baseline-update job.
+This writes the coarse baseline CSV for every model wired into the gate; commit the new
+`tests/golden/<model>/baseline.csv`. Subsequent CI runs assert the model's coarse fingerprint
+has not drifted from it (a deliberate change is then a reviewable CSV diff).
 
-The self-golden baseline does not claim hardware accuracy — it fixes the model's own behaviour so regressions are caught. External accuracy against the real analog device is sub-project 2.
+The dense, full-grid fingerprint — for manual inspection, not committed — is produced
+separately by the opt-in runner, which writes ephemeral CSVs under
+`build/characterization/<model>/`:
+
+```bash
+./build/tests/k2000_filter_characterization --model buchla          # full grid (slow)
+./build/tests/k2000_filter_characterization --model buchla --quick  # bounded coarse grid
+```
+
+The self-golden baseline does not claim hardware accuracy — it fixes the model's own
+behaviour so regressions are caught. External accuracy against the real analog device is
+sub-project 2.
 
 ---
 
@@ -124,4 +139,4 @@ The self-golden baseline does not claim hardware accuracy — it fixes the model
 - [ ] Only supported `Mode` values return `true` from the Configurator
 - [ ] Smoke test added to `CharacterizationRunnerTests.cpp` and passing
 - [ ] `./build/tests/k2000_tests` shows 0 failed
-- [ ] Baseline CSVs generated and committed under `baselines/<model>/`
+- [ ] Baseline generated via `BERNIE_UPDATE_GOLDEN=1 ./build/tests/k2000_tests` and committed at `tests/golden/<model>/baseline.csv`
