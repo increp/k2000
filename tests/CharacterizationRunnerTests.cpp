@@ -46,6 +46,60 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
             expect(outDir.getChildFile("response.csv").existsAsFile(), "response.csv written");
             outDir.deleteRecursively();
         }
+
+        beginTest("B2+B3: resonance.csv + distortion.csv exist; B2/B3 summary keys present and finite");
+        {
+            auto fut = chz::makeMoogFut();
+            chz::Grid g;
+            g.modes      = { chz::Mode::LP24 };
+            g.cutoffs    = { 1000.0 };
+            g.resonances = { 0.0, 0.9 };   // max resonance (0.9) drives B2 self-osc probe
+            g.drives     = { 0.0 };
+            g.osFactors  = { 1, 2 };        // two OS factors so alias_db@os1 and @os2 are both written
+            g.osModes    = { chz::OsMode::Live };
+            g.hostRates  = { 96000.0 };
+            g.probeFreqs = chz::CharacterizationRunner::logFreqs(50.0, 20000.0, 40);
+
+            auto outDir = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                              .getChildFile("chz_runner_b2b3_test");
+            outDir.deleteRecursively(); outDir.createDirectory();
+
+            auto summary = chz::CharacterizationRunner::run(*fut, g, outDir);
+
+            // CSV files must exist.
+            expect(outDir.getChildFile("resonance.csv").existsAsFile(), "resonance.csv written");
+            expect(outDir.getChildFile("distortion.csv").existsAsFile(), "distortion.csv written");
+
+            // B2: selfosc_cents_err key must be present and finite.
+            expect(summary.count("moog/LP24/fc1000/selfosc_cents_err") > 0,
+                   "B2 summary key selfosc_cents_err present");
+            const double centsErr = summary.at("moog/LP24/fc1000/selfosc_cents_err");
+            // Sentinel -1.0 (self-osc not detected) or a finite measurement are both valid.
+            // Use tolerance compare instead of == to avoid -Wfloat-equal.
+            expect(std::isfinite(centsErr) || (centsErr < -0.5 && centsErr > -2.0),
+                   "selfosc_cents_err is finite or sentinel -1: " + juce::String(centsErr));
+
+            // B3 THD key must be present.
+            expect(summary.count("moog/LP24/fc1000/thd_db") > 0,
+                   "B3 summary key thd_db present");
+            const double thdDb = summary.at("moog/LP24/fc1000/thd_db");
+            expect(std::isfinite(thdDb) || (thdDb < -0.5 && thdDb > -2.0),
+                   "thd_db is finite or sentinel -1: " + juce::String(thdDb));
+
+            // B3 aliasing keys for both OS factors.
+            expect(summary.count("moog/LP24/fc1000/alias_db@os1") > 0,
+                   "B3 summary key alias_db@os1 present");
+            expect(summary.count("moog/LP24/fc1000/alias_db@os2") > 0,
+                   "B3 summary key alias_db@os2 present");
+            const double aliasOs1 = summary.at("moog/LP24/fc1000/alias_db@os1");
+            const double aliasOs2 = summary.at("moog/LP24/fc1000/alias_db@os2");
+            expect(std::isfinite(aliasOs1) || (aliasOs1 < -0.5 && aliasOs1 > -2.0),
+                   "alias_db@os1 is finite or sentinel -1: " + juce::String(aliasOs1));
+            expect(std::isfinite(aliasOs2) || (aliasOs2 < -0.5 && aliasOs2 > -2.0),
+                   "alias_db@os2 is finite or sentinel -1: " + juce::String(aliasOs2));
+
+            outDir.deleteRecursively();
+        }
     }
 };
 static CharacterizationRunnerTests characterizationRunnerTestsInstance;

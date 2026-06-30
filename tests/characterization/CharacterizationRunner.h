@@ -52,6 +52,26 @@ private:
                                    const std::vector<double>& probeFreqs,
                                    juce::String& csvRows);
 
+    // B2: resonance + self-oscillation at high resonance for a (mode, cutoff) pair.
+    // op must already have its resonance set to the max resonance in the grid.
+    struct B2Result {
+        double selfoscHz       = -1.0;   // measured self-osc pitch (FFT peak)
+        double selfoscCentsErr = -1.0;   // 1200 * log2(measured / cutoff)
+    };
+
+    static B2Result runB2OnePoint(FilterUnderTest& fut, const OperatingPoint& op,
+                                   juce::String& csvRows);
+
+    // B3: distortion + aliasing at a single operating point (osFactor is part of op).
+    // probeHz is the tone used for THD and aliasing measurements.
+    struct B3Result {
+        double thdDb    = -1.0;
+        double aliasDb  = -1.0;
+    };
+
+    static B3Result runB3OnePoint(FilterUnderTest& fut, const OperatingPoint& op,
+                                   double probeHz, juce::String& csvRows);
+
     // Interpolate magDb (sampled at freqs) at target frequency, linearly on log-freq axis.
     static double interpMag(const std::vector<double>& freqs, const std::vector<double>& magDb,
                             double targetHz);

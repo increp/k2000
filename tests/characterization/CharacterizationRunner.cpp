@@ -2,6 +2,11 @@
 #include "../testdsp/SteppedSine.h"
 #include "../testdsp/EssResponse.h"
 #include "../testdsp/MethodAgreement.h"
+#include "../testdsp/Response.h"
+#include "../testdsp/Harmonics.h"
+#include "../testdsp/Metrics.h"
+#include "../testdsp/Spectrum.h"
+#include "../testdsp/SignalGen.h"
 #include <juce_core/juce_core.h>
 #include <algorithm>
 #include <cmath>
@@ -249,6 +254,174 @@ CharacterizationRunner::B1Result CharacterizationRunner::runB1OnePoint(
 }
 
 // ---------------------------------------------------------------------------
+// runB2OnePoint — B2: resonance + self-oscillation at high resonance
+//   op.resonance should already be the max resonance in the grid.
+//   Kicks an impulse, captures a power-of-two window, finds FFT peak pitch.
+//   selfoscCentsErr = 1200 * log2(measuredHz / cutoffHz).
+//   Above 4 kHz: still recorded, logged as report-only.
+//   Appends one row to csvRows.
+// ---------------------------------------------------------------------------
+CharacterizationRunner::B2Result CharacterizationRunner::runB2OnePoint(
+        FilterUnderTest& fut, const OperatingPoint& op, juce::String& csvRows) {
+
+    const juce::String modelName = fut.name();
+    const juce::String modeStr   = modeName(op.mode);
+    const juce::String osModeStr = osModeName(op.osMode);
+
+    B2Result result;
+
+    // Power-of-two window size: 4096 gives ~23 Hz bin resolution at 96 kHz.
+    // Must be power-of-two for Spectrum::magnitude.
+    const int kCaptureLen = 4096;
+
+    fut.setOperatingPoint(op);
+    fut.reset();
+
+    // Kick: one impulse followed by silence; capture the ring.
+    auto impulse = testdsp::SignalGen::impulse(0.5f, 1);
+    fut.process(impulse.data(), 1);
+
+    std::vector<float> capture(static_cast<size_t>(kCaptureLen), 0.0f);
+    // Warm: let the ring build up a bit before capturing (skip first 256 samples).
+    std::vector<float> warmup(256, 0.0f);
+    fut.process(warmup.data(), 256);
+
+    // Capture kCaptureLen samples of the ring-down.
+    fut.process(capture.data(), kCaptureLen);
+
+    // FFT-peak pitch
+    const double measuredHz = testdsp::Response::peakFreqHz(capture, op.hostSampleRate);
+
+    if (!std::isfinite(measuredHz) || measuredHz <= 1.0) {
+        juce::Logger::writeToLog("[CharacterizationRunner B2] WARNING: self-osc not detected for "
+            + modelName + "/" + modeStr + " fc=" + juce::String(op.cutoffHz)
+            + " res=" + juce::String(op.resonance, 3));
+        result.selfoscHz       = -1.0;
+        result.selfoscCentsErr = -1.0;
+    } else {
+        result.selfoscHz = measuredHz;
+        result.selfoscCentsErr = 1200.0 * std::log2(measuredHz / op.cutoffHz);
+
+        if (op.cutoffHz > 4000.0) {
+            juce::Logger::writeToLog("[CharacterizationRunner B2] INFO: self-osc above 4 kHz "
+                "(report-only): fc=" + juce::String(op.cutoffHz)
+                + " measured=" + juce::String(measuredHz, 1) + " Hz"
+                + " err=" + juce::String(result.selfoscCentsErr, 1) + " cents");
+        }
+    }
+
+    // Append CSV row
+    // Header: model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,selfoscHz,selfosc_cents_err
+    const double soHz  = std::isfinite(result.selfoscHz)       ? result.selfoscHz       : -1.0;
+    const double soCe  = std::isfinite(result.selfoscCentsErr) ? result.selfoscCentsErr : -1.0;
+    csvRows += modelName + "," + modeStr + ","
+            + juce::String(op.osFactor) + "," + osModeStr + ","
+            + juce::String((int) op.hostSampleRate) + ","
+            + juce::String(op.cutoffHz, 2) + ","
+            + juce::String(op.resonance, 4) + ","
+            + juce::String(soHz, 4) + ","
+            + juce::String(soCe, 4) + "\n";
+
+    return result;
+}
+
+// ---------------------------------------------------------------------------
+// runB3OnePoint — B3: distortion + aliasing at one operating point
+//   THD: Harmonics::thdDb at probeHz with operating point's drive.
+//   Aliasing: drive a bin-aligned tone through the FUT (osFactor is in op),
+//   FFT the output, Metrics::inharmonicDb → alias_db.
+//   Because FUT applies oversampling internally, the output is at base-rate;
+//   higher osFactor pushes aliasing down and is captured PER osFactor in the grid.
+//
+//   Drive for aliasing: use drive=1.0 if op.drive==0 so harmonics are actually
+//   generated (aliasing only appears with nonlinear content; at drive=0 a linear
+//   filter won't alias). The THD measurement uses op.drive as-is.
+//   Appends one row to csvRows.
+// ---------------------------------------------------------------------------
+CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
+        FilterUnderTest& fut, const OperatingPoint& op, double probeHz,
+        juce::String& csvRows) {
+
+    const juce::String modelName = fut.name();
+    const juce::String modeStr   = modeName(op.mode);
+    const juce::String osModeStr = osModeName(op.osMode);
+
+    B3Result result;
+
+    // --- THD at the operating-point drive ---
+    fut.setOperatingPoint(op);
+    result.thdDb = testdsp::Harmonics::thdDb(fut, probeHz, op.hostSampleRate, 0.5f);
+    if (!std::isfinite(result.thdDb)) {
+        juce::Logger::writeToLog("[CharacterizationRunner B3] WARNING: thdDb not finite for "
+            + modelName + "/" + modeStr + " fc=" + juce::String(op.cutoffHz));
+        result.thdDb = -1.0;
+    }
+
+    // --- Aliasing probe: use drive=1.0 and high resonance to ensure nonlinear ---
+    // content is generated. Even if op.drive==0 (linear), we force drive=1 and
+    // resonance=0.9 here so the aliasing probe produces harmonics that fold back
+    // above Nyquist at os1. THD above used op.drive/resonance (faithful to the
+    // operating point); this is a SEPARATE aliasing-only probe.
+    //
+    // Probe tone strategy: pick a frequency such that low-order harmonics fold at
+    // os1 (base-rate Nyquist = hostSR/2) but NOT at os2 (Nyquist = hostSR).
+    // We use probeHz ≈ hostSR * 0.35 so the 2nd harmonic (0.70 * hostSR) folds at
+    // os1 (> Nyquist = 0.5*hostSR) but not at os2 (Nyquist = hostSR). Clamp to
+    // [hostSR*0.30, hostSR*0.42] to stay well into the aliasing zone.
+    OperatingPoint aliasOp = op;
+    aliasOp.drive     = 1.0;
+    aliasOp.resonance = 0.9;      // nonlinear feedback tanh boosts harmonic content
+    // Set cutoff well above probe tone so filter doesn't suppress the probe.
+    // Use 80% of Nyquist (= 0.4 * hostSR) as cutoff.
+    aliasOp.cutoffHz  = op.hostSampleRate * 0.4;
+    fut.setOperatingPoint(aliasOp);
+    fut.reset();
+
+    // Use a power-of-two buffer so Spectrum::magnitude works correctly.
+    const int kN = 1 << 14;  // 16384 samples
+    // Probe at hostSR * 0.35: H2 = hostSR * 0.70 > Nyquist at os1, folds back.
+    // At os2, H2 = hostSR * 0.70 < Nyquist (hostSR), does NOT fold.
+    const double nyquistFrac  = 0.35;  // fraction of hostSR
+    const double aliasToneHz  = op.hostSampleRate * nyquistFrac;
+    const int bin = std::max(2, (int) std::lround(aliasToneHz * kN / op.hostSampleRate));
+
+    // Warm up
+    std::vector<float> warm = testdsp::SignalGen::sine(0.5f, (double) bin * op.hostSampleRate / kN,
+                                                        op.hostSampleRate, 8192);
+    fut.process(warm.data(), (int) warm.size());
+
+    // Capture bin-aligned window
+    std::vector<float> cap = testdsp::SignalGen::binAlignedSine(0.5f, bin, kN);
+    fut.process(cap.data(), kN);
+
+    auto mag = testdsp::Spectrum::magnitude(cap);
+    result.aliasDb = testdsp::Metrics::inharmonicDb(mag, bin);
+
+    if (!std::isfinite(result.aliasDb)) {
+        juce::Logger::writeToLog("[CharacterizationRunner B3] WARNING: aliasDb not finite for "
+            + modelName + "/" + modeStr + " fc=" + juce::String(op.cutoffHz)
+            + " os=" + juce::String(op.osFactor));
+        result.aliasDb = -1.0;
+    }
+
+    // Append CSV row
+    // Header: model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,probeHz,thd_db,alias_db
+    const double tdb = std::isfinite(result.thdDb)   ? result.thdDb   : -1.0;
+    const double adb = std::isfinite(result.aliasDb) ? result.aliasDb : -1.0;
+    csvRows += modelName + "," + modeStr + ","
+            + juce::String(op.osFactor) + "," + osModeStr + ","
+            + juce::String((int) op.hostSampleRate) + ","
+            + juce::String(op.cutoffHz, 2) + ","
+            + juce::String(op.resonance, 4) + ","
+            + juce::String(op.drive, 4) + ","
+            + juce::String(aliasToneHz, 4) + ","
+            + juce::String(tdb, 6) + ","
+            + juce::String(adb, 6) + "\n";
+
+    return result;
+}
+
+// ---------------------------------------------------------------------------
 // run — main entry point for 8a (B1 + B4)
 // B2/B3 seam: add runB2OnePoint / runB3OnePoint helpers and call them here.
 // ---------------------------------------------------------------------------
@@ -256,10 +429,16 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
                                      const juce::File& outDir) {
     outDir.createDirectory();
 
-    // CSV header
-    juce::String csvRows;
-    csvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,"
-               "probeHz,method,magDb,phaseRad,groupDelaySec\n";
+    // CSV headers for all three batteries.
+    juce::String b1CsvRows;
+    b1CsvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,"
+                 "probeHz,method,magDb,phaseRad,groupDelaySec\n";
+
+    juce::String b2CsvRows;
+    b2CsvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,selfoscHz,selfosc_cents_err\n";
+
+    juce::String b3CsvRows;
+    b3CsvRows += "model,mode,osFactor,osMode,hostSR,cutoffHz,resonance,drive,probeHz,thd_db,alias_db\n";
 
     Summary summary;
 
@@ -268,10 +447,31 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
     // (or first in grid if 96000 not present).
     const double baseRes = g.resonances.empty() ? 0.0 :
                            *std::min_element(g.resonances.begin(), g.resonances.end());
+    const double baseDrive = g.drives.empty() ? 0.0 :
+                             *std::min_element(g.drives.begin(), g.drives.end());
     const double baseHost = [&]() {
         auto it = std::find_if(g.hostRates.begin(), g.hostRates.end(),
                                [](double r) { return std::abs(r - 96000.0) < 0.5; });
         return (it != g.hostRates.end()) ? 96000.0 : (g.hostRates.empty() ? 96000.0 : g.hostRates[0]);
+    }();
+
+    // B2: run once per (mode, cutoff) at max resonance, osFactor=1, Live, baseHost.
+    // We need the max resonance from the grid.
+    const double maxRes = g.resonances.empty() ? 0.0 :
+                          *std::max_element(g.resonances.begin(), g.resonances.end());
+
+    // B3: use a mid probe freq for THD (aim for 1 kHz, or the nearest grid probe >= 500 Hz).
+    // For aliasing tone: fixed 4 kHz (clipped inside runB3OnePoint to 3-5 kHz).
+    const double b3MidHz = [&]() {
+        if (g.probeFreqs.empty()) return 1000.0;
+        // Find probe freq closest to 1 kHz.
+        double best = g.probeFreqs[0];
+        double bestDiff = std::abs(best - 1000.0);
+        for (double f : g.probeFreqs) {
+            const double diff = std::abs(f - 1000.0);
+            if (diff < bestDiff) { bestDiff = diff; best = f; }
+        }
+        return best;
     }();
 
     for (Mode mode : g.modes) {
@@ -283,6 +483,25 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
             // Build the (stable) summary key prefix for this (model, mode, cutoff) triple.
             const juce::String keyBase = fut.name() + "/" + modeName(mode)
                                        + "/fc" + juce::String((int) std::round(cutoff));
+
+            // --- B2: one measurement per (mode, cutoff) at max resonance ---
+            // Run at os=1, Live, baseHost so B2 summary keys are deterministic.
+            {
+                OperatingPoint opB2;
+                opB2.mode           = mode;
+                opB2.cutoffHz       = cutoff;
+                opB2.resonance      = maxRes;
+                opB2.drive          = baseDrive;
+                opB2.osFactor       = 1;
+                opB2.osMode         = OsMode::Live;
+                opB2.hostSampleRate = baseHost;
+                auto b2r = runB2OnePoint(fut, opB2, b2CsvRows);
+
+                const double soHz = std::isfinite(b2r.selfoscHz)       ? b2r.selfoscHz       : -1.0;
+                const double soCe = std::isfinite(b2r.selfoscCentsErr) ? b2r.selfoscCentsErr : -1.0;
+                summary[keyBase + "/selfosc_cents_err"] = soCe;
+                (void) soHz;  // selfosc_cents_err is the headline; Hz is in CSV
+            }
 
             for (double resonance : g.resonances) {
                 for (double drive : g.drives) {
@@ -298,9 +517,9 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
                                 op.osMode         = osMode;
                                 op.hostSampleRate = hostRate;
 
-                                auto result = runB1OnePoint(fut, op, g.probeFreqs, csvRows);
+                                auto b1r = runB1OnePoint(fut, op, g.probeFreqs, b1CsvRows);
 
-                                // Only store summary metrics for the base operating point
+                                // Only store B1 summary metrics for the base operating point
                                 // to keep keys unique and deterministic.
                                 // NOTE for downstream consumers (Tasks 9-12): corner_hz is the
                                 // measured physical -3 dB point, which for an authentic 4-pole
@@ -314,12 +533,34 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
                                                  && (std::abs(resonance - baseRes) < 1.0e-9)
                                                  && (std::abs(hostRate - baseHost) < 0.5);
                                 if (isBase) {
-                                    const double c = std::isfinite(result.cornerHz)     ? result.cornerHz     : -1.0;
-                                    const double s = std::isfinite(result.slopeDbOct)   ? result.slopeDbOct   : -1.0;
-                                    const double d = std::isfinite(result.methodDeltaDb)? result.methodDeltaDb: -1.0;
+                                    const double c = std::isfinite(b1r.cornerHz)     ? b1r.cornerHz     : -1.0;
+                                    const double s = std::isfinite(b1r.slopeDbOct)   ? b1r.slopeDbOct   : -1.0;
+                                    const double d = std::isfinite(b1r.methodDeltaDb)? b1r.methodDeltaDb: -1.0;
                                     summary[keyBase + "/corner_hz"]      = c;
                                     summary[keyBase + "/slope_db_oct"]   = s;
                                     summary[keyBase + "/method_delta_db"]= d;
+                                }
+
+                                // --- B3: one measurement per full operating point ---
+                                // THD uses op.drive; aliasing forces drive=1.0 internally.
+                                // alias_db is recorded per osFactor (Task 11 depends on this).
+                                auto b3r = runB3OnePoint(fut, op, b3MidHz, b3CsvRows);
+
+                                // Store alias_db per osFactor in the summary
+                                // (at base resonance + base drive + Live + baseHost).
+                                const bool isB3Base = (osMode == OsMode::Live)
+                                                   && (std::abs(resonance - baseRes) < 1.0e-9)
+                                                   && (std::abs(drive - baseDrive) < 1.0e-9)
+                                                   && (std::abs(hostRate - baseHost) < 0.5);
+                                if (isB3Base) {
+                                    const double adb = std::isfinite(b3r.aliasDb) ? b3r.aliasDb : -1.0;
+                                    summary[keyBase + "/alias_db@os" + juce::String(osFactor)] = adb;
+
+                                    // THD: only at the osFactor=1 base point (single headline).
+                                    if (osFactor == 1) {
+                                        const double tdb = std::isfinite(b3r.thdDb) ? b3r.thdDb : -1.0;
+                                        summary[keyBase + "/thd_db"] = tdb;
+                                    }
                                 }
                             }
                         }
@@ -329,9 +570,10 @@ Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
         }
     }
 
-    // Write response.csv
-    const auto csvFile = outDir.getChildFile("response.csv");
-    csvFile.replaceWithText(csvRows);
+    // Write all three CSVs.
+    outDir.getChildFile("response.csv").replaceWithText(b1CsvRows);
+    outDir.getChildFile("resonance.csv").replaceWithText(b2CsvRows);
+    outDir.getChildFile("distortion.csv").replaceWithText(b3CsvRows);
 
     return summary;
 }
