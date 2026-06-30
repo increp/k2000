@@ -144,6 +144,34 @@ struct CharacterizationRunnerTests : public juce::UnitTest {
             outDir.deleteRecursively();
         }
 
+        beginTest("aliasing decreases as OS factor rises (Moog, driven LP)");
+        {
+            auto fut = chz::makeMoogFut();
+            chz::Grid g;
+            g.modes = { chz::Mode::LP24 };
+            g.cutoffs = { 4000.0 }; g.resonances = { 0.0 }; g.drives = { 1.0 };
+            g.osFactors = { 1, 2, 4, 8 }; g.osModes = { chz::OsMode::Live };
+            g.hostRates = { 96000.0 };
+            g.probeFreqs = chz::CharacterizationRunner::logFreqs(50.0, 20000.0, 40);
+
+            auto outDir = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                              .getChildFile("chz_alias_test");
+            outDir.deleteRecursively(); outDir.createDirectory();
+            auto s = chz::CharacterizationRunner::run(*fut, g, outDir);
+
+            const double a1 = s.at("moog/LP24/fc4000/alias_db@os1");
+            const double a2 = s.at("moog/LP24/fc4000/alias_db@os2");
+            const double a4 = s.at("moog/LP24/fc4000/alias_db@os4");
+            const double a8 = s.at("moog/LP24/fc4000/alias_db@os8");
+            logMessage("alias os1=" + juce::String(a1, 1) + " dB"
+                       + "  os2=" + juce::String(a2, 1) + " dB"
+                       + "  os4=" + juce::String(a4, 1) + " dB"
+                       + "  os8=" + juce::String(a8, 1) + " dB");
+            expect(a8 < a1 - 3.0, "8x must reduce aliasing by >3 dB vs 1x: os1="
+                   + juce::String(a1, 1) + " os8=" + juce::String(a8, 1));
+            outDir.deleteRecursively();
+        }
+
         beginTest("Moog HP fc4000: methods agree in-band (deep stopband is noise-limited)");
         {
             // Regression for a method-agreement scoping issue. A Moog HP filter's deep stopband

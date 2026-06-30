@@ -99,6 +99,62 @@ The `--model` flag selects which filter under test to run:
 
 ---
 
+## OS-tier decision instrument: alias_db@os\<N\>
+
+The `alias_db@os<N>` family of summary keys is the primary instrument for
+validating and comparing oversampling tiers. Understanding how it is measured
+and what the values mean is essential before interpreting results or adjusting
+OS configuration.
+
+### What is measured
+
+Battery B3 produces an `alias_db` value for each `(model, mode, cutoff, osFactor)`
+combination. Crucially, the **aliasing measurement is independent of the grid
+operating point** (i.e., it does not depend on `cutoffHz`, `resonance`, or
+`drive` from the grid row). B3 uses a fixed internal isolation probe:
+
+- Cutoff at `0.4 * hostSampleRate` — wide open so the probe tone passes the
+  filter unattenuated.
+- Resonance = 0.9, drive = 1.0 — engages the nonlinear `tanh` path so harmonics
+  are generated at the operating sample rate.
+- Tone at `0.35 * hostSampleRate` — the second harmonic (H2) lands at
+  `0.70 * hostSampleRate`, which is **above the base-rate Nyquist** at `os1`
+  (folds back as an alias) but **below the internal Nyquist** at `os2` (does
+  not fold).
+
+The output spectrum's inharmonic energy (`Metrics::inharmonicDb`) is the
+reported `aliasDb`. A more negative value means lower aliasing.
+
+### Interpreting the curve
+
+| OS factor | Tier label | Example Moog LP24 fc4000 measurement |
+|-----------|------------|--------------------------------------|
+| 1x        | None       | 0.0 dB (worst — folded harmonics at full power) |
+| 2x        | Live       | -29.0 dB |
+| 4x        | Live HQ    | -80.5 dB |
+| 8x        | Render     | -117.6 dB (best) |
+
+The Moog curve shows the expected monotonic improvement: each doubling of
+`osFactor` roughly halves (in dB/octave terms) the folded harmonic energy,
+with the largest single step at `os1 -> os2` (~29 dB) because that is where
+H2 first clears the base-rate Nyquist ceiling.
+
+An improvement of ~100 dB from os1 to os8 is the expected pattern for a
+well-implemented oversampling path. The regression assertion requires at minimum
+`alias_db@os8 < alias_db@os1 - 3.0 dB` — a deliberately conservative threshold
+(the real margin is ~100 dB) so a genuine regression cannot hide behind noise.
+
+### Live vs Render
+
+`Live` and `Render` are labels describing the OS mode (halfband filter chain
+quality), not separate audio engines. The harness measures the `osFactor`
+directly; `osMode` is metadata. In the B3 isolation probe, `osMode` is always
+set to `Live` (the base-case condition) so `alias_db@os<N>` values from different
+grids are directly comparable. Render-mode aliasing is not separately tracked
+in summary keys — the Live-mode curve is the OS-tier decision instrument.
+
+---
+
 ## Summary key base-case selection
 
 When the grid has many operating points per `(model, mode, cutoff)` triple,
