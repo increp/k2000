@@ -16,7 +16,7 @@ sub-project 2 and is not built yet.
 
 ## 60-Second Quickstart
 
-### Always-on gate (every build — ~45-60 sec overhead)
+### Always-on gate (every build — ~5 sec overhead)
 
 The `CharacterizationGate` tests run automatically inside the standard test binary.
 They exercise a small fixed grid (Moog + Huggett, LP24 at fc 1000 Hz, OS factor 1)

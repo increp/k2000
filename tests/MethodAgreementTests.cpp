@@ -59,6 +59,44 @@ struct MethodAgreementTests : public juce::UnitTest {
             Passthrough p;
             expect(testdsp::Harmonics::thdDb(p, 1000.0, sr, 0.5f) < -60.0, "clean signal low THD");
         }
+
+        // EssResponse's MAGNITUDE calibration is delay-invariant — this is exactly WHY the
+        // magnitude path (and the magnitude-only method-agreement gate) is trustworthy. A pure
+        // D-sample delay is all-pass (|H| = 0 dB everywhere); the reference calibration must
+        // reproduce that regardless of the deconvolution's bulk IR latency.
+        //
+        // KNOWN LIMITATION (tracked follow-up): absolute PHASE / GROUP DELAY from EssResponse
+        // are NOT yet trustworthy. The deconvolved IR sits at the linear-convolution centre
+        // (~N samples), so its huge bulk latency wraps the phase far faster than the probe grid
+        // can unwrap — a pure 30-sample delay reads group delay off by ~9x. The fix is to
+        // time-align the IR (shift to a common reference origin) before the transfer function.
+        // Until then the response.csv phaseRad/groupDelaySec columns are descriptive-only; no
+        // gate depends on them, and the magnitude ruler below is unaffected.
+        beginTest("EssResponse magnitude is delay-invariant (a pure delay reads ~0 dB all-pass)");
+        {
+            struct DelayAdapter {
+                int D = 0; std::vector<float> buf; size_t pos = 0;
+                void reset() { buf.assign((size_t) std::max(1, D), 0.0f); pos = 0; }
+                void process(float* b, int n) {
+                    if (D == 0) return;
+                    for (int i = 0; i < n; ++i) {
+                        const float out = buf[pos]; buf[pos] = b[i];
+                        pos = (pos + 1) % buf.size(); b[i] = out;
+                    }
+                }
+            };
+            const int D = 30;
+            DelayAdapter d; d.D = D; d.reset();
+            auto freqs = logFreqs(300.0, 6000.0, 40);
+            auto r = testdsp::EssResponse::measure(d, 20.0, 24000.0, 1.0, sr, 0.05f, freqs);
+            double worstMag = 0.0;
+            for (size_t i = 0; i < freqs.size(); ++i)
+                if (freqs[i] >= 500.0 && freqs[i] <= 4000.0)
+                    worstMag = std::max(worstMag, std::abs(r.magDb[i]));   // all-pass -> 0 dB
+            logMessage("EssResponse pure-delay magnitude worst |dB| = " + juce::String(worstMag, 3)
+                       + " (all-pass expects 0 dB; phase/GD time-alignment is a tracked follow-up)");
+            expect(worstMag < 0.5, "pure delay is all-pass within 0.5 dB: " + juce::String(worstMag, 3));
+        }
     }
 };
 static MethodAgreementTests methodAgreementTestsInstance;

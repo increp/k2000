@@ -29,6 +29,16 @@ One row per probe frequency per measurement method. Two rows per probe frequency
 | `phaseRad` | float | Unwrapped phase in radians. For `stepped` rows, this is the measured steady-state phase shift. For `ess` rows, phase is extracted from the complex impulse response |
 | `groupDelaySec` | float | Group delay in seconds. **Present only for `ess` rows** — the column is empty (blank field) for `stepped` rows, because the stepped-sine measurement does not produce a group delay estimate |
 
+> **B4 phase / group delay are descriptive-only today (known limitation).** The `phaseRad`
+> and `groupDelaySec` values from the `ess` method are NOT yet time-aligned: the deconvolved
+> impulse response sits at the linear-convolution centre (~N samples), whose bulk latency
+> wraps the phase far faster than the probe grid can unwrap (a synthetic 30-sample delay reads
+> a group delay ~9× off). Absolute phase / group-delay values are therefore unreliable, and
+> **no gate depends on them** — the magnitude path (B1), the method-agreement gate, and every
+> spec / self-golden gate are magnitude-only and unaffected (the magnitude calibration is
+> provably delay-invariant; see the `EssResponse magnitude is delay-invariant` test).
+> Time-aligning the IR before the transfer function is a tracked follow-up (engine-questions Q20).
+
 ### Method-agreement delta
 
 The key metric extracted from response.csv and stored in summary.csv is
