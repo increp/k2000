@@ -40,6 +40,7 @@ add_executable(k2000_tests
     TestDspSelfTests.cpp
     SteppedSineTests.cpp
     SweepTests.cpp
+    TransferFunctionTests.cpp
     MoogPipelineTests.cpp
     MoogLadderTests.cpp
     MoogMaxFreqTests.cpp
