@@ -1,5 +1,6 @@
 #pragma once
 #include "OperatingPoint.h"
+#include "DeviceUnderTest.h"
 #include "../../src/dsp/spine/FilterModel.h"
 #include "../../src/dsp/VoiceOversampler.h"
 #include <juce_core/juce_core.h>
@@ -15,22 +16,24 @@ namespace chz {
 // The OS axis is applied internally via VoiceOversampler: when osFactor > 1 the
 // model runs at hostSampleRate*osFactor and the socket up/downsamples around it.
 // Adapter contract for testdsp engines: reset(); process(float*, int).
-class FilterUnderTest {
+class FilterUnderTest : public DeviceUnderTest {
 public:
     // Returns false if the model does not support the requested Mode.
     using Configurator = std::function<bool(FilterModel&, Mode)>;
 
     FilterUnderTest(juce::String name, std::unique_ptr<FilterModel> model, Configurator cfg);
 
-    juce::String name() const { return name_; }
+    juce::String name() const override { return name_; }
+    DeviceKind   kind()       const override { return DeviceKind::TransferFunction; }
+    Excitation   excitation() const override { return Excitation::InputSweep; }
     // NOT const: probing the configurator sets the model's mode/slope. setOperatingPoint()
     // always re-applies mode before measuring, so a prior supports() probe cannot leak into a
     // measurement — but never call supports() mid-sweep.
-    bool supports(Mode m);
+    bool supports(Mode m) override;
 
-    void setOperatingPoint(const OperatingPoint& op);
-    void reset();
-    void process(float* mono, int n);   // base-rate in/out; OS applied internally
+    void setOperatingPoint(const OperatingPoint& op) override;
+    void reset() override;
+    void process(float* mono, int n) override;   // base-rate in/out; OS applied internally
 
 private:
     juce::String name_;

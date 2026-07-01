@@ -1,5 +1,6 @@
 #include <juce_core/juce_core.h>
 #include "characterization/DeviceUnderTest.h"
+#include "characterization/FilterUnderTest.h"
 #include "testdsp/SteppedSine.h"
 #include <cmath>
 #include <vector>
@@ -35,6 +36,18 @@ struct DeviceUnderTestTests : public juce::UnitTest {
         auto r = testdsp::SteppedSine::transfer(dut, freqs, 48000.0, 0.25f);
         for (double m : r.magDb)
             expect(std::abs(m) < 0.01, "unity gain should read ~0 dB");
+
+        beginTest("real filter factories report TransferFunction / InputSweep");
+        auto moog = chz::makeMoogFut();
+        auto hug  = chz::makeHuggettFut();
+        DeviceUnderTest& mdut = *moog;    // upcast proves FilterUnderTest IS-A DeviceUnderTest
+        DeviceUnderTest& hdut = *hug;
+        expect(mdut.kind() == DeviceKind::TransferFunction);
+        expect(mdut.excitation() == Excitation::InputSweep);
+        expect(hdut.kind() == DeviceKind::TransferFunction);
+        expect(hdut.excitation() == Excitation::InputSweep);
+        expectEquals(mdut.name(), juce::String("moog"));
+        expectEquals(hdut.name(), juce::String("huggett"));
     }
 };
 
