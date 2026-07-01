@@ -32,6 +32,14 @@ struct LevelExtractorTests : public juce::UnitTest {
         auto noise = testdsp::SignalGen::whiteNoise(0.1f, 16384, 1234u);
         const double expectedDbfs = 20.0 * std::log10(0.1 / std::sqrt(3.0));  // ~ -24.77
         expectWithinAbsoluteError(testdsp::Level::rmsDbfs(noise), expectedDbfs, 0.5);
+
+        beginTest("empty input returns the -300 dB no-data sentinel (not silence/DC)");
+        std::vector<double> emptyResp;
+        std::vector<float>  emptyBuf;
+        expectWithinAbsoluteError(Level::peakGainDb(emptyResp),   -300.0, 1.0e-9);
+        expectWithinAbsoluteError(Level::peakDbfs(emptyBuf),      -300.0, 1.0e-9);
+        expectWithinAbsoluteError(Level::rmsDbfs(emptyBuf),       -300.0, 1.0e-9);
+        expectWithinAbsoluteError(Level::crestFactorDb(emptyBuf), -300.0, 1.0e-9);
     }
 };
 
