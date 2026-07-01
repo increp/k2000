@@ -3,8 +3,43 @@
 #include "testdsp/SignalGen.h"
 #include <vector>
 #include <cmath>
+#include "characterization/ReferenceDevices.h"
+#include "characterization/CharacterizationRunner.h"   // logFreqs
+#include "testdsp/SteppedSine.h"
 
 // M2 trust gates: the ruler + level extractors must recover known answers.
+
+struct SyntheticReferenceTests : public juce::UnitTest {
+    SyntheticReferenceTests() : juce::UnitTest("SyntheticReference") {}
+
+    void runTest() override {
+        using namespace chz;
+
+        beginTest("ruler recovers an analytic biquad's exact response (<= 0.1 dB in-band)");
+        AnalyticBiquad bq;
+        OperatingPoint op;
+        op.cutoffHz       = 1000.0;
+        op.resonance      = 0.4737;      // -> Q ~= 5.0 (0.5 + 0.4737*9.5)
+        op.hostSampleRate = 48000.0;
+        op.osFactor       = 1;
+        bq.setOperatingPoint(op);
+
+        auto probes = CharacterizationRunner::logFreqs(50.0, 20000.0, 100);
+        auto r = testdsp::SteppedSine::transfer(bq, probes, 48000.0, 0.5f);
+
+        double worst = 0.0, truePeak = -300.0;
+        for (size_t i = 0; i < probes.size(); ++i) {
+            const double truth = bq.trueMagDb(probes[i]);
+            worst    = std::max(worst, std::abs(r.magDb[i] - truth));
+            truePeak = std::max(truePeak, truth);
+        }
+        expect(worst < 0.1, "measured vs analytic |H| within 0.1 dB at every probe");
+
+        beginTest("peak-gain extractor matches the analytic peak (<= 0.2 dB)");
+        const double measPeak = testdsp::Level::peakGainDb(r.magDb);
+        expectWithinAbsoluteError(measPeak, truePeak, 0.2);
+    }
+};
 
 struct LevelExtractorTests : public juce::UnitTest {
     LevelExtractorTests() : juce::UnitTest("LevelExtractors") {}
@@ -43,4 +78,5 @@ struct LevelExtractorTests : public juce::UnitTest {
     }
 };
 
+static SyntheticReferenceTests syntheticReferenceTestsInstance;
 static LevelExtractorTests levelExtractorTestsInstance;
