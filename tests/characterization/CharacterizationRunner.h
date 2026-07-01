@@ -1,5 +1,6 @@
 #pragma once
 #include "OperatingPoint.h"
+#include "DeviceUnderTest.h"
 #include "FilterUnderTest.h"
 #include <juce_core/juce_core.h>
 #include <map>
@@ -37,7 +38,7 @@ struct CharacterizationRunner {
     // Writes response.csv into outDir (directory is created if absent).
     // Returns headline metrics. B2/B3 seam: extend via runB1OnePoint helper is already
     // isolated; add runB2/runB3 helpers and call them from run() for 8b.
-    static Summary run(FilterUnderTest& fut, const Grid& g, const juce::File& outDir);
+    static Summary run(DeviceUnderTest& fut, const Grid& g, const juce::File& outDir);
 
 private:
     // Per-point B1+B4 measurement. Returns headline metrics for this point.
@@ -48,7 +49,7 @@ private:
         double methodDeltaDb = -1.0;
     };
 
-    static B1Result runB1OnePoint(FilterUnderTest& fut, const OperatingPoint& op,
+    static B1Result runB1OnePoint(DeviceUnderTest& fut, const OperatingPoint& op,
                                    const std::vector<double>& probeFreqs,
                                    juce::String& csvRows);
 
@@ -59,7 +60,7 @@ private:
         double selfoscCentsErr = -1.0;   // 1200 * log2(measured / cutoff)
     };
 
-    static B2Result runB2OnePoint(FilterUnderTest& fut, const OperatingPoint& op,
+    static B2Result runB2OnePoint(DeviceUnderTest& fut, const OperatingPoint& op,
                                    juce::String& csvRows);
 
     // B3: distortion + aliasing at a single operating point (osFactor is part of op).
@@ -69,7 +70,7 @@ private:
         double aliasDb  = -1.0;
     };
 
-    static B3Result runB3OnePoint(FilterUnderTest& fut, const OperatingPoint& op,
+    static B3Result runB3OnePoint(DeviceUnderTest& fut, const OperatingPoint& op,
                                    double probeHz, juce::String& csvRows);
 
     // Interpolate magDb (sampled at freqs) at target frequency, linearly on log-freq axis.

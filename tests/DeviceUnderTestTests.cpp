@@ -1,6 +1,7 @@
 #include <juce_core/juce_core.h>
 #include "characterization/DeviceUnderTest.h"
 #include "characterization/FilterUnderTest.h"
+#include "characterization/CharacterizationRunner.h"
 #include "testdsp/SteppedSine.h"
 #include <cmath>
 #include <vector>
@@ -48,6 +49,27 @@ struct DeviceUnderTestTests : public juce::UnitTest {
         expect(hdut.excitation() == Excitation::InputSweep);
         expectEquals(mdut.name(), juce::String("moog"));
         expectEquals(hdut.name(), juce::String("huggett"));
+
+        beginTest("runner accepts a DeviceUnderTest& (polymorphic)");
+        auto moogForRun = chz::makeMoogFut();
+        DeviceUnderTest& runDut = *moogForRun;          // pass as the abstract base
+        chz::Grid g;
+        g.modes       = { Mode::LP24 };
+        g.cutoffs     = { 1000.0 };
+        g.resonances  = { 0.0 };
+        g.drives      = { 0.0 };
+        g.osFactors   = { 1 };
+        g.osModes     = { OsMode::Live };
+        g.hostRates   = { 96000.0 };
+        g.probeFreqs  = chz::CharacterizationRunner::logFreqs(50.0, 20000.0, 20);
+        auto outDir = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                          .getChildFile("chz_dut_runner_test");
+        outDir.deleteRecursively();
+        outDir.createDirectory();
+        auto summary = chz::CharacterizationRunner::run(runDut, g, outDir);
+        expect(summary.count("moog/LP24/fc1000/corner_hz") == 1,
+               "runner should produce the corner_hz summary key via the base ref");
+        outDir.deleteRecursively();
     }
 };
 

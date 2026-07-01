@@ -90,7 +90,7 @@ double CharacterizationRunner::interpMag(const std::vector<double>& freqs,
 //   Returns B1Result with corner_hz, slope_db_oct, method_delta_db.
 // ---------------------------------------------------------------------------
 CharacterizationRunner::B1Result CharacterizationRunner::runB1OnePoint(
-        FilterUnderTest& fut, const OperatingPoint& op,
+        DeviceUnderTest& fut, const OperatingPoint& op,
         const std::vector<double>& probeFreqs,
         juce::String& csvRows) {
 
@@ -266,7 +266,7 @@ CharacterizationRunner::B1Result CharacterizationRunner::runB1OnePoint(
 //   Appends one row to csvRows.
 // ---------------------------------------------------------------------------
 CharacterizationRunner::B2Result CharacterizationRunner::runB2OnePoint(
-        FilterUnderTest& fut, const OperatingPoint& op, juce::String& csvRows) {
+        DeviceUnderTest& fut, const OperatingPoint& op, juce::String& csvRows) {
 
     const juce::String modelName = fut.name();
     const juce::String modeStr   = modeName(op.mode);
@@ -361,7 +361,7 @@ CharacterizationRunner::B2Result CharacterizationRunner::runB2OnePoint(
 //   Appends one row to csvRows.
 // ---------------------------------------------------------------------------
 CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
-        FilterUnderTest& fut, const OperatingPoint& op, double probeHz,
+        DeviceUnderTest& fut, const OperatingPoint& op, double probeHz,
         juce::String& csvRows) {
 
     const juce::String modelName = fut.name();
@@ -451,7 +451,7 @@ CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
 //       + B3 (distortion/aliasing). Writes response.csv, resonance.csv,
 //       distortion.csv to outDir.
 // ---------------------------------------------------------------------------
-Summary CharacterizationRunner::run(FilterUnderTest& fut, const Grid& g,
+Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                                      const juce::File& outDir) {
     outDir.createDirectory();
 
