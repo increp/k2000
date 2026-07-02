@@ -61,9 +61,17 @@ struct LevelDisparityTests : public juce::UnitTest {
                    + " dB, Huggett peak=" + juce::String(hugPeak, 2)
                    + " dB, disparity=" + juce::String(hugPeak - moogPeak, 2) + " dB.");
 
-        expect(hugPeak > 55.0,  "Huggett true peak should be well above +55 dB (dense sweep captures it)");
+        // Re-anchored after the Q27 bounded-resonance fix (2026-07-02). Pre-fix this
+        // sweep read +88.97 dB (the anti-damped defect; see
+        // docs/reviews/2026-07-02-huggett-large-signal-read.md). Post-fix the state
+        // rails compress the response AT THIS PROBE LEVEL to ~+26 dB; the tiny-signal
+        // (-80 dBFS) peak remains ~+61 dB (verified by LargeSignalTests) — the
+        // near-self-osc linear character is intact, the follow-through is bounded.
+        expect(hugPeak > 15.0 && hugPeak < 40.0,
+               "Huggett dense-sweep peak should sit in the bounded band (+15..+40 dB)");
         expect(moogPeak < 10.0, "Moog peak should be modest (internally bounded ladder)");
-        expect(hugPeak - moogPeak > 40.0, "true Huggett-vs-Moog disparity should exceed 40 dB");
+        expect(hugPeak - moogPeak > 10.0,
+               "Huggett stays distinctly hotter than Moog (character preserved, > 10 dB)");
     }
 };
 
