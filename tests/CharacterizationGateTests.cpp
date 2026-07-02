@@ -96,6 +96,13 @@ struct CharacterizationGateTests : public juce::UnitTest {
         gs.check(*this, "LP24/fc1000/passband_gain_db",
                  s.at(modelName + "/LP24/fc1000/passband_gain_db"),  1.0);
 
+        // Idle-noise-floor golden (M4): silence in at the base point. Catches a
+        // filter that starts humming/leaking at idle. Flat + A-weighted lens.
+        gs.check(*this, "LP24/fc1000/noise_floor_dbfs",
+                 s.at(modelName + "/LP24/fc1000/noise_floor_dbfs"),  3.0);
+        gs.check(*this, "LP24/fc1000/noise_floor_dbfsA",
+                 s.at(modelName + "/LP24/fc1000/noise_floor_dbfsA"), 3.0);
+
         gs.flush();
 
         // Clean up temp dir.

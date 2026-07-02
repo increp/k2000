@@ -1,5 +1,7 @@
 LP24/fc1000/corner_hz,441.608737
 LP24/fc1000/method_delta_db,0.081312
+LP24/fc1000/noise_floor_dbfs,-180.000000
+LP24/fc1000/noise_floor_dbfsA,-180.000000
 LP24/fc1000/passband_gain_db,-12.622894
 LP24/fc1000/peak_gain_db,4.439776
 LP24/fc1000/selfosc_cents_err,-111.731285

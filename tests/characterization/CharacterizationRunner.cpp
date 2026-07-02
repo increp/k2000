@@ -593,6 +593,26 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                 (void) soHz;  // selfosc_cents_err is the headline; Hz is in CSV
             }
 
+            // --- M4: idle noise floor at the base point (silence in -> output level) ---
+            // Flat dBFS is primary; the A-weighted figure is the labeled lens beside it.
+            {
+                OperatingPoint opN;
+                opN.mode           = mode;
+                opN.cutoffHz       = cutoff;
+                opN.resonance      = baseRes;
+                opN.drive          = baseDrive;
+                opN.osFactor       = 1;
+                opN.osMode         = OsMode::Live;
+                opN.hostSampleRate = baseHost;
+                fut.setOperatingPoint(opN);
+                fut.reset();
+                auto ns = testdsp::SignalGen::silence(1 << 14);
+                fut.process(ns.data(), (int) ns.size());
+                summary[keyBase + "/noise_floor_dbfs"]  = testdsp::Level::rmsDbfs(ns);
+                summary[keyBase + "/noise_floor_dbfsA"] =
+                    testdsp::AWeighting::aWeightedRmsDbfs(ns, baseHost);
+            }
+
             for (double resonance : g.resonances) {
                 for (double drive : g.drives) {
                     for (int osFactor : g.osFactors) {
