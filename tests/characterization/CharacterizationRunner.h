@@ -47,6 +47,8 @@ private:
         double cornerHz      = -1.0;
         double slopeDbOct    = -1.0;
         double methodDeltaDb = -1.0;
+        double peakGainDb     = -300.0;
+        double passbandGainDb = -300.0;
     };
 
     static B1Result runB1OnePoint(DeviceUnderTest& fut, const OperatingPoint& op,

@@ -4,6 +4,7 @@
 #include "../testdsp/MethodAgreement.h"
 #include "../testdsp/Response.h"
 #include "../testdsp/Harmonics.h"
+#include "../testdsp/Level.h"
 #include "../testdsp/Metrics.h"
 #include "../testdsp/Spectrum.h"
 #include "../testdsp/SignalGen.h"
@@ -250,10 +251,20 @@ CharacterizationRunner::B1Result CharacterizationRunner::runB1OnePoint(
                 + juce::String(esGD, 9) + "\n";
     }
 
+    // Absolute-level reductions (M3): peak = resonant peak gain; passband = gain at
+    // the mode's passband anchor. st.magDb is absolute gain (output/input) in dB.
+    const double peakGainDb = testdsp::Level::peakGainDb(st.magDb);
+    const testdsp::Level::Passband anchor =
+        (op.mode == Mode::HP) ? testdsp::Level::Passband::High
+                              : testdsp::Level::Passband::Low;   // LP/LP12/BP/Notch -> Low (BP/Notch approximate)
+    const double passbandGainDb = testdsp::Level::passbandGainDb(st.magDb, anchor);
+
     B1Result result;
     result.cornerHz      = cornerHz;
     result.slopeDbOct    = slopeDbOct;
     result.methodDeltaDb = methodDelta;
+    result.peakGainDb     = peakGainDb;
+    result.passbandGainDb = passbandGainDb;
     return result;
 }
 
@@ -570,6 +581,20 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                                     summary[keyBase + "/corner_hz"]      = c;
                                     summary[keyBase + "/slope_db_oct"]   = s;
                                     summary[keyBase + "/method_delta_db"]= d;
+                                }
+
+                                // M3: level metrics are stored at MAX resonance (where the
+                                // resonant peak and the authentic passband droop actually appear),
+                                // at the same os=1/Live/baseHost base point for deterministic keys.
+                                const bool isLevelBase = (osFactor == 1)
+                                                      && (osMode == OsMode::Live)
+                                                      && (std::abs(resonance - maxRes) < 1.0e-9)
+                                                      && (std::abs(hostRate - baseHost) < 0.5);
+                                if (isLevelBase) {
+                                    const double pk = std::isfinite(b1r.peakGainDb)     ? b1r.peakGainDb     : -300.0;
+                                    const double pb = std::isfinite(b1r.passbandGainDb) ? b1r.passbandGainDb : -300.0;
+                                    summary[keyBase + "/peak_gain_db"]     = pk;
+                                    summary[keyBase + "/passband_gain_db"] = pb;
                                 }
                             }
                         }
