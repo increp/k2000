@@ -16,15 +16,16 @@ BUILD_LOG_GLOBS      = ["*_output.txt", "build_output*.txt"]
 
 # ---- registry ---------------------------------------------------------------
 class Check:
-    def __init__(self, name, tiers, severity, fn):
+    def __init__(self, name, tiers, severity, fn, soft=()):
         self.name, self.tiers, self.severity, self.fn = name, tiers, severity, fn
+        self.soft = set(soft)   # tiers where a fail is reported but downgraded to warn
 
 CHECKS = []
 FIXTURES = {}   # name -> fx(dir, passing)
 
-def check(name, tiers, severity):
+def check(name, tiers, severity, soft=()):
     def deco(fn):
-        CHECKS.append(Check(name, set(tiers), severity, fn))
+        CHECKS.append(Check(name, set(tiers), severity, fn, soft))
         return fn
     return deco
 
@@ -120,6 +121,87 @@ def chk_doc_links(root, ctx):
         return "fail", "dangling doc links: " + "; ".join(bad[:5])
     return "ok", "doc links resolve"
 
+@check("build-dir-type", {"session"}, "warn")
+def chk_build_type(root, ctx):
+    """build/ must be Release per convention (specimen: the Debug perf-table fiasco)."""
+    cache = root / "build/CMakeCache.txt"
+    if not cache.exists():
+        return "skip", "no build/ dir"
+    m = re.search(r"^CMAKE_BUILD_TYPE:\w+=(\S+)", cache.read_text(encoding="utf-8"), re.M)
+    if m and m.group(1) != "Release":
+        return "warn", f"build/ is {m.group(1)}, convention is Release (perf numbers there are meaningless)"
+    return "ok", "build/ is Release"
+
+@check("handoff-age", {"session"}, "warn")
+def chk_handoff_age(root, ctx):
+    """Newest doc under docs/handoffs/ must be < HANDOFF_MAX_AGE_DAYS (specimen: 2026-06-20 HANDOFF)."""
+    hd = root / "docs/handoffs"
+    if not hd.exists() or not any(hd.glob("*.md")):
+        return "skip", "no handoffs"
+    newest = max(hd.glob("*.md"), key=lambda p: p.stat().st_mtime)
+    age = (time.time() - newest.stat().st_mtime) / 86400.0
+    if age > HANDOFF_MAX_AGE_DAYS:
+        return "warn", f"{newest.name} is {age:.0f} days old — do not trust it as current state"
+    return "ok", f"{newest.name} is {age:.0f} days old"
+
+@check("register-aging", {"session", "ci"}, "warn")
+def chk_register_aging(root, ctx):
+    """Open (red) register questions whose resolve-at version already shipped (specimen: Q19)."""
+    reg = root / "docs/architecture/engine-questions.md"
+    rj  = root / "tools/roadmap-dashboard/roadmap.json"
+    if not reg.exists() or not rj.exists():
+        return "skip", "register or roadmap missing"
+    shipped = set()
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("kind") == "version" and o.get("status") == "shipped":
+                shipped.add(str(o.get("id")))
+            for v in o.values(): walk(v)
+        elif isinstance(o, list):
+            for v in o: walk(v)
+    walk(json.loads(rj.read_text(encoding="utf-8")))
+    aged = []
+    for line in reg.read_text(encoding="utf-8").splitlines():
+        if "\U0001F534" not in line or not line.startswith("| Q"):
+            continue
+        cols = [c.strip() for c in line.split("|")]
+        if len(cols) < 6:
+            continue
+        qid, resolve_at = cols[1], cols[4]
+        for v in re.findall(r"\bv[0-9.]+\b", resolve_at):
+            if v in shipped:
+                aged.append(f"{qid} (resolve at {v}, shipped)")
+    if aged:
+        return "warn", "aging open questions: " + "; ".join(aged[:5])
+    return "ok", "no open questions past their resolve-at version"
+
+@check("suite-count-claims", {"session", "ci"}, "fail", soft={"session"})
+def chk_suite_counts(root, ctx):
+    """LIVING docs' 'Summary: N tests' claims must equal the actual suite count
+    (specimen: the stale 227/138 counts). Dated point-in-time records (handoffs,
+    execution plans) are exempt — they describe the past. CI passes --suite-log;
+    locally build/last-test-run.log is used when present."""
+    log = ctx.get("suite_log") or (root / "build/last-test-run.log")
+    log = Path(log)
+    if not log.exists():
+        return "skip", "no suite log (tee a run to build/last-test-run.log)"
+    m = re.search(r"Summary:\s+(\d+)\s+tests", log.read_text(encoding="utf-8", errors="replace"))
+    if not m:
+        return "fail", f"{log} has no 'Summary: N tests' line"
+    actual = m.group(1)
+    exempt = ("/handoffs/", "/plans/")   # point-in-time records
+    bad = []
+    for p in (root / "docs").rglob("*.md"):
+        if any(e in str(p) for e in exempt):
+            continue
+        for c in re.findall(r"Summary:\s+(\d+)\s+tests",
+                            p.read_text(encoding="utf-8", errors="replace")):
+            if c != actual:
+                bad.append(f"{p.relative_to(root)} says {c}")
+    if bad:
+        return "fail", f"suite has {actual} tests but: " + "; ".join(bad[:4])
+    return "ok", f"doc test-counts match ({actual})"
+
 # ---- fixtures ---------------------------------------------------------------
 @fixture("root-md-litter")
 def fx_root_md(d, passing):
@@ -154,6 +236,37 @@ def fx_doc_links(d, passing):
     if passing:
         (d / "docs/b.md").write_text("# b\n")
 
+@fixture("build-dir-type")
+def fx_build_type(d, passing):
+    (d / "build").mkdir()
+    t = "Release" if passing else "Debug"
+    (d / "build/CMakeCache.txt").write_text(f"CMAKE_BUILD_TYPE:STRING={t}\n")
+
+@fixture("handoff-age")
+def fx_handoff_age(d, passing):
+    hd = d / "docs/handoffs"; hd.mkdir(parents=True)
+    p = hd / "h.md"; p.write_text("# h\n")
+    if not passing:
+        old = time.time() - (HANDOFF_MAX_AGE_DAYS + 5) * 86400
+        os.utime(p, (old, old))
+
+@fixture("register-aging")
+def fx_register_aging(d, passing):
+    (d / "docs/architecture").mkdir(parents=True)
+    (d / "tools/roadmap-dashboard").mkdir(parents=True)
+    (d / "tools/roadmap-dashboard/roadmap.json").write_text(
+        json.dumps({"items": [{"id": "v5", "kind": "version", "status": "shipped"}]}))
+    status = "\U0001F7E2" if passing else "\U0001F534"
+    (d / "docs/architecture/engine-questions.md").write_text(
+        f"| Q9 | q | why | v5 | {status} |\n")
+
+@fixture("suite-count-claims")
+def fx_suite_counts(d, passing):
+    (d / "docs").mkdir(); (d / "build").mkdir()
+    (d / "build/last-test-run.log").write_text("Summary: 264 tests, 0 failed\n")
+    n = "264" if passing else "227"
+    (d / "docs/manual.md").write_text(f"Expected: `Summary: {n} tests, 0 failed`\n")
+
 # ---- engine ------------------------------------------------------------------
 def run_tier(root, tier, ctx):
     failed = False
@@ -164,7 +277,7 @@ def run_tier(root, tier, ctx):
             status, msg = c.fn(root, ctx)
         except Exception as e:                       # a broken check must not pass silently
             status, msg = ("fail" if tier == "ci" else "warn"), f"check crashed: {e}"
-        if status == "fail" and c.severity == "warn":
+        if status == "fail" and (c.severity == "warn" or tier in c.soft):
             status = "warn"
         print(f"[{status.upper():4}] {c.name}: {msg}")
         if status == "fail":
