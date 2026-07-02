@@ -1,5 +1,7 @@
 # v4 known concerns (carried from the v4 build)
 
+> **Point-in-time record (v4 era).** Not groomed since; several items are since resolved. Surviving concerns belong in the living register `docs/architecture/engine-questions.md` — check there before acting on anything below.
+
 Issues identified during v4 that don't block shipping but should be addressed in a later phase. Captured here so they aren't lost.
 
 ## Editor has no automated test coverage

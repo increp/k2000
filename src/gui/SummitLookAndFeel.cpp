@@ -58,7 +58,7 @@ void SummitLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
 static constexpr int kComboArrowZone = 18;
 
 juce::Font SummitLookAndFeel::getComboBoxFont(juce::ComboBox& box) {
-    return juce::Font(juce::jmin(13.0f, (float) box.getHeight() * 0.75f));
+    return juce::Font(juce::FontOptions(juce::jmin(13.0f, (float) box.getHeight() * 0.75f)));
 }
 
 void SummitLookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label) {

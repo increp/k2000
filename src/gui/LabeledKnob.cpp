@@ -6,7 +6,7 @@ LabeledKnob::LabeledKnob(const juce::String& caption) {
 
     caption_.setText(caption, juce::dontSendNotification);
     caption_.setJustificationType(juce::Justification::centred);
-    caption_.setFont(juce::Font(11.0f));
+    caption_.setFont(juce::Font(juce::FontOptions(11.0f)));
     addAndMakeVisible(caption_);
 }
 

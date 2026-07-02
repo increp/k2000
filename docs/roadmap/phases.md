@@ -45,14 +45,14 @@ with a subset of its FX blocks also exposed as VAST DSP blocks (roadmap item **v
 - **The model:** `[ K2061 Dynamic VAST source + DSP graph (variable) ] → [ constant
   Summit spine: selectable filter model (Huggett default) + drive → VCA, with
   envelopes/LFOs/mod matrix/voice modes ]`, **per voice, per Layer**.
-- **Locked decisions** (from the register): **full stereo throughout** · **256-voice**
-  target · spine + modulation **per-Layer** · **synth-only** sources now (sample/keymap
-  arrive later).
+- **Locked decisions** (from the register): **full stereo throughout** · **64–128-voice**
+  target (re-resolved 2026-07-02 from 256 with measured per-voice cost — register Q2/Q23) ·
+  spine + modulation **per-Layer** · **synth-only** sources now (sample/keymap arrive later).
 - **GUI grows with the engine, toward a fixed aesthetic** — no phase ships a feature you
   can't drive; each phase advances the visual design incrementally toward the target
   Summit aesthetic rather than deferring a "real GUI" to the end.
-- **Performance is a gate** — at 256 voices × full stereo × graph DSP, every phase meets a
-  per-voice CPU budget with profiling as a release gate.
+- **Performance is a gate** — at 64–128 voices × full stereo × graph DSP, every phase meets a
+  per-voice CPU budget with profiling as a release gate (first real numbers: register Q23).
 
 ## Cross-cutting threads
 
@@ -64,7 +64,8 @@ threads"): the **DSP test harness** (grows to cover every component, gates relea
 ## Cmajor — a decision gate, not a version
 
 Cmajor (graph-based DSP language) is evaluated as a **spike before v6**: pilot one filter
-model, verify JUCE integration, prove the 256-voice per-voice model, then write an ADR.
+model, verify JUCE integration, prove the per-voice model at the voice-count target
+(64–128, register Q2), then write an ADR.
 The full migration's position is decided by that spike — if it wins, the v6 graph is
 authored in Cmajor (avoiding a double build); if not, the C++ DSP stays. This is why the
 spike must resolve **before v6 is designed**.
