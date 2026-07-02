@@ -25,7 +25,7 @@ K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
 void K2000AudioProcessorEditor::buildStaticControls() {
     title_.setText(juce::String("k2000  v") + JucePlugin_VersionString,
                    juce::dontSendNotification);
-    title_.setFont(juce::Font(16.0f, juce::Font::bold));
+    title_.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
     addAndMakeVisible(title_);
 
     editLayerLabel_.setText("Edit Layer", juce::dontSendNotification);
