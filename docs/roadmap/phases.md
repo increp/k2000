@@ -64,7 +64,8 @@ threads"): the **DSP test harness** (grows to cover every component, gates relea
 ## Cmajor — a decision gate, not a version
 
 Cmajor (graph-based DSP language) is evaluated as a **spike before v6**: pilot one filter
-model, verify JUCE integration, prove the 256-voice per-voice model, then write an ADR.
+model, verify JUCE integration, prove the per-voice model at the voice-count target
+(64–128, register Q2), then write an ADR.
 The full migration's position is decided by that spike — if it wins, the v6 graph is
 authored in Cmajor (avoiding a double build); if not, the C++ DSP stays. This is why the
 spike must resolve **before v6 is designed**.
