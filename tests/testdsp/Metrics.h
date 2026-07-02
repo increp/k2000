@@ -18,6 +18,22 @@ struct Metrics {
         }
         return fund > 0.0 ? 10.0 * std::log10(inh / fund) : 0.0;
     }
+    // M4 perceptual lens: inharmonic energy SPLIT at the fundamental, each half in
+    // dB relative to the fundamental. Below-fundamental aliasing is exposed and
+    // dissonant (no harmonic masking under it) — the perceptually weighted half.
+    // Harmonic bins (multiples of fundamentalBin) are excluded, like inharmonicDb.
+    struct AliasSplit { double belowDb; double aboveDb; };
+    static AliasSplit aliasSplit(const std::vector<float>& mag, int fundamentalBin) {
+        double fund = 0.0, below = 0.0, above = 0.0;
+        for (int b = 2; b < (int) mag.size(); ++b) {
+            const double e = double(mag[(size_t) b]) * mag[(size_t) b];
+            if (b % fundamentalBin == 0) { if (b == fundamentalBin) fund = e; continue; }
+            if (b < fundamentalBin) below += e; else above += e;
+        }
+        if (fund <= 0.0) return { 0.0, 0.0 };
+        return { 10.0 * std::log10(std::max(below, 1.0e-30) / fund),
+                 10.0 * std::log10(std::max(above, 1.0e-30) / fund) };
+    }
     // M6: (everything except fundamental) / fundamental, dB.
     static double thdPlusNDb(const std::vector<float>& mag, int fundamentalBin) {
         double fund = 0.0, rest = 0.0;

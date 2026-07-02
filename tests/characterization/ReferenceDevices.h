@@ -92,4 +92,28 @@ public:
     }
 };
 
+// Engineered aliasing case: ADDS a fixed inharmonic tone (aliasHz, aliasAmp) to
+// whatever passes through — a synthetic stand-in for aliasing foldback whose
+// frequency and level are known by construction. Plain reset()/process() adapter.
+class EngineeredAliaser {
+public:
+    double sr       = 48000.0;
+    double aliasHz  = 300.0;
+    float  aliasAmp = 0.01f;
+
+    void reset() { phase_ = 0.0; }
+    void process(float* mono, int n) {
+        const double inc = 2.0 * juce::MathConstants<double>::pi * aliasHz / sr;
+        for (int i = 0; i < n; ++i) {
+            mono[i] += aliasAmp * (float) std::sin(phase_);
+            phase_ += inc;
+            if (phase_ > 2.0 * juce::MathConstants<double>::pi)
+                phase_ -= 2.0 * juce::MathConstants<double>::pi;
+        }
+    }
+
+private:
+    double phase_ = 0.0;
+};
+
 } // namespace chz
