@@ -342,3 +342,15 @@ git commit -m "refactor(chz): rename opt-in runner to k2000_device_characterizat
 Two execution options:
 1. **Subagent-Driven** — fresh subagent per task + spec/quality review each (as M2). Task 2 touches goldens, so its reviewer should confirm only additive golden rows.
 2. **Inline Execution** — execute in this session with checkpoints.
+
+---
+
+## Design Revision (2026-07-01, post-implementation-review)
+
+During Task 2 execution a subagent found that the fast gate's 40-probe grid (spaced ~150 Hz near 1 kHz) **steps over** Huggett's razor-narrow res=0.9 resonance (~15 Hz wide), measuring its peak as ~+34 dB instead of the true ~+70 dB. Capturing the true peak needs dense probes *at* the peak — but that is exactly where the two dual-methods (stepped-sine vs ESS) diverge, which would break the ≤1 dB method-agreement gate. The coarse grid was implicitly protecting that gate. **Per user decision, the disparity handling is SPLIT:**
+
+- **Task 2 (revised):** the fast gate goldens the level metrics as-is — coarse `peak_gain_db` (a stable regression **proxy**; probes step over the narrow peak) + accurate `passband_gain_db`. Closes the ungated-resonance hole. **No** disparity assertion, **no** `gateModel` return-type change. (Simpler than the original Task 2.)
+- **Task 3 (new):** a separate `tests/LevelDisparityTests.cpp` measures the **true** peak via a single-method (stepped-sine) **dense** sweep near the cutoff (no method-agreement involved) and asserts the real Huggett ≫ Moog disparity (~+70 vs ~+5).
+- **Task 4:** the exe rename (formerly Task 3, unchanged).
+
+The coarse gate `peak_gain_db` golden is labeled a regression proxy in the gate comments; the authentic peak lives in `LevelDisparityTests` and the heavy dense runner. This supersedes the original "## Task 2" and "## Task 3" sections above for execution; the reviewer for revised Task 2 should still confirm additive-only golden rows.
