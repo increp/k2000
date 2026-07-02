@@ -2,6 +2,13 @@
 
 **Version:** 5.12 · **Date:** 2026-07-02 · Part of the [codebase health audit](README.md).
 
+> **STATUS: FIXED same day.** `Layer::prepare` now creates `models_` once and
+> re-prepares in place (stable instances); contract test added in
+> `LayerTests.cpp` ("stable across re-prepare"). Full ASan/UBSan suite re-run:
+> **262 tests, 0 failed, zero sanitizer reports** — this is the project's
+> memory-safety baseline going forward. The analysis below is kept as the
+> record of the defect and its mechanism.
+
 ## Setup (reproducible)
 
 ```bash

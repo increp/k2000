@@ -9,16 +9,23 @@ void Layer::prepare(double sr, int maxBlock) {
     for (auto& b : palette_)
         if (b) b->prepare(sr, maxBlock);
     sampleRate_ = sr;
-    models_.clear();
-    for (std::size_t i = 0; i < FilterModelLibrary::count(); ++i) {
-        auto m = FilterModelLibrary::create(i);
-        m->prepare(sampleRate_);
-        models_.push_back(std::move(m));
+    // Models are created ONCE and stay stable for the Layer's lifetime: voice
+    // slots cache non-owning FilterModel* (to destroy the per-voice state those
+    // models constructed), so recreating models_ on re-prepare dangles every
+    // cached pointer — a use-after-free on the next slot prepare (OS-factor
+    // change / Live<->Offline re-prepare). Re-prepare reconfigures in place.
+    if (models_.empty()) {
+        for (std::size_t i = 0; i < FilterModelLibrary::count(); ++i)
+            models_.push_back(FilterModelLibrary::create(i));
+        currentModelId_ = 0;
+        huggett_ = nullptr;
+        moog_    = nullptr;
+        for (auto& m : models_) {
+            if (auto* h  = dynamic_cast<HuggettFilter*>(m.get())) huggett_ = h;
+            if (auto* mg = dynamic_cast<MoogLadder*>(m.get()))    moog_    = mg;
+        }
     }
-    currentModelId_ = 0;
-    huggett_ = dynamic_cast<HuggettFilter*>(models_[0].get());
-    moog_ = nullptr;
-    for (auto& m : models_) if (auto* mg = dynamic_cast<MoogLadder*>(m.get())) moog_ = mg;
+    for (auto& m : models_) m->prepare(sampleRate_);
     hpStage_.prepare(sr);
 }
 

@@ -73,6 +73,20 @@ public:
             expect(layer.spineModel() == m0a, "current model should be id 0");
         }
 
+        beginTest("model instances are stable across re-prepare (voice slots cache FilterModel*)");
+        {
+            // SpineFilterSlot caches non-owning FilterModel* to destroy the in-place
+            // per-voice state it constructed. If Layer::prepare recreates models_,
+            // every cached pointer dangles and the next slot prepare is a
+            // use-after-free (found by ASan via the OS-change lifecycle path).
+            Layer layer; layer.prepare(48000.0, 512);
+            const FilterModel* m0 = layer.spineModel(0);
+            const FilterModel* m1 = layer.spineModel(1);
+            layer.prepare(96000.0, 256);   // OS-factor / sample-rate re-prepare
+            expect(layer.spineModel(0) == m0, "model 0 was recreated by re-prepare (dangles voice slots)");
+            expect(layer.spineModel(1) == m1, "model 1 was recreated by re-prepare (dangles voice slots)");
+        }
+
         beginTest("Layer routes Moog params to the Moog instance and processes through it");
         {
             // Block size and sample rate used throughout this test
