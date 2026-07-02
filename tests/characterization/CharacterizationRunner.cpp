@@ -8,6 +8,7 @@
 #include "../testdsp/Metrics.h"
 #include "../testdsp/Spectrum.h"
 #include "../testdsp/SignalGen.h"
+#include "../testdsp/AWeighting.h"
 #include <juce_core/juce_core.h>
 #include <algorithm>
 #include <cmath>
@@ -462,9 +463,56 @@ CharacterizationRunner::B3Result CharacterizationRunner::runB3OnePoint(
 //       + B3 (distortion/aliasing). Writes response.csv, resonance.csv,
 //       distortion.csv to outDir.
 // ---------------------------------------------------------------------------
+Summary CharacterizationRunner::runGeneratorCapture(DeviceUnderTest& dut, const Grid& g,
+                                                     const juce::File& outDir) {
+    Summary summary;
+    const double baseHost = [&]() {
+        auto it = std::find_if(g.hostRates.begin(), g.hostRates.end(),
+                               [](double r) { return std::abs(r - 96000.0) < 0.5; });
+        return (it != g.hostRates.end()) ? 96000.0
+                                         : (g.hostRates.empty() ? 96000.0 : g.hostRates[0]);
+    }();
+    const double toneHz = g.cutoffs.empty() ? 1000.0 : g.cutoffs[0];
+
+    constexpr int N = 1 << 14;
+    // Snap to an FFT bin so the A-weighted (frequency-domain) reading is leak-free.
+    const double snappedHz = std::round(toneHz * N / baseHost) * baseHost / N;
+
+    OperatingPoint op;
+    op.cutoffHz       = snappedHz;
+    op.hostSampleRate = baseHost;
+    dut.setOperatingPoint(op);
+    dut.reset();
+
+    auto buf = testdsp::SignalGen::silence(N);
+    dut.process(buf.data(), N);   // Generator: overwrites with its emission
+
+    const double pk   = testdsp::Level::peakDbfs(buf);
+    const double rms  = testdsp::Level::rmsDbfs(buf);
+    const double rmsA = testdsp::AWeighting::aWeightedRmsDbfs(buf, baseHost);
+
+    const juce::String keyBase = dut.name() + "/gen";
+    summary[keyBase + "/peak_dbfs"] = pk;
+    summary[keyBase + "/rms_dbfs"]  = rms;
+    summary[keyBase + "/rms_dbfsA"] = rmsA;
+
+    juce::String csv;
+    csv += "model,hostSR,toneHz,peak_dbfs,rms_dbfs,rms_dbfsA\n";
+    csv += dut.name() + "," + juce::String(baseHost, 1) + "," + juce::String(snappedHz, 3)
+         + "," + juce::String(pk, 4) + "," + juce::String(rms, 4)
+         + "," + juce::String(rmsA, 4) + "\n";
+    outDir.getChildFile("emission.csv").replaceWithText(csv);
+    return summary;
+}
+
 Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                                      const juce::File& outDir) {
     outDir.createDirectory();
+
+    // M4: Generator devices are excited by the Trigger driver, not the input
+    // sweep — B1/B2/B3 are transfer-function batteries and do not apply.
+    if (fut.excitation() == Excitation::Trigger)
+        return runGeneratorCapture(fut, g, outDir);
 
     // CSV headers for all three batteries.
     juce::String b1CsvRows;

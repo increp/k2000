@@ -85,6 +85,7 @@ add_executable(k2000_tests
     AWeightingTests.cpp
     AliasSplitTests.cpp
     LevelResponseTests.cpp
+    GeneratorPathTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp)
 

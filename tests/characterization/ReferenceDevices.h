@@ -116,4 +116,42 @@ private:
     double phase_ = 0.0;
 };
 
+// Calibrated-tone Generator: emits a sine of exactly known amplitude — the
+// absolute-level trust anchor (spec §5.1 "calibrated tone") and the first
+// Generator/Trigger device through the DeviceUnderTest contract. M4 Generator
+// convention: OperatingPoint::cutoffHz is the tone frequency, hostSampleRate the
+// rate (generalized OperatingPoint lands in SP-C).
+class CalibratedToneRef : public DeviceUnderTest {
+public:
+    void setToneDbfs(double dbfs) { amp_ = (float) std::pow(10.0, dbfs / 20.0); }
+
+    void reset() override { phase_ = 0.0; }
+
+    // Generator: input contents ignored, buffer OVERWRITTEN with the emission.
+    void process(float* mono, int n) override {
+        const double inc = 2.0 * juce::MathConstants<double>::pi * freqHz_ / sr_;
+        for (int i = 0; i < n; ++i) {
+            mono[i] = amp_ * (float) std::sin(phase_);
+            phase_ += inc;
+            if (phase_ > 2.0 * juce::MathConstants<double>::pi)
+                phase_ -= 2.0 * juce::MathConstants<double>::pi;
+        }
+    }
+
+    juce::String name()       const override { return "ref_tone"; }
+    DeviceKind   kind()       const override { return DeviceKind::Generator; }
+    Excitation   excitation() const override { return Excitation::Trigger; }
+    bool         supports(Mode) override { return true; }
+
+    void setOperatingPoint(const OperatingPoint& op) override {
+        freqHz_ = op.cutoffHz;
+        sr_     = op.hostSampleRate;
+        reset();
+    }
+
+private:
+    double sr_ = 48000.0, freqHz_ = 1000.0, phase_ = 0.0;
+    float  amp_ = 0.12589254f;   // -18 dBFS default (the documented calibration tone)
+};
+
 } // namespace chz

@@ -75,6 +75,12 @@ private:
     static B3Result runB3OnePoint(DeviceUnderTest& fut, const OperatingPoint& op,
                                    double probeHz, juce::String& csvRows);
 
+    // M4 Trigger driver: capture a Generator device's emission at the base host
+    // rate (tone frequency = first grid cutoff, snapped to an FFT bin for
+    // leak-free level reading) and record absolute + A-weighted level.
+    static Summary runGeneratorCapture(DeviceUnderTest& dut, const Grid& g,
+                                       const juce::File& outDir);
+
     // Interpolate magDb (sampled at freqs) at target frequency, linearly on log-freq axis.
     static double interpMag(const std::vector<double>& freqs, const std::vector<double>& magDb,
                             double targetHz);
