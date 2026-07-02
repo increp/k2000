@@ -86,6 +86,16 @@ struct CharacterizationGateTests : public juce::UnitTest {
                      s.at(modelName + "/LP24/fc1000/selfosc_cents_err"), 50.0);
         }
 
+        // Level-regression golden (M3): peak & passband gain at max res (0.9). Closes the
+        // "resonance is ungated" hole. NOTE: peak_gain_db here is the COARSE-grid value --
+        // the 40-probe gate grid steps over Huggett's narrow resonance, so this is a stable
+        // regression PROXY, not the true peak. The true peak + Huggett-vs-Moog disparity are
+        // measured in LevelDisparityTests with a dense sweep. passband_gain_db is accurate.
+        gs.check(*this, "LP24/fc1000/peak_gain_db",
+                 s.at(modelName + "/LP24/fc1000/peak_gain_db"),      2.0);
+        gs.check(*this, "LP24/fc1000/passband_gain_db",
+                 s.at(modelName + "/LP24/fc1000/passband_gain_db"),  1.0);
+
         gs.flush();
 
         // Clean up temp dir.
