@@ -42,6 +42,10 @@ public:
     }
 
     // Exact |H(e^{jw})| in dB, w = 2*pi*f/sr. H = (b0+b1 z^-1+b2 z^-2)/(1+a1 z^-1+a2 z^-2).
+    // Evaluated from the SAME quantized float coefficients the process() loop uses (b0_..a2_),
+    // by design — so the trust-gate tolerance bounds RULER error alone, not a coefficient
+    // mismatch. Do not 'optimize' this to recompute in double precision: that would silently
+    // loosen the gate's meaning.
     double trueMagDb(double f) const {
         const double w = 2.0 * juce::MathConstants<double>::pi * f / sr_;
         const double c1 = std::cos(w),  s1 = std::sin(w);
@@ -77,6 +81,9 @@ public:
     }
 
     // Closed-form THD (3rd / fundamental amplitude), dB.
+    // THD of a memoryless cubic is LEVEL-DEPENDENT: pass the SAME amplitude used to excite
+    // the device (the amp given to Harmonics::thdDb). A different amp yields a silently wrong
+    // 'truth'.
     double trueThdDb(float amp) const {
         const double A = amp;
         const double fund = A + 0.75 * (double) c3 * A * A * A;
