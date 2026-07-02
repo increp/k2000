@@ -61,4 +61,28 @@ private:
     float  z1_ = 0.0f, z2_ = 0.0f;
 };
 
+// Memoryless cubic: y = x + c3*x^3. For a sine A*sin(wt), x^3 = A^3*(3/4 sin - 1/4 sin3),
+// so the output is a fundamental of amplitude (A + 3/4 c3 A^3) plus a single 3rd harmonic
+// of amplitude (1/4 c3 A^3) -- a THD known in closed form. Plain reset()/process() adapter.
+class CubicNonlinearity {
+public:
+    float c3 = 0.0f;
+
+    void reset() {}
+    void process(float* mono, int n) {
+        for (int i = 0; i < n; ++i) {
+            const float x = mono[i];
+            mono[i] = x + c3 * x * x * x;
+        }
+    }
+
+    // Closed-form THD (3rd / fundamental amplitude), dB.
+    double trueThdDb(float amp) const {
+        const double A = amp;
+        const double fund = A + 0.75 * (double) c3 * A * A * A;
+        const double h3   = 0.25 * (double) c3 * A * A * A;
+        return 20.0 * std::log10(std::abs(h3) / std::abs(fund));
+    }
+};
+
 } // namespace chz

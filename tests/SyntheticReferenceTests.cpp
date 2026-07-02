@@ -6,6 +6,7 @@
 #include "characterization/ReferenceDevices.h"
 #include "characterization/CharacterizationRunner.h"   // logFreqs
 #include "testdsp/SteppedSine.h"
+#include "testdsp/Harmonics.h"
 
 // M2 trust gates: the ruler + level extractors must recover known answers.
 
@@ -38,6 +39,13 @@ struct SyntheticReferenceTests : public juce::UnitTest {
         beginTest("peak-gain extractor matches the analytic peak (<= 0.2 dB)");
         const double measPeak = testdsp::Level::peakGainDb(r.magDb);
         expectWithinAbsoluteError(measPeak, truePeak, 0.2);
+
+        beginTest("THD ruler recovers a cubic's closed-form THD (<= 0.5 dB)");
+        CubicNonlinearity cubic;
+        cubic.c3 = 0.5f;                 // y = x + 0.5*x^3 -> pure 3rd harmonic
+        const double measThd = testdsp::Harmonics::thdDb(cubic, 1000.0, 48000.0, 0.5f);
+        const double trueThd = cubic.trueThdDb(0.5f);   // ~ -30.88 dB
+        expectWithinAbsoluteError(measThd, trueThd, 0.5);
     }
 };
 
