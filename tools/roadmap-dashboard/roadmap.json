@@ -172,6 +172,16 @@
             "testing"
           ],
           "summary": "STANDARD (set 2026-06-23): every spine filter validated by a 7000-point LOG sweep 10 Hz–25 kHz, in BOTH forms — (1) frequency-response magnitude |H(f)| (rolloff + resonant peak; the Arturia-comparison format) and (2) self-osc pitch-tracking (±3% gate only ≤~4 kHz, measure-report above due to base-rate delay drift). Log-spaced, in a SEPARATE opt-in test target (too slow for every build; fast suite keeps a ~7-point subset). Applies to all models. Deliverable: the reusable dual-sweep harness + BACK-TEST Huggett against it."
+        },
+        {
+          "id": "v5-modulation-basics",
+          "title": "v5.x — Modulation Basics (2 LFOs, 1 mod env, fixed-slot matrix)",
+          "status": "planned",
+          "kind": "point",
+          "tags": [
+            "priority"
+          ],
+          "summary": "Closes the L2 identity gap (register Q24, resolved 2026-07-02): the constant spine promises LFOs/mod envelopes/mod matrix but only the amp envelope exists, and v16 'Modulation Deepening' had nothing to deepen. Scope: 2 LFOs + 1 mod envelope + a small fixed-slot mod matrix targeting spine common-core params (cutoff/res/drive/output, separation). Scheduled BEFORE v6 design; also the easy on-ramp to Q7 (matrix addressing) by solving spine-only targets first. From the 2026-07-02 fit-for-purpose review."
         }
       ]
     },

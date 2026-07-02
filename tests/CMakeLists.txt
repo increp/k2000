@@ -88,6 +88,7 @@ add_executable(k2000_tests
     GeneratorPathTests.cpp
     CaptureCalTests.cpp
     RunnerNoiseFloorTests.cpp
+    VoicePerfTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp)
 
