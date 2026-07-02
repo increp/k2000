@@ -202,6 +202,17 @@ def chk_suite_counts(root, ctx):
         return "fail", f"suite has {actual} tests but: " + "; ".join(bad[:4])
     return "ok", f"doc test-counts match ({actual})"
 
+@check("hooks-installed", {"session"}, "warn")
+def chk_hooks(root, ctx):
+    """core.hooksPath must point at .githooks so the commit gate actually fires."""
+    if not (root / ".githooks/pre-commit").exists():
+        return "skip", "no .githooks yet"
+    r = subprocess.run(["git", "-C", str(root), "config", "core.hooksPath"],
+                       capture_output=True, text=True)
+    if r.stdout.strip() != ".githooks":
+        return "warn", "hooks not installed: run  git config core.hooksPath .githooks"
+    return "ok", "pre-commit gate installed"
+
 # ---- fixtures ---------------------------------------------------------------
 @fixture("root-md-litter")
 def fx_root_md(d, passing):
@@ -266,6 +277,13 @@ def fx_suite_counts(d, passing):
     (d / "build/last-test-run.log").write_text("Summary: 264 tests, 0 failed\n")
     n = "264" if passing else "227"
     (d / "docs/manual.md").write_text(f"Expected: `Summary: {n} tests, 0 failed`\n")
+
+@fixture("hooks-installed")
+def fx_hooks(d, passing):
+    subprocess.run(["git", "init", "-q", str(d)], check=True)
+    (d / ".githooks").mkdir(); (d / ".githooks/pre-commit").write_text("#!/bin/sh\n")
+    if passing:
+        subprocess.run(["git", "-C", str(d), "config", "core.hooksPath", ".githooks"], check=True)
 
 # ---- engine ------------------------------------------------------------------
 def run_tier(root, tier, ctx):
