@@ -90,6 +90,7 @@ add_executable(k2000_tests
     RunnerNoiseFloorTests.cpp
     VoicePerfTests.cpp
     RenderFingerprintTests.cpp
+    LargeSignalTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp)
 
