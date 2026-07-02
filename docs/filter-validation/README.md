@@ -1,7 +1,7 @@
 # Filter-Validation Harness
 
-**Version:** 5.09
-**Date:** 2026-06-30
+**Version:** 5.11
+**Date:** 2026-07-02
 
 A model-agnostic, dual-method (stepped-sine + Farina ESS) internal
 filter-characterization harness that produces numbers-only measurements of each
@@ -27,7 +27,7 @@ cmake --build build --target k2000_tests -j4
 ./build/tests/k2000_tests
 ```
 
-Expected: `Summary: 227 tests, 0 failed`
+Expected: `Summary: 261 tests, 0 failed`
 
 ### Opt-in fingerprint (on demand — 10-25 min for `--quick`, many hours without)
 
@@ -55,3 +55,4 @@ the full dense grid (~36 000 B1 points — use only for a deliberate production 
 | [running.md](running.md) | Step-by-step build and run instructions; golden baseline refresh; Windows CI |
 | [extending.md](extending.md) | Adding a new filter model: factory function, Configurator contract, smoke test, golden commit |
 | [troubleshooting.md](troubleshooting.md) | Known output noise, degenerate metrics, gate failures, MSVC-specific pitfalls |
+| [acceptance-criterion.md](acceptance-criterion.md) | When the framework is trusted for authenticity judgments (the §5.3 criterion, trust ladder, tolerances) |
