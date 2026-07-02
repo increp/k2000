@@ -48,6 +48,33 @@ public:
             expect(db < -80.0, "image rejection >=80 dB (got " + juce::String(db,1) + " dB)");
         }
 
+        beginTest("golden equivalence vector (guards optimizations against numeric drift)");
+        {
+            // Captured 2026-07-02 from the reference (pre-optimization) implementation
+            // on deterministic LCG noise. An optimized Halfband2x (e.g. exploiting the
+            // halfband zero taps) must reproduce these within float noise. If a
+            // DELIBERATE filter redesign changes them, recapture and say so in the diff.
+            unsigned s = 12345u;
+            auto rnd = [&]() { s = s*1664525u + 1013904223u; return ((s >> 9) / 4194304.0f) - 1.0f; };
+            const int M = 256;
+            std::vector<float> in((size_t) M), up((size_t) (2*M)), dn((size_t) M);
+            for (auto& v : in) v = 0.5f * rnd();
+            Halfband2x hbU, hbD;
+            hbU.upsample(in.data(), M, up.data());
+            hbD.downsample(up.data(), M, dn.data());
+
+            const int   upIdx[]  = { 50, 100, 200, 300, 400, 511 };
+            const float upRef[]  = { 0.04834877f, -0.03733288f, 0.02827655f,
+                                     -0.08027717f, -0.38160583f, -0.33816302f };
+            const int   dnIdx[]  = { 50, 100, 150, 200, 250, 255 };
+            const float dnRef[]  = { 0.20530711f, 0.18134883f, 0.14807343f,
+                                     -0.39674664f, -0.07224100f, 0.22509778f };
+            for (int k = 0; k < 6; ++k) {
+                expectWithinAbsoluteError(up[(size_t) upIdx[k]], upRef[k], 2.0e-5f);
+                expectWithinAbsoluteError(dn[(size_t) dnIdx[k]], dnRef[k], 2.0e-5f);
+            }
+        }
+
         beginTest("round-trip reconstructs the input at an integer base-sample delay");
         {
             // Feed a low-freq sine through upsample -> downsample and assert the
