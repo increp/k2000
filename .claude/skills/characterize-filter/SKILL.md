@@ -6,14 +6,14 @@ argument-hint: "<moog|huggett|all> [quick]"
 
 # characterize-filter
 
-Interactive front door over the self-sufficient `k2000_filter_characterization`
+Interactive front door over the self-sufficient `k2000_device_characterization`
 binary. This skill adds interpretation, the baseline-update offer, and
 follow-up Q&A only. If this skill vanished, the binary, CI, and golden tests
 would all continue working without it.
 
 ## Boundary (state once, never revisit)
 
-The binary at `./build/tests/k2000_filter_characterization` is fully
+The binary at `./build/tests/k2000_device_characterization` is fully
 self-sufficient. This skill does NOT reimplement DSP, alter sweep logic, or
 write CSV files. Its only value is reading the binary output and making it
 human-readable.
@@ -41,7 +41,7 @@ they want to add `--quick` before proceeding.
 Run from the repo root:
 
 ```bash
-cmake --build build --target k2000_filter_characterization -j4
+cmake --build build --target k2000_device_characterization -j4
 ```
 
 Use `-j4`, not bare `-j` (bare `-j` OOMs a JUCE compile and produces 0-byte
@@ -54,7 +54,7 @@ Stop and report the build error if the command exits non-zero.
 ## Step 3 — Run the binary
 
 ```bash
-./build/tests/k2000_filter_characterization --model <model> [--quick]
+./build/tests/k2000_device_characterization --model <model> [--quick]
 ```
 
 Where `<model>` is the parsed model name and `[--quick]` is appended only if

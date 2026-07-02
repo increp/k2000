@@ -84,7 +84,7 @@ Operating-point count estimate for B1 (response.csv):
 ## `--quick` flag
 
 ```
-k2000_filter_characterization [--model moog|huggett|all] [--quick]
+k2000_device_characterization [--model moog|huggett|all] [--quick]
 ```
 
 | Flag | Grid | Use |

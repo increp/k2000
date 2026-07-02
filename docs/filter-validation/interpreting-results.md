@@ -3,7 +3,7 @@
 **Version:** 5.09
 **Date:** 2026-06-30
 
-This page explains every column and key produced by `k2000_filter_characterization`.
+This page explains every column and key produced by `k2000_device_characterization`.
 All CSVs land in `build/characterization/<model>/` after a run.
 
 ---
@@ -133,5 +133,5 @@ lowest resonance in grid, host rate 96000 Hz (or grid's first if 96000 absent).
 
 ### Exit code
 
-`k2000_filter_characterization` returns 0 (PASS) when the worst `method_delta_db`
+`k2000_device_characterization` returns 0 (PASS) when the worst `method_delta_db`
 across all summary keys is below 1.0 dB. It returns 1 (FAIL) otherwise.

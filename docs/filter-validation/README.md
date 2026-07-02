@@ -31,12 +31,12 @@ Expected: `Summary: 227 tests, 0 failed`
 
 ### Opt-in fingerprint (on demand — 10-25 min for `--quick`, many hours without)
 
-The `k2000_filter_characterization` binary is not run in CI. Launch it deliberately
+The `k2000_device_characterization` binary is not run in CI. Launch it deliberately
 for deep characterization work. Results land in `build/characterization/<model>/`.
 
 ```
-cmake --build build --target k2000_filter_characterization -j4
-./build/tests/k2000_filter_characterization --model moog --quick
+cmake --build build --target k2000_device_characterization -j4
+./build/tests/k2000_device_characterization --model moog --quick
 ```
 
 Exit code: 0 if all in-band `method_delta_db` values are < 1.0 dB (PASS), 1 otherwise.

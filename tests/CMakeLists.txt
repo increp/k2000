@@ -111,11 +111,11 @@ set_target_properties(k2000_tests PROPERTIES
 add_test(NAME k2000_tests COMMAND k2000_tests)
 
 # ---------------------------------------------------------------------------
-# k2000_filter_characterization — opt-in heavy runner (NOT registered in CTest)
-# Usage: ./build/tests/k2000_filter_characterization [--model moog|huggett|all] [--quick]
+# k2000_device_characterization — opt-in heavy runner (NOT registered in CTest)
+# Usage: ./build/tests/k2000_device_characterization [--model moog|huggett|all] [--quick]
 # --quick uses coarseGrid (CI/smoke); without it uses fullGrid (dense, slow).
 # ---------------------------------------------------------------------------
-add_executable(k2000_filter_characterization
+add_executable(k2000_device_characterization
     characterization/characterize_main.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp
@@ -132,24 +132,24 @@ add_executable(k2000_filter_characterization
     ../src/dsp/spine/cmajor/NlSvfDriveLeanAdapter.cpp
     ../src/dsp/spine/cmajor/MoogLadderAdapter.cpp)
 
-target_include_directories(k2000_filter_characterization PRIVATE
+target_include_directories(k2000_device_characterization PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(k2000_filter_characterization PRIVATE
+target_link_libraries(k2000_device_characterization PRIVATE
     juce::juce_core
     juce::juce_audio_basics
     juce::juce_dsp
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
 
-target_compile_definitions(k2000_filter_characterization PRIVATE
+target_compile_definitions(k2000_device_characterization PRIVATE
     JUCE_STANDALONE_APPLICATION=1
     JUCE_USE_CURL=0
     JUCE_WEB_BROWSER=0
     K2000_TESTING=1
     BERNIE_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
 
-set_target_properties(k2000_filter_characterization PROPERTIES
+set_target_properties(k2000_device_characterization PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON)
 # NOTE: no add_test — stays out of CTest/CI default run.

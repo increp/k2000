@@ -122,8 +122,8 @@ separately by the opt-in runner, which writes ephemeral CSVs under
 `build/characterization/<model>/`:
 
 ```bash
-./build/tests/k2000_filter_characterization --model buchla          # full grid (slow)
-./build/tests/k2000_filter_characterization --model buchla --quick  # bounded coarse grid
+./build/tests/k2000_device_characterization --model buchla          # full grid (slow)
+./build/tests/k2000_device_characterization --model buchla --quick  # bounded coarse grid
 ```
 
 The self-golden baseline does not claim hardware accuracy — it fixes the model's own

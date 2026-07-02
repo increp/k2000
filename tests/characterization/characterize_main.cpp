@@ -10,7 +10,7 @@
 // no skill required.
 //
 // Usage:
-//   k2000_filter_characterization [--model moog|huggett|all] [--quick]
+//   k2000_device_characterization [--model moog|huggett|all] [--quick]
 //
 //   --quick  selects chz::coarseGrid() (~72 B1 points, fast/CI smoke mode).
 //   default  selects chz::fullGrid()   (dense, slow; production characterization).
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     }
 
     const char* gridLabel = quick ? "coarseGrid" : "fullGrid";
-    std::printf("k2000_filter_characterization  model=%s  grid=%s\n\n",
+    std::printf("k2000_device_characterization  model=%s  grid=%s\n\n",
                 model.toRawUTF8(), gridLabel);
 
     int rc = 0;

@@ -10,7 +10,7 @@
 | Path | When | Command |
 |---|---|---|
 | Always-on gate | Every build | `./build/tests/k2000_tests` |
-| Opt-in heavy runner | On demand (never CI) | `./build/tests/k2000_filter_characterization ...` |
+| Opt-in heavy runner | On demand (never CI) | `./build/tests/k2000_device_characterization ...` |
 
 ---
 
@@ -44,14 +44,14 @@ Without the env var, the gate asserts against the committed baseline. An unexpla
 
 ---
 
-## 2. Opt-in heavy runner (`k2000_filter_characterization`)
+## 2. Opt-in heavy runner (`k2000_device_characterization`)
 
 This binary is for deep characterization work. It is **not run in CI** and should be launched deliberately.
 
 ### Syntax
 
 ```
-./build/tests/k2000_filter_characterization --model <moog|huggett|all> [--quick]
+./build/tests/k2000_device_characterization --model <moog|huggett|all> [--quick]
 ```
 
 ### Grid sizes
