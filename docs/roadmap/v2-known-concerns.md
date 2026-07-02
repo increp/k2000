@@ -1,5 +1,7 @@
 # v2 known concerns (carried from the v1 final review)
 
+> **Point-in-time record (v2 era).** Not groomed since; several items are since resolved. Surviving concerns belong in the living register `docs/architecture/engine-questions.md` — check there before acting on anything below.
+
 These are issues identified in v1 that don't block v1 shipping but must be addressed in v2 or a later phase. Captured here so they aren't lost between specs.
 
 ## Structural

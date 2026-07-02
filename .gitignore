@@ -44,3 +44,7 @@ tools/roadmap-dashboard/requests/
 
 # Session handoffs (save-session / PreCompact auto-save) — also in global gitignore
 .handoffs/
+
+# Build logs / scratch at repo root
+build_output.txt
+build-asan/

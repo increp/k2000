@@ -24,8 +24,8 @@ Tool gap: `clang-tidy`, `cppcheck`, `valgrind`, `pluginval` are not installed on
 |---|---|---|---|
 | 1 | **P0 — crash** | Heap-use-after-free: `SpineFilterSlot::prepare` destroys per-voice filter state through a stale `FilterModel*` after `Layer::prepare` has recreated the models. Fires on any OS-factor change / Live↔Offline re-prepare. | [01](01-memory-safety.md) |
 | 2 | P1 | ASan coverage is **partial**: the run aborts at finding #1, so the rest of the suite is unverified under sanitizers. Re-run after the fix. | [01](01-memory-safety.md) |
-| 3 | P2 | Version-surface drift: CMake `project(k2000 VERSION 5.4.0)` vs docs claiming plugin 5.9.0. Third occurrence of this failure class (panel label went stale at v2 and v3). | [02](02-static-analysis.md) |
-| 4 | P2 | 4 deprecated `juce::Font(float,int)` call sites (JUCE 8 FontOptions migration) — will break on a future JUCE bump. | [02](02-static-analysis.md) |
+| 3 | P2 | ~~Version-surface drift~~ **RESOLVED same day**: CMake 5.4.0 is correct (bump history is consistent); the SP-A spec misread the doc-artifact stream (5.09) as plugin SemVer "5.9.0" — spec corrected. Panel label already derives from `JucePlugin_VersionString`. Anti-drift check must treat the two numbering streams as distinct. | [02](02-static-analysis.md) |
+| 4 | P2 | ~~4 deprecated `juce::Font(float,int)` call sites~~ **RESOLVED same day**: migrated to `FontOptions`; VST3 builds with zero deprecation warnings. | [02](02-static-analysis.md) |
 | 5 | P3 | `params/Parameters.h → LayerRouting.h` is the codebase's only upward (params→top) layer dependency. | [03](03-architecture.md) |
 | 6 | P3 | `Layer::prepare` hardcodes `models_[0]` as Huggett (`dynamic_cast` on index 0) while Moog is found by scan — fragile registry assumption. | [03](03-architecture.md) |
 | 7 | P3 | ~92 `-Wsign-conversion` warnings in older TUs (benign index conversions; known deferred cleanup) + `params::snapshot` re-does ~30 string-keyed map lookups per layer per block (cache the `std::atomic<float>*` once). | [02](02-static-analysis.md), [03](03-architecture.md) |
