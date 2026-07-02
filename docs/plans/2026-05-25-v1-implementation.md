@@ -3161,8 +3161,8 @@ In `docs/specs/2026-05-25-v1-skeleton-design.md`, change the front-matter:
 And in `docs/specs/README.md`:
 
 ```diff
--| [v1 — Skeleton end-to-end](2026-05-25-v1-skeleton-design.md) | Approved, not yet implemented |
-+| [v1 — Skeleton end-to-end](2026-05-25-v1-skeleton-design.md) | Implemented (v1.0.0) |
+-| [v1 — Skeleton end-to-end](../specs/2026-05-25-v1-skeleton-design.md) | Approved, not yet implemented |
++| [v1 — Skeleton end-to-end](../specs/2026-05-25-v1-skeleton-design.md) | Implemented (v1.0.0) |
 ```
 
 In `docs/plans/README.md`:

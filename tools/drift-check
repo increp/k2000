@@ -79,6 +79,47 @@ def chk_roadmap(root, ctx):
         return "fail", f"roadmap items missing id/status: {', '.join(map(str, bad[:5]))}"
     return "ok", "roadmap schema sound"
 
+@check("version-claims", {"commit", "ci"}, "fail")
+def chk_version_claims(root, ctx):
+    """Any 'plugin SemVer X.Y.Z' claim in docs/ must equal CMake project(VERSION)
+    (specimen: the 5.9.0 claim born of misreading artifact stream 5.09)."""
+    cm = (root / "CMakeLists.txt")
+    if not cm.exists():
+        return "skip", "no CMakeLists.txt"
+    m = re.search(r"project\(\s*\S+\s+VERSION\s+([0-9.]+)", cm.read_text(encoding="utf-8"))
+    if not m:
+        return "fail", "CMakeLists.txt has no project(VERSION)"
+    truth = m.group(1)
+    bad = []
+    for p in (root / "docs").rglob("*.md"):
+        for c in re.findall(r"plugin SemVer[^0-9]{0,4}([0-9]+\.[0-9]+\.[0-9]+)",
+                            p.read_text(encoding="utf-8", errors="replace")):
+            if c != truth:
+                bad.append(f"{p.relative_to(root)} claims {c}")
+    if bad:
+        return "fail", f"CMake VERSION is {truth} but: " + "; ".join(bad[:4])
+    return "ok", f"all plugin-SemVer claims match {truth}"
+
+@check("doc-links", {"commit", "ci"}, "fail")
+def chk_doc_links(root, ctx):
+    """Relative .md links under docs/ must resolve (specimen: the spec's broken L3 link)."""
+    bad = []
+    docs = root / "docs"
+    if not docs.exists():
+        return "skip", "no docs/"
+    for p in docs.rglob("*.md"):
+        # Strip fenced code blocks: example links in code snippets are not claims.
+        text = re.sub(r"```.*?```", "", p.read_text(encoding="utf-8", errors="replace"),
+                      flags=re.S)
+        for target in re.findall(r"\]\(([^)#\s]+\.md)\)", text):
+            if target.startswith(("http://", "https://")):
+                continue
+            if not (p.parent / target).resolve().exists():
+                bad.append(f"{p.relative_to(root)} -> {target}")
+    if bad:
+        return "fail", "dangling doc links: " + "; ".join(bad[:5])
+    return "ok", "doc links resolve"
+
 # ---- fixtures ---------------------------------------------------------------
 @fixture("root-md-litter")
 def fx_root_md(d, passing):
@@ -98,6 +139,20 @@ def fx_roadmap(d, passing):
     item = {"id": "v1", "kind": "version", "status": "shipped"} if passing \
         else {"kind": "version", "title": "orphan"}
     (p / "roadmap.json").write_text(json.dumps({"items": [item]}))
+
+@fixture("version-claims")
+def fx_version_claims(d, passing):
+    (d / "CMakeLists.txt").write_text('project(k2000 VERSION 5.4.0 LANGUAGES C CXX)\n')
+    (d / "docs").mkdir()
+    v = "5.4.0" if passing else "5.9.0"
+    (d / "docs/spec.md").write_text(f"distinct from plugin SemVer {v}\n")
+
+@fixture("doc-links")
+def fx_doc_links(d, passing):
+    (d / "docs").mkdir()
+    (d / "docs/a.md").write_text("see [b](b.md)\n")
+    if passing:
+        (d / "docs/b.md").write_text("# b\n")
 
 # ---- engine ------------------------------------------------------------------
 def run_tier(root, tier, ctx):
