@@ -81,6 +81,7 @@ add_executable(k2000_tests
     DeviceUnderTestTests.cpp
     SyntheticReferenceTests.cpp
     RunnerLevelTests.cpp
+    LevelDisparityTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp)
 
