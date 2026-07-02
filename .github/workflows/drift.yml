@@ -1,0 +1,43 @@
+name: Drift
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  drift:
+    name: drift-check + suite (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: JUCE linux deps
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libfreetype6-dev libfontconfig1-dev
+      - name: Configure (Release)
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+      - name: Build tests
+        run: cmake --build build --target k2000_tests -j4
+      - name: Run suite (log for drift-check)
+        run: ./build/tests/k2000_tests 2>/dev/null | tee build/last-test-run.log | tail -3
+      - name: Drift self-test
+        run: tools/drift-check --self-test
+      - name: Drift CI tier
+        run: tools/drift-check --ci --suite-log build/last-test-run.log
+
+  sanitizers:
+    name: ASan+UBSan suite (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: JUCE linux deps
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libfreetype6-dev libfontconfig1-dev
+      - name: Configure (ASan/UBSan)
+        run: cmake -B build-asan -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build
+        run: cmake --build build-asan --target k2000_tests -j4
+      - name: Run suite under sanitizers
+        run: ./build-asan/tests/k2000_tests 2>&1 | tail -3

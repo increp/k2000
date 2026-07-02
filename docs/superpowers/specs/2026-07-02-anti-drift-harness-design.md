@@ -9,7 +9,7 @@
 
 ## 1. Purpose & premise
 
-Drift is this project's chronic disease, in four confirmed strains — **AI/session drift** (agents diverging from plans/specs between sessions), **doc–code drift**, **DSP measurement drift**, and **sound/voicing drift**. 2026-07-02 alone produced four live specimens: the `build/` dir silently in Debug against the documented Release convention (corrupting the first published perf table), the "plugin SemVer 5.9.0" claim born of a version-stream collision with artifact numbering "5.09", a 12-day-stale root `HANDOFF.md` describing a pre-Moog world, and doc test-counts (`227`, `138`) frozen at old suite sizes.
+Drift is this project's chronic disease, in four confirmed strains — **AI/session drift** (agents diverging from plans/specs between sessions), **doc–code drift**, **DSP measurement drift**, and **sound/voicing drift**. 2026-07-02 alone produced four live specimens: the `build/` dir silently in Debug against the documented Release convention (corrupting the first published perf table), the "plugin SemVer" claim of 5.9.0 born of a version-stream collision with artifact numbering "5.09", a 12-day-stale root `HANDOFF.md` describing a pre-Moog world, and doc test-counts (`227`, `138`) frozen at old suite sizes.
 
 The harness is a **layered safety net that makes drift either impossible to commit or impossible to miss** — one implementation of every check, enforced at three points, with the sound itself fingerprinted.
 

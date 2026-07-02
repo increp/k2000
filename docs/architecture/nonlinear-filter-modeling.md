@@ -6,7 +6,7 @@
 > measured data. This is the load-bearing implementation reference for **v5 Plan 2** (nonlinear
 > Huggett + HP pre-filter). Aliasing of these stages → [antialiasing-adaa.md](antialiasing-adaa.md).
 > **Primary source** (saved in `docs/incoming_research/`, see
-> [INDEX](../incoming_research/INDEX-huggett-sources-2026-06-17.md)): Köper, Holters, Esqueda,
+> `INDEX` (gitignored local archive `docs/incoming_research/`)): Köper, Holters, Esqueda,
 > Parker, *A Virtual Analog Model of the EDP Wasp VCF*, DAFx-22 — the only paper with **measured**
 > OTA/diode curves from a Huggett-lineage filter. Companion to
 > [huggett-filter.md](huggett-filter.md) / [huggett-filter-dossier.md](huggett-filter-dossier.md).

@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+"""k2000 anti-drift harness (spec: docs/superpowers/specs/2026-07-02-anti-drift-harness-design.md).
+
+Tiers: --session (fast facts + warnings), --commit (deterministic hard-fails),
+--ci (everything; parse failures are FAILs). --self-test proves every check
+against synthetic pass/fail fixtures so the harness itself cannot rot.
+Stdlib only. Exit 0 = no FAIL in the invoked tier; 1 otherwise.
+"""
+import argparse, json, os, re, subprocess, sys, tempfile, time
+from pathlib import Path
+
+# ---- tunables (spec §3/§4) --------------------------------------------------
+HANDOFF_MAX_AGE_DAYS = 14
+ALLOWED_ROOT_MD      = {"README.md", "CLAUDE.md"}
+BUILD_LOG_GLOBS      = ["*_output.txt", "build_output*.txt"]
+
+# ---- registry ---------------------------------------------------------------
+class Check:
+    def __init__(self, name, tiers, severity, fn, soft=()):
+        self.name, self.tiers, self.severity, self.fn = name, tiers, severity, fn
+        self.soft = set(soft)   # tiers where a fail is reported but downgraded to warn
+
+CHECKS = []
+FIXTURES = {}   # name -> fx(dir, passing)
+
+def check(name, tiers, severity, soft=()):
+    def deco(fn):
+        CHECKS.append(Check(name, set(tiers), severity, fn, soft))
+        return fn
+    return deco
+
+def fixture(name):
+    def deco(fn):
+        FIXTURES[name] = fn
+        return fn
+    return deco
+
+# ---- checks -----------------------------------------------------------------
+@check("root-md-litter", {"commit", "ci"}, "fail")
+def chk_root_md(root, ctx):
+    """No *.md at repo root except README.md (specimen: stale HANDOFF/REVIEW litter)."""
+    stray = sorted(p.name for p in root.glob("*.md") if p.name not in ALLOWED_ROOT_MD)
+    if stray:
+        return "fail", f"stray root markdown: {', '.join(stray)} -> move under docs/"
+    return "ok", "repo root clean"
+
+@check("tracked-build-logs", {"commit", "ci"}, "fail")
+def chk_build_logs(root, ctx):
+    """No build logs in the tree; build*/ dirs gitignored (specimen: build_output.txt)."""
+    for g in BUILD_LOG_GLOBS:
+        hits = sorted(p.name for p in root.glob(g))
+        if hits:
+            return "fail", f"build log(s) at root: {', '.join(hits)} -> delete + gitignore"
+    gi = root / ".gitignore"
+    text = gi.read_text(encoding="utf-8") if gi.exists() else ""
+    if not re.search(r"^build", text, re.M):
+        return "fail", ".gitignore does not ignore build dirs (need build*/ entries)"
+    return "ok", "no tracked build logs; build dirs ignored"
+
+@check("roadmap-schema", {"commit", "ci"}, "fail")
+def chk_roadmap(root, ctx):
+    """roadmap.json parses; every item dict with 'kind' has id+status (dashboard contract)."""
+    p = root / "tools/roadmap-dashboard/roadmap.json"
+    if not p.exists():
+        return "skip", "no roadmap.json"
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return "fail", f"roadmap.json does not parse: {e}"
+    bad = []
+    def walk(o):
+        if isinstance(o, dict):
+            if "kind" in o and not ("id" in o and "status" in o):
+                bad.append(o.get("id") or o.get("title", "?"))
+            for v in o.values(): walk(v)
+        elif isinstance(o, list):
+            for v in o: walk(v)
+    walk(data)
+    if bad:
+        return "fail", f"roadmap items missing id/status: {', '.join(map(str, bad[:5]))}"
+    return "ok", "roadmap schema sound"
+
+@check("version-claims", {"commit", "ci"}, "fail")
+def chk_version_claims(root, ctx):
+    """Any 'plugin SemVer X.Y.Z' claim in docs/ must equal CMake project(VERSION)
+    (specimen: the 5.9.0 claim born of misreading artifact stream 5.09)."""
+    cm = (root / "CMakeLists.txt")
+    if not cm.exists():
+        return "skip", "no CMakeLists.txt"
+    m = re.search(r"project\(\s*\S+\s+VERSION\s+([0-9.]+)", cm.read_text(encoding="utf-8"))
+    if not m:
+        return "fail", "CMakeLists.txt has no project(VERSION)"
+    truth = m.group(1)
+    bad = []
+    for p in (root / "docs").rglob("*.md"):
+        for c in re.findall(r"plugin SemVer[^0-9]{0,4}([0-9]+\.[0-9]+\.[0-9]+)",
+                            p.read_text(encoding="utf-8", errors="replace")):
+            if c != truth:
+                bad.append(f"{p.relative_to(root)} claims {c}")
+    if bad:
+        return "fail", f"CMake VERSION is {truth} but: " + "; ".join(bad[:4])
+    return "ok", f"all plugin-SemVer claims match {truth}"
+
+@check("doc-links", {"commit", "ci"}, "fail")
+def chk_doc_links(root, ctx):
+    """Relative .md links under docs/ must resolve (specimen: the spec's broken L3 link)."""
+    bad = []
+    docs = root / "docs"
+    if not docs.exists():
+        return "skip", "no docs/"
+    for p in docs.rglob("*.md"):
+        # Strip fenced code blocks: example links in code snippets are not claims.
+        text = re.sub(r"```.*?```", "", p.read_text(encoding="utf-8", errors="replace"),
+                      flags=re.S)
+        for target in re.findall(r"\]\(([^)#\s]+\.md)\)", text):
+            if target.startswith(("http://", "https://")):
+                continue
+            if not (p.parent / target).resolve().exists():
+                bad.append(f"{p.relative_to(root)} -> {target}")
+    if bad:
+        return "fail", "dangling doc links: " + "; ".join(bad[:5])
+    return "ok", "doc links resolve"
+
+@check("build-dir-type", {"session"}, "warn")
+def chk_build_type(root, ctx):
+    """build/ must be Release per convention (specimen: the Debug perf-table fiasco)."""
+    cache = root / "build/CMakeCache.txt"
+    if not cache.exists():
+        return "skip", "no build/ dir"
+    m = re.search(r"^CMAKE_BUILD_TYPE:\w+=(\S+)", cache.read_text(encoding="utf-8"), re.M)
+    if m and m.group(1) != "Release":
+        return "warn", f"build/ is {m.group(1)}, convention is Release (perf numbers there are meaningless)"
+    return "ok", "build/ is Release"
+
+@check("handoff-age", {"session"}, "warn")
+def chk_handoff_age(root, ctx):
+    """Newest doc under docs/handoffs/ must be < HANDOFF_MAX_AGE_DAYS (specimen: 2026-06-20 HANDOFF)."""
+    hd = root / "docs/handoffs"
+    if not hd.exists() or not any(hd.glob("*.md")):
+        return "skip", "no handoffs"
+    newest = max(hd.glob("*.md"), key=lambda p: p.stat().st_mtime)
+    age = (time.time() - newest.stat().st_mtime) / 86400.0
+    if age > HANDOFF_MAX_AGE_DAYS:
+        return "warn", f"{newest.name} is {age:.0f} days old — do not trust it as current state"
+    return "ok", f"{newest.name} is {age:.0f} days old"
+
+@check("register-aging", {"session", "ci"}, "warn")
+def chk_register_aging(root, ctx):
+    """Open (red) register questions whose resolve-at version already shipped (specimen: Q19)."""
+    reg = root / "docs/architecture/engine-questions.md"
+    rj  = root / "tools/roadmap-dashboard/roadmap.json"
+    if not reg.exists() or not rj.exists():
+        return "skip", "register or roadmap missing"
+    shipped = set()
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("kind") == "version" and o.get("status") == "shipped":
+                shipped.add(str(o.get("id")))
+            for v in o.values(): walk(v)
+        elif isinstance(o, list):
+            for v in o: walk(v)
+    walk(json.loads(rj.read_text(encoding="utf-8")))
+    aged = []
+    for line in reg.read_text(encoding="utf-8").splitlines():
+        if "\U0001F534" not in line or not line.startswith("| Q"):
+            continue
+        cols = [c.strip() for c in line.split("|")]
+        if len(cols) < 6:
+            continue
+        qid, resolve_at = cols[1], cols[4]
+        for v in re.findall(r"\bv[0-9.]+\b", resolve_at):
+            if v in shipped:
+                aged.append(f"{qid} (resolve at {v}, shipped)")
+    if aged:
+        return "warn", "aging open questions: " + "; ".join(aged[:5])
+    return "ok", "no open questions past their resolve-at version"
+
+@check("suite-count-claims", {"session", "ci"}, "fail", soft={"session"})
+def chk_suite_counts(root, ctx):
+    """LIVING docs' 'Summary: N tests' claims must equal the actual suite count
+    (specimen: the stale 227/138 counts). Dated point-in-time records (handoffs,
+    execution plans) are exempt — they describe the past. CI passes --suite-log;
+    locally build/last-test-run.log is used when present."""
+    log = ctx.get("suite_log") or (root / "build/last-test-run.log")
+    log = Path(log)
+    if not log.exists():
+        return "skip", "no suite log (tee a run to build/last-test-run.log)"
+    m = re.search(r"Summary:\s+(\d+)\s+tests", log.read_text(encoding="utf-8", errors="replace"))
+    if not m:
+        return "fail", f"{log} has no 'Summary: N tests' line"
+    actual = m.group(1)
+    exempt = ("/handoffs/", "/plans/")   # point-in-time records
+    bad = []
+    for p in (root / "docs").rglob("*.md"):
+        if any(e in str(p) for e in exempt):
+            continue
+        for c in re.findall(r"Summary:\s+(\d+)\s+tests",
+                            p.read_text(encoding="utf-8", errors="replace")):
+            if c != actual:
+                bad.append(f"{p.relative_to(root)} says {c}")
+    if bad:
+        return "fail", f"suite has {actual} tests but: " + "; ".join(bad[:4])
+    return "ok", f"doc test-counts match ({actual})"
+
+@check("hooks-installed", {"session"}, "warn")
+def chk_hooks(root, ctx):
+    """core.hooksPath must point at .githooks so the commit gate actually fires."""
+    if not (root / ".githooks/pre-commit").exists():
+        return "skip", "no .githooks yet"
+    r = subprocess.run(["git", "-C", str(root), "config", "core.hooksPath"],
+                       capture_output=True, text=True)
+    if r.stdout.strip() != ".githooks":
+        return "warn", "hooks not installed: run  git config core.hooksPath .githooks"
+    return "ok", "pre-commit gate installed"
+
+# ---- fixtures ---------------------------------------------------------------
+@fixture("root-md-litter")
+def fx_root_md(d, passing):
+    (d / "README.md").write_text("# r\n")
+    if not passing:
+        (d / "HANDOFF.md").write_text("stale\n")
+
+@fixture("tracked-build-logs")
+def fx_build_logs(d, passing):
+    (d / ".gitignore").write_text("build*/\n")
+    if not passing:
+        (d / "build_output.txt").write_text("log\n")
+
+@fixture("roadmap-schema")
+def fx_roadmap(d, passing):
+    p = d / "tools/roadmap-dashboard"; p.mkdir(parents=True)
+    item = {"id": "v1", "kind": "version", "status": "shipped"} if passing \
+        else {"kind": "version", "title": "orphan"}
+    (p / "roadmap.json").write_text(json.dumps({"items": [item]}))
+
+@fixture("version-claims")
+def fx_version_claims(d, passing):
+    (d / "CMakeLists.txt").write_text('project(k2000 VERSION 5.4.0 LANGUAGES C CXX)\n')
+    (d / "docs").mkdir()
+    v = "5.4.0" if passing else "5.9.0"
+    (d / "docs/spec.md").write_text(f"distinct from plugin SemVer {v}\n")
+
+@fixture("doc-links")
+def fx_doc_links(d, passing):
+    (d / "docs").mkdir()
+    (d / "docs/a.md").write_text("see [b](b.md)\n")
+    if passing:
+        (d / "docs/b.md").write_text("# b\n")
+
+@fixture("build-dir-type")
+def fx_build_type(d, passing):
+    (d / "build").mkdir()
+    t = "Release" if passing else "Debug"
+    (d / "build/CMakeCache.txt").write_text(f"CMAKE_BUILD_TYPE:STRING={t}\n")
+
+@fixture("handoff-age")
+def fx_handoff_age(d, passing):
+    hd = d / "docs/handoffs"; hd.mkdir(parents=True)
+    p = hd / "h.md"; p.write_text("# h\n")
+    if not passing:
+        old = time.time() - (HANDOFF_MAX_AGE_DAYS + 5) * 86400
+        os.utime(p, (old, old))
+
+@fixture("register-aging")
+def fx_register_aging(d, passing):
+    (d / "docs/architecture").mkdir(parents=True)
+    (d / "tools/roadmap-dashboard").mkdir(parents=True)
+    (d / "tools/roadmap-dashboard/roadmap.json").write_text(
+        json.dumps({"items": [{"id": "v5", "kind": "version", "status": "shipped"}]}))
+    status = "\U0001F7E2" if passing else "\U0001F534"
+    (d / "docs/architecture/engine-questions.md").write_text(
+        f"| Q9 | q | why | v5 | {status} |\n")
+
+@fixture("suite-count-claims")
+def fx_suite_counts(d, passing):
+    (d / "docs").mkdir(); (d / "build").mkdir()
+    (d / "build/last-test-run.log").write_text("Summary: 264 tests, 0 failed\n")
+    n = "264" if passing else "227"
+    (d / "docs/manual.md").write_text(f"Expected: `Summary: {n} tests, 0 failed`\n")
+
+@fixture("hooks-installed")
+def fx_hooks(d, passing):
+    subprocess.run(["git", "init", "-q", str(d)], check=True)
+    (d / ".githooks").mkdir(); (d / ".githooks/pre-commit").write_text("#!/bin/sh\n")
+    if passing:
+        subprocess.run(["git", "-C", str(d), "config", "core.hooksPath", ".githooks"], check=True)
+
+# ---- engine ------------------------------------------------------------------
+def run_tier(root, tier, ctx):
+    failed = False
+    for c in CHECKS:
+        if tier not in c.tiers:
+            continue
+        try:
+            status, msg = c.fn(root, ctx)
+        except Exception as e:                       # a broken check must not pass silently
+            status, msg = ("fail" if tier == "ci" else "warn"), f"check crashed: {e}"
+        if status == "fail" and (c.severity == "warn" or tier in c.soft):
+            status = "warn"
+        print(f"[{status.upper():4}] {c.name}: {msg}")
+        if status == "fail":
+            failed = True
+    return 1 if failed else 0
+
+def self_test():
+    bad = 0
+    for c in CHECKS:
+        fx = FIXTURES.get(c.name)
+        if fx is None:
+            print(f"[FAIL] self-test: no fixture for check '{c.name}'"); bad += 1
+            continue
+        for passing in (True, False):
+            with tempfile.TemporaryDirectory() as td:
+                d = Path(td); fx(d, passing)
+                status, _ = c.fn(d, {})
+                want_ok = status in ("ok", "skip") if passing else status in ("fail", "warn")
+                if not want_ok:
+                    print(f"[FAIL] self-test: {c.name} {'pass' if passing else 'fail'}-fixture -> {status}")
+                    bad += 1
+    print(f"self-test: {len(CHECKS)} checks, {bad} problems")
+    return 1 if bad else 0
+
+def main():
+    ap = argparse.ArgumentParser()
+    g = ap.add_mutually_exclusive_group()
+    for t in ("session", "commit", "ci"):
+        g.add_argument(f"--{t}", action="store_const", const=t, dest="tier")
+    ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--root", type=Path, default=None)
+    ap.add_argument("--suite-log", type=Path, default=None)
+    a = ap.parse_args()
+    if a.self_test:
+        sys.exit(self_test())
+    root = a.root or Path(subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                          capture_output=True, text=True, check=True).stdout.strip())
+    sys.exit(run_tier(root, a.tier or "session", {"suite_log": a.suite_log}))
+
+if __name__ == "__main__":
+    main()

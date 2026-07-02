@@ -1659,7 +1659,7 @@ Replace the entire contents of `docs/roadmap/phases.md` with:
 > This document holds only the **durable vision and engine principles** — the things
 > that do not change release to release. It deliberately carries **no** status tables,
 > so it can never drift from the dashboard. (Brought into this form 2026-06-20; see the
-> [dashboard design spec](../superpowers/specs/2026-06-20-roadmap-dashboard-design.md).)
+> [dashboard design spec](../specs/2026-06-20-roadmap-dashboard-design.md).)
 
 ## End-state vision (re-positioned to K2061/K2088, 2026-06-16)
 
@@ -1678,8 +1678,8 @@ always a Summit.
   variable source/DSP region's knob-clusters swap to match the active blocks. Tiered
   immediacy: front panel for live params, pages for the long tail.
 
-See the [v4.5(C) re-positioning spec](../specs/2026-06-16-v4.5-k2061-repositioning-design.md)
-and the living [engine architecture register](../architecture/engine-questions.md).
+See the [v4.5(C) re-positioning spec](../../specs/2026-06-16-v4.5-k2061-repositioning-design.md)
+and the living [engine architecture register](../../architecture/engine-questions.md).
 
 ## Product naming
 
@@ -1727,7 +1727,7 @@ spike must resolve **before v6 is designed**.
 ## How a phase becomes real
 
 1. Enumerate the phase's open questions into the
-   [engine architecture register](../architecture/engine-questions.md); ask them; record
+   [engine architecture register](../../architecture/engine-questions.md); ask them; record
    answers; **groom the register for internal consistency**.
 2. Write `specs/YYYY-MM-DD-vN-<theme>-design.md` once the relevant questions are resolved.
 3. Capture non-obvious decisions as ADRs in [`../decisions/`](../decisions/).

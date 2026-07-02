@@ -89,6 +89,7 @@ add_executable(k2000_tests
     CaptureCalTests.cpp
     RunnerNoiseFloorTests.cpp
     VoicePerfTests.cpp
+    RenderFingerprintTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp)
 

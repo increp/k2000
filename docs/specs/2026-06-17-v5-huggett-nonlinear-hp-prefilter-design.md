@@ -10,7 +10,7 @@
 - [nonlinear-filter-modeling.md](../architecture/nonlinear-filter-modeling.md) — the gray-box nonlinear stages (measured OTA tanh, `fbExtra` resonance saturator, drive shapers, ZDF solve, fast-tanh).
 - [antialiasing-adaa.md](../architecture/antialiasing-adaa.md) — ADAA + the quality-tier policy.
 
-Primary sources (PDFs + extracted facts) in the gitignored [drop zone](../incoming_research/INDEX-huggett-sources-2026-06-17.md).
+Primary sources (PDFs + extracted facts) in the gitignored drop zone (`docs/incoming_research/`, gitignored).
 
 ## Thesis
 

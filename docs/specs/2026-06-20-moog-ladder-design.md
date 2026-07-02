@@ -8,7 +8,7 @@
 
 ## Context & grounding
 
-The spine is a curated, **append-only, stable-ID** `FilterModel` library ([ADR-0011](../decisions/0011-selectable-spine-filter-library.md), register **L7**). Huggett (id `"huggett"`) is entry 0 and the flagship; this spec adds the **second entry** (id `"moog"`). The Moog transistor-ladder topology is legally clear — Robert Moog's US 3,475,623 expired **1986** ([dossier](filter-dossiers-sem-moog.md) §"Patent / IP status", ADR-0011).
+The spine is a curated, **append-only, stable-ID** `FilterModel` library ([ADR-0011](../decisions/0011-selectable-spine-filter-library.md), register **L7**). Huggett (id `"huggett"`) is entry 0 and the flagship; this spec adds the **second entry** (id `"moog"`). The Moog transistor-ladder topology is legally clear — Robert Moog's US 3,475,623 expired **1986** ([dossier](../architecture/filter-dossiers-sem-moog.md) §"Patent / IP status", ADR-0011).
 
 Ground sources (read before implementing):
 - [filter-dossiers-sem-moog.md](../architecture/filter-dossiers-sem-moog.md) **Dossier 2** — the load-bearing Moog dossier (topology, self-oscillation at `k≈4`, bass-thinning, per-stage `tanh`, the differential-equation form, Pirkle's limiter trick, the `ddiakopoulos/MoogLadders` repo).
