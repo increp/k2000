@@ -57,6 +57,21 @@ despite the voicing hold — no hardware answer can make expansion authentic) or
 designed for calibration questions; this finding is categorical. User decision
 requested; analysis stops here per the standing rule.
 
+## Addendum — dropout forensics (same day)
+
+Q27 was RULED a defect the same day on a user field report: *"at max resonance
+the sound disappears completely and then re-appears"*, with the default-ON
+safety limiter credited with preventing hearing damage. Forensic reproduction
+(`BERNIE_RUN_DROPOUT=1`, 20 s runs): **no NaN/Inf and no silent windows** at
+either the bare-filter level (res 1.0, −6 dBFS sine) or the full Voice path
+(saw, res 1.0, os8) — but the voice path sustains **~+22 dBFS output**
+(maxAbs ≈ 13) continuously. Conclusion: the perceived dropout is most likely
+the **safety limiter slamming ~25 dB+ of gain reduction** against the
+screaming filter (audible as disappearance) and releasing (reappearance) —
+possibly compounded, before 2026-07-02, by the since-fixed re-prepare
+use-after-free (audit P0), which fired on OS changes. Either way the source is
+this defect; fixing the expansive loop removes the trigger.
+
 ## Follow-ups (SP-B proper)
 
 - Drive axis (this read was drive 0 — the pre/post shapers add another level
