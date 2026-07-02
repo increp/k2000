@@ -2,6 +2,9 @@
 #include "../src/Layer.h"
 #include "../src/Voice.h"
 #include "../src/dsp/ParamSnapshot.h"
+#include "../src/dsp/Oscillator.h"
+#include "../src/dsp/VoiceOversampler.h"
+#include "../src/dsp/spine/SpineFilterSlot.h"
 #include <chrono>
 #include <cstdlib>
 #include <vector>
@@ -28,6 +31,15 @@ struct VoicePerfTests : public juce::UnitTest {
             expect(true);
             return;
         }
+
+#ifndef NDEBUG
+        // Guard learned the hard way (2026-07-02): the first published pricing table
+        // was measured on a Debug (-O0) build dir and was ~5-10x wrong. Perf numbers
+        // from unoptimized builds are meaningless — refuse to print them.
+        beginTest("REFUSED: Debug build — run the pricing from a Release build dir");
+        expect(true);
+        return;
+#endif
 
         const double sr = 48000.0;
         const int    N  = 512;
@@ -96,6 +108,60 @@ struct VoicePerfTests : public juce::UnitTest {
             }
         }
         logMessage("(voices realtime = single-core; multiply by usable cores for a machine budget)");
+
+        // ---- Section breakdown (BERNIE_VOICEPERF_SECTIONS=1): where does the OS
+        // cost live? Times each render stage in isolation, mirroring Voice::render.
+        if (std::getenv("BERNIE_VOICEPERF_SECTIONS") == nullptr) return;
+
+        beginTest("section breakdown (huggett, light, os=1 vs os=2)");
+        for (int os : { 1, 2 }) {
+            const int nOs = N * os;
+            Layer layer;
+            layer.prepare(sr * os, nOs);
+            ParamSnapshot s {};
+            s.oscWaveform = 0; s.svfCutoffHz = 1000.0f; s.svfResonance = 0.2f;
+            s.spineModel = 0; s.spineSlope = 1;
+            s.ampSustain = 1.0f;
+            layer.updateParameters(s);
+
+            Oscillator osc; osc.prepare(sr); osc.setFrequency(110.0f);
+            osc.setWaveform(Oscillator::Waveform::Saw);
+            VoiceOversampler ovs; ovs.prepare(N); ovs.setFactor(os);
+            auto wsState = layer.block(BlockTypeId::Waveshaper).makeVoiceState();
+            SpineFilterSlot slot;
+            slot.prepare(sr * os, nOs, layer.spineModel(), layer.hpStage());
+
+            std::vector<float> base((size_t) N), osMono((size_t) nOs),
+                               l((size_t) nOs), r((size_t) nOs),
+                               dl((size_t) N), dr((size_t) N);
+
+            auto time = [&](auto&& fn) {
+                const int reps = 4000;
+                for (int i = 0; i < 64; ++i) fn();          // warm-up
+                const auto t0 = std::chrono::steady_clock::now();
+                for (int i = 0; i < reps; ++i) fn();
+                const auto t1 = std::chrono::steady_clock::now();
+                const double audio = (double) reps * N / sr;
+                return 100.0 * std::chrono::duration<double>(t1 - t0).count() / audio;
+            };
+
+            const double cOsc  = time([&] { osc.processBlock(base.data(), N); });
+            const double cUp   = time([&] { ovs.processMonoUp(base.data(), N, osMono.data()); });
+            const double cWs   = time([&] { layer.block(BlockTypeId::Waveshaper)
+                                                 .process(*wsState, osMono.data(), nOs); });
+            const double cSpine = time([&] {
+                std::copy(osMono.begin(), osMono.end(), l.begin());
+                std::copy(osMono.begin(), osMono.end(), r.begin());
+                slot.processStereo(layer.hpStage(), false, layer.spineModel(),
+                                   25.0f, 110.0f, l.data(), r.data(), nOs);
+            });
+            const double cDown = time([&] { ovs.processStereoDown(l.data(), r.data(), N,
+                                                                  dl.data(), dr.data()); });
+            logMessage(juce::String::formatted(
+                "os=%d  osc %.3f%%  up %.3f%%  shaper %.3f%%  spine(+copy) %.3f%%  down %.3f%%",
+                os, cOsc, cUp, cWs, cSpine, cDown));
+            expect(std::isfinite((float) (cOsc + cUp + cWs + cSpine + cDown)));
+        }
     }
 };
 

@@ -48,3 +48,4 @@ tools/roadmap-dashboard/requests/
 # Build logs / scratch at repo root
 build_output.txt
 build-asan/
+build-release/
