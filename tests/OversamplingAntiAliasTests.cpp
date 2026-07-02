@@ -57,7 +57,7 @@ public:
             auto buildSnapshot = []() {
                 ParamSnapshot s;
                 s.oscWaveform      = 0;        // saw — rich in harmonics, alias-prone
-                s.svfCutoffHz      = 3000.0f;  // moderately low cutoff
+                s.svfCutoffHz      = 8000.0f;  // open enough to pass the drive harmonics
                 s.svfResonance     = 0.95f;    // near-max resonance, self-osc territory
                 s.wsDrive          = 0.0f;     // no waveshaper (isolate spine path)
                 s.wsMix            = 0.0f;
@@ -86,7 +86,7 @@ public:
                 Voice v;
                 v.setLayer(&layer);
                 v.prepare(sr, block, factor);
-                v.noteOn(40, 1.0f);  // MIDI 40 = E2 ~= 82.4 Hz
+                v.noteOn(88, 1.0f);  // MIDI 88 = E6 ~= 1318.5 Hz — drive harmonics fold fast at 48k
 
                 std::vector<float> capture;
                 capture.reserve((size_t) block * nBlocks);
@@ -120,8 +120,8 @@ public:
             // alias FRACTION of the driven filter; it does NOT independently prove the
             // halfband filter's stopband depth (that is covered by Halfband2x/oversampler
             // unit tests).
-            const Spectrum s1 = spectrum(a1, 82.4, sr);
-            const Spectrum s4 = spectrum(a4, 82.4, sr);
+            const Spectrum s1 = spectrum(a1, 1318.5, sr);
+            const Spectrum s4 = spectrum(a4, 1318.5, sr);
             const double frac1 = s1.total > 0 ? s1.alias / s1.total : -1.0;
             const double frac4 = s4.total > 0 ? s4.alias / s4.total : -1.0;
             const double fracRatio = frac1 > 0 ? frac4 / frac1 : -1.0;
@@ -131,9 +131,10 @@ public:
                                      + "  frac4=" + juce::String(frac4, 5)
                                      + "  ratio frac4/frac1=" + juce::String(fracRatio, 4));
 
-            // 4x oversampling must cut the alias FRACTION materially. Measured on the
-            // driven Huggett LP chain: frac1 ~= 0.5397, frac4 ~= 0.3169, ratio ~= 0.587
-            // (~1.7x reduction in alias fraction). Threshold 0.7 (>1.4x) is strict enough
+            // 4x oversampling must cut the alias FRACTION materially. Re-anchored after
+            // the Q27 bounded-resonance fix (the old 82 Hz anchor relied on the expansive
+            // scream, which was ~54% aliasing by itself): driven Huggett at E6,
+            // frac1 ~= 0.257, frac4 ~= 0.014, ratio ~= 0.056 (~18x). Threshold 0.7 is strict enough
             // to catch a broken oversampling path (ratio ~1.0) while honoring the physics.
             // A ratio near 1.0 means the oversampling path is not reducing aliasing; do
             // not weaken this threshold without re-measuring the actual chain behaviour.

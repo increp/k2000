@@ -30,6 +30,10 @@ processor NlSvf
         let num = (27.0f + 3.0f * x2) * den - (27.0f * x + x * x2) * (18.0f * x);
         return num / (den * den);
     }
+    float rail (float x)
+    {
+        return padTanh (x * 0.25f) * 4.0f;   // soft rails at +-4 // CALIB
+    }
     float satRes (float x)
     {
         let b = 0.18f;
@@ -60,13 +64,18 @@ processor NlSvf
             if (rsat > 0.0f)
             {
                 let bpPrev = bp;
-                v0 -= k * rsat * (satRes (bpPrev) - bpPrev);
+                v0 -= k * rsat * (bpPrev - satRes (bpPrev));   // Q27 fix: extra damping, not anti-damping
             }
             let v3 = v0 - ic2;
             let v1 = a1 * ic1 + a2 * v3;
             let v2 = ic2 + a2 * ic1 + a3 * v3;
             ic1 = 2.0f * v1 - ic1;
             ic2 = 2.0f * v2 - ic2;
+            if (rsat > 0.0f)
+            {
+                ic1 = rail (ic1);   // Q27: OTA-style state rails
+                ic2 = rail (ic2);
+            }
             bp  = v1;
             float result;
             if      (tapSel == 1) result = v0 - k * v1 - v2;  // HP

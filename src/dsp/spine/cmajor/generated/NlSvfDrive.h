@@ -559,7 +559,7 @@ struct NlSvfDrive
     //==============================================================================
     double getMaxFrequency() const
     {
-        return 192000.0;
+        return 1536000.0;
     }
 
     void initialise (int32_t sessionID, double frequency)
@@ -894,13 +894,18 @@ struct NlSvfDrive
             if (_state.rsat > 0.0f)
             {
                 bpPrev = _state.bp;
-                v0 = (v0 - ((_state.k * _state.rsat) * (_NlSvfDrive__satRes (bpPrev) - bpPrev)));
+                v0 = (v0 - ((_state.k * _state.rsat) * (bpPrev - _NlSvfDrive__satRes (bpPrev))));
             }
             v3 = v0 - _state.ic2;
             v1 = (_state.a1 * _state.ic1) + (_state.a2 * v3);
             v2 = (_state.ic2 + (_state.a2 * _state.ic1)) + (_state.a3 * v3);
             _state.ic1 = ((2.0f * v1) - _state.ic1);
             _state.ic2 = ((2.0f * v2) - _state.ic2);
+            if (_state.rsat > 0.0f)
+            {
+                _state.ic1 = _NlSvfDrive__rail (_state.ic1);
+                _state.ic2 = _NlSvfDrive__rail (_state.ic2);
+            }
             _state.bp = v1;
             filt = {};
             if (_state.tapSel == int32_t {1})
@@ -1045,6 +1050,11 @@ struct NlSvfDrive
 
         x2 = x * x;
         return intrinsics::clamp ((x * (27.0f + x2)) / (27.0f + (9.0f * x2)), -1.0f, 1.0f);
+    }
+
+    float _NlSvfDrive__rail (float x) noexcept
+    {
+        return _NlSvfDrive__padTanh (x * 0.25f) * 4.0f;
     }
 
     //==============================================================================

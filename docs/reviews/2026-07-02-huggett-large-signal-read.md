@@ -72,6 +72,21 @@ possibly compounded, before 2026-07-02, by the since-fixed re-prepare
 use-after-free (audit P0), which fired on OS changes. Either way the source is
 this defect; fixing the expansive loop removes the trigger.
 
+## Addendum 2 — THE FIX (same day, fix/huggett-bounded-resonance)
+
+Root cause confirmed by reading `NlSvfCell::step()`: the satRes delta had its
+operands transposed — `v0 -= k·s·(satRes(bp) − bp)` is POSITIVE band-pass
+feedback growing with amplitude (anti-damping). Fix: (1) operand swap, so the
+delta is extra damping that grows as the loop saturates; (2) OTA-style soft
+state rails at ±4 (the absolute bound real integrators have). Mirrored into
+`NlSvf.cmajor`/`NlSvfDrive.cmajor` and regenerated (bit-exact equivalence
+kept). Post-fix, res 0.9: gain 61 dB small-signal → **+8 dB at −6 dBFS in**
+(was +86); voice path at res 1.0/os8 peaks at **−1.5 dBFS** (was +22);
+1 dB knee at −83 dBFS (analog-early); small-signal response and Moog
+byte-identical. Both `// CALIB` dials (rail level, asymmetry) remain SP-D
+calibration targets — the *law* is now the right shape; the *numbers* await
+the real Summit.
+
 ## Follow-ups (SP-B proper)
 
 - Drive axis (this read was drive 0 — the pre/post shapers add another level

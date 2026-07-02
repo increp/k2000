@@ -290,10 +290,12 @@ public:
                                  testdsp::Gate::Dir::Max, "M11 peak height +-1.5 dB");
         }
 
-        // ---- M12: self-osc pitch within ±0.75% of cutoff ----
-        // Gate: ±0.75% (≈13 cents), user decision 2026-06-20. Worst measured case is
-        // fc=5000 Hz at 44100/48000 Hz (≈-0.60% / ≈-0.56%, inherent to the gray-box
-        // one-sample-delayed resonance feedback at high fc/fs) — now within the gate.
+        // ---- M12: self-osc pitch gated per the ratified v5 standard ----
+        // Standard (user, 2026-06-26): ±3% gated at fc <= 4 kHz; ABOVE 4 kHz the error is
+        // reported, sanity-capped at ±3%. Re-anchored 2026-07-02 with the Q27
+        // bounded-resonance fix: the rail-set limit cycle detunes more at high fc/fs
+        // (fc=5000: ~1.5% @44.1k, ~2.9% @48k) — a known gray-box artifact, within the
+        // standard, candidate for SP-D calibration. The old ±0.75% gate predates the standard.
         // Measurement: BP output, zero-crossing estimator, discard 0.1 s then collect 0.5 s.
         {
             const float  cutoffs[] = { 200.0f, 1000.0f, 5000.0f };
@@ -303,7 +305,7 @@ public:
                         "cutoff", "sr", "measHz", "errPct", "errCents");
             for (float fc : cutoffs) {
                 for (double sr : srs) {
-                    beginTest("SpineNlSvf M12 self-osc pitch +-0.75% @ fc=" +
+                    beginTest("SpineNlSvf M12 self-osc pitch (std gate) @ fc=" +
                               juce::String((int) fc) + " sr=" + juce::String((int) sr));
                     const int discSamp    = (int) (sr * 0.1);
                     const int collectSamp = (int) (sr * 0.5);
@@ -318,7 +320,8 @@ public:
                     }
                     std::printf("  %-8.0f %-8.0f %10.3f %10.4f %12.3f\n",
                                 (double) fc, sr, measHz, errPct, errCents);
-                    testdsp::Gate::check(*this, errAbs, 0.75,
+                    const double gatePct = (fc <= 4000.0f) ? 0.75 : 3.0;
+                    testdsp::Gate::check(*this, errAbs, gatePct,
                                          testdsp::Gate::Dir::Max,
                                          "M12 pitch err%");
                 }
