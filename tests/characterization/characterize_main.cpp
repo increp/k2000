@@ -2,6 +2,7 @@
 #include "CharacterizationRunner.h"
 #include "FilterUnderTest.h"
 #include "../testdsp/GoldenIO.h"
+#include "../testdsp/RunLog.h"
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -20,7 +21,8 @@
 // Exit: 0 = all method-agreement deltas < 1.0 dB (PASS)
 //       1 = at least one delta >= 1.0 dB (FAIL)
 
-static int runOne(const juce::String& model, bool quick) {
+static int runOne(const juce::String& model, bool quick, runlog::Writer& log,
+                   std::vector<runlog::Writer::Check>& checksOut) {
     auto fut = (model == "moog") ? chz::makeMoogFut() : chz::makeHuggettFut();
 
     // Build output directory relative to cwd (the repo root when invoked from
@@ -42,17 +44,19 @@ static int runOne(const juce::String& model, bool quick) {
     // BERNIE_NO_PROGRESS=1 (e.g. when redirecting stderr to a log).
     const bool showProgress = std::getenv("BERNIE_NO_PROGRESS") == nullptr;
     const auto t0 = std::chrono::steady_clock::now();
-    chz::CharacterizationRunner::Progress progress;
-    if (showProgress)
-        progress = [&](int done, int total, const juce::String& label) {
-            const double elapsed = std::chrono::duration<double>(
-                std::chrono::steady_clock::now() - t0).count();
-            const double eta = done > 0 ? elapsed / done * (total - done) : 0.0;
-            std::fprintf(stderr, "\r[%s] %d/%d (%d%%)  %5.0fs elapsed  eta %5.0fs  %-60.60s",
-                         model.toRawUTF8(), done, total, (int) ((100LL * done) / total),
-                         elapsed, eta, label.toRawUTF8());
-            if (done == total) std::fputc('\n', stderr);
-            std::fflush(stderr);
+    chz::CharacterizationRunner::Progress progress =
+        [&](int done, int total, const juce::String& label) {
+            if (showProgress) {
+                const double elapsed = std::chrono::duration<double>(
+                    std::chrono::steady_clock::now() - t0).count();
+                const double eta = done > 0 ? elapsed / done * (total - done) : 0.0;
+                std::fprintf(stderr, "\r[%s] %d/%d (%d%%)  %5.0fs elapsed  eta %5.0fs  %-60.60s",
+                             model.toRawUTF8(), done, total, (int) ((100LL * done) / total),
+                             elapsed, eta, label.toRawUTF8());
+                if (done == total) std::fputc('\n', stderr);
+                std::fflush(stderr);
+            }
+            log.progress(done, total, "[" + model + "] " + label);
         };
 
     auto summary = chz::CharacterizationRunner::run(*fut, grid, outDir, progress);
@@ -113,6 +117,16 @@ static int runOne(const juce::String& model, bool quick) {
                 model.toRawUTF8(), outDir.getFullPathName().toRawUTF8());
     std::fflush(stdout);
 
+    // chz sink: every summary key becomes an info check EXCEPT method_delta_db,
+    // which mirrors the binary's real gate (expected 1.0 dB, pass/fail verdict).
+    for (const auto& kv : summary) {
+        if (std::abs(kv.second - (-1.0)) < 1.0e-9) continue;
+        runlog::Writer::Check c; c.name = "[" + model + "] " + kv.first; c.measured = kv.second;
+        if (kv.first.endsWith("method_delta_db")) { c.expected = 1.0; c.verdict = kv.second < 1.0 ? "pass" : "fail"; }
+        else c.verdict = "info";
+        checksOut.push_back(c);
+    }
+
     // Gate: method-agreement is the headline gate (< 1.0 dB = pass).
     return (worstDelta < 1.0) ? 0 : 1;
 }
@@ -134,13 +148,26 @@ int main(int argc, char** argv) {
     std::printf("k2000_device_characterization  model=%s  grid=%s\n\n",
                 model.toRawUTF8(), gridLabel);
 
-    int rc = 0;
-    if (model == "all") {
-        rc |= runOne("moog",    quick);
-        rc |= runOne("huggett", quick);
-    } else {
-        rc = runOne(model, quick);
+    runlog::Writer log("chz");
+    {
+        juce::StringArray a;
+        for (int i = 0; i < argc; ++i) a.add(argv[i]);
+        log.start(a, model, quick ? "quick" : "full");
     }
+    const auto mainT0 = std::chrono::steady_clock::now();
+
+    int rc = 0;
+    std::vector<runlog::Writer::Check> allChecks;
+    if (model == "all") {
+        rc |= runOne("moog",    quick, log, allChecks);
+        rc |= runOne("huggett", quick, log, allChecks);
+    } else {
+        rc = runOne(model, quick, log, allChecks);
+    }
+
+    const double elapsedSeconds = std::chrono::duration<double>(
+        std::chrono::steady_clock::now() - mainT0).count();
+    log.end(rc == 0 ? "pass" : "fail", elapsedSeconds, allChecks);
 
     std::printf("\n%s\n", rc == 0 ? "PASS" : "FAIL");
     return rc;
