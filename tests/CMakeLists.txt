@@ -82,6 +82,7 @@ add_executable(k2000_tests
     DeviceUnderTestTests.cpp
     SyntheticReferenceTests.cpp
     RunnerLevelTests.cpp
+    RunnerProgressTests.cpp
     LevelDisparityTests.cpp
     AWeightingTests.cpp
     AliasSplitTests.cpp

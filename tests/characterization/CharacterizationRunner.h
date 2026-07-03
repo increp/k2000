@@ -3,6 +3,7 @@
 #include "DeviceUnderTest.h"
 #include "FilterUnderTest.h"
 #include <juce_core/juce_core.h>
+#include <functional>
 #include <map>
 #include <vector>
 
@@ -34,11 +35,18 @@ struct CharacterizationRunner {
     // Log-spaced frequency grid with n points from f0 to f1 (inclusive).
     static std::vector<double> logFreqs(double f0, double f1, int n);
 
+    // Live progress sink (engagement item 6): called after every measured point with
+    // (done, total, label). total is computed up front and stays stable; done ends
+    // exactly at total. Default-empty: existing call sites are unaffected; printing is
+    // the caller's job (the heavy runner wires a stderr line with ETA; tests stay silent).
+    using Progress = std::function<void(int done, int total, const juce::String& label)>;
+
     // Run B1 (magnitude, dual-method) + B4 (phase/group delay) over the grid for one filter.
     // Writes response.csv into outDir (directory is created if absent).
     // Returns headline metrics. B2/B3 seam: extend via runB1OnePoint helper is already
     // isolated; add runB2/runB3 helpers and call them from run() for 8b.
-    static Summary run(DeviceUnderTest& fut, const Grid& g, const juce::File& outDir);
+    static Summary run(DeviceUnderTest& fut, const Grid& g, const juce::File& outDir,
+                       const Progress& progress = {});
 
 private:
     // Per-point B1+B4 measurement. Returns headline metrics for this point.
