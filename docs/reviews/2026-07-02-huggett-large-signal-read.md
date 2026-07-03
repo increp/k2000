@@ -87,6 +87,24 @@ byte-identical. Both `// CALIB` dials (rail level, asymmetry) remain SP-D
 calibration targets — the *law* is now the right shape; the *numbers* await
 the real Summit.
 
+## Addendum 3 — UAT iteration: the whistle and the knob (2026-07-03)
+
+User audition of the first fix found two regressions the metrics missed:
+**(a) no self-oscillation at max resonance** — the old "whistle" had been powered
+by the anti-damping defect itself (linear Q caps at ~50, always decaying), so
+removing the defect removed the whistle; **(b) a click + sudden character change
+at the first resonance increment** — the rails engaged binarily at full
+strength. Fix iteration: the top 5 % of the resonance range is now genuinely
+**regenerative** (damping fades through zero to −0.012 at max — how analog
+actually crosses the oscillation threshold), with the state rails setting the
+whistle amplitude; the rails (and the saturation delta via |k|) blend in
+**proportionally with resonance**, so engagement is continuous in the knob.
+Regression tests added: sustained-whistle (kick → amplitude at 3 s within 50 %
+of 0.5 s, rail-limited) and a twin-run click-burst guard. Both `.cmajor`
+sources mirrored + regenerated, equivalence bit-exact; goldens churned
+surgically once more (Huggett-active rows only; Moog + init_saw byte-identical).
+`kOscStart`/`kOscDepth` join the `// CALIB` dials for SP-D.
+
 ## Follow-ups (SP-B proper)
 
 - Drive axis (this read was drive 0 — the pre/post shapers add another level

@@ -555,6 +555,7 @@ struct NlSvfDrive
     using std_intrinsics_T_5 = float;
     using std_intrinsics_T_6 = float;
     using std_intrinsics_T_7 = float;
+    using std_intrinsics_T_8 = float;
 
     //==============================================================================
     double getMaxFrequency() const
@@ -894,7 +895,7 @@ struct NlSvfDrive
             if (_state.rsat > 0.0f)
             {
                 bpPrev = _state.bp;
-                v0 = (v0 - ((_state.k * _state.rsat) * (bpPrev - _NlSvfDrive__satRes (bpPrev))));
+                v0 = (v0 - ((intrinsics::abs (_state.k) * _state.rsat) * (bpPrev - _NlSvfDrive__satRes (bpPrev))));
             }
             v3 = v0 - _state.ic2;
             v1 = (_state.a1 * _state.ic1) + (_state.a2 * v3);
@@ -903,8 +904,8 @@ struct NlSvfDrive
             _state.ic2 = ((2.0f * v2) - _state.ic2);
             if (_state.rsat > 0.0f)
             {
-                _state.ic1 = _NlSvfDrive__rail (_state.ic1);
-                _state.ic2 = _NlSvfDrive__rail (_state.ic2);
+                _state.ic1 = (_state.ic1 + (_state.rsat * (_NlSvfDrive__rail (_state.ic1) - _state.ic1)));
+                _state.ic2 = (_state.ic2 + (_state.rsat * (_NlSvfDrive__rail (_state.ic2) - _state.ic2)));
             }
             _state.bp = v1;
             filt = {};
@@ -934,6 +935,8 @@ struct NlSvfDrive
         float  c;
         float  r;
         float  Q;
+        float  oscStart;
+        float  t;
 
         sr = static_cast<float> (1.0 * g__frequency);
         c = intrinsics::clamp (_state.cutoff, 16.0f, sr * 0.45f);
@@ -941,6 +944,12 @@ struct NlSvfDrive
         Q = 0.5f + ((r * r) * 49.5f);
         _state.g = intrinsics::tan ((3.1415927f * c) / sr);
         _state.k = (1.0f / Q);
+        oscStart = 0.95f;
+        if (r > oscStart)
+        {
+            t = (r - oscStart) / 0.050000012f;
+            _state.k = ((_state.k * (1.0f - t)) - (0.012f * t));
+        }
         _state.a1 = (1.0f / (1.0f + (_state.g * (_state.g + _state.k))));
         _state.a2 = (_state.g * _state.a1);
         _state.a3 = (_state.g * _state.a2);
@@ -1019,6 +1028,13 @@ struct NlSvfDrive
     {
         {
             return (v1 < v2) ? v1 : v2;
+        }
+    }
+
+    float std__intrinsics__abs (float n) noexcept
+    {
+        {
+            return (n < static_cast<float> (int32_t {0})) ? (- n) : n;
         }
     }
 

@@ -63,6 +63,14 @@ processor NlSvfDrive
         let Q  = 0.5f + r * r * 49.5f;
         g  = tan (float (pi) * c / sr);
         k  = 1.0f / Q;
+        // Regenerative top of the knob: damping fades through zero near max res so
+        // the filter genuinely self-oscillates; the rails set the amplitude. // CALIB
+        let oscStart = 0.95f;
+        if (r > oscStart)
+        {
+            let t = (r - oscStart) / (1.0f - oscStart);
+            k = k * (1.0f - t) - 0.012f * t;
+        }
         a1 = 1.0f / (1.0f + g * (g + k));
         a2 = g * a1;
         a3 = g * a2;
@@ -88,7 +96,7 @@ processor NlSvfDrive
             if (rsat > 0.0f)
             {
                 let bpPrev = bp;
-                v0 -= k * rsat * (bpPrev - satRes (bpPrev));   // Q27 fix: extra damping, not anti-damping
+                v0 -= abs (k) * rsat * (bpPrev - satRes (bpPrev));   // Q27 fix: damping delta (|k|: k goes negative in the self-osc top)
             }
             let v3 = v0 - ic2;
             let v1 = a1 * ic1 + a2 * v3;
@@ -97,8 +105,8 @@ processor NlSvfDrive
             ic2 = 2.0f * v2 - ic2;
             if (rsat > 0.0f)
             {
-                ic1 = rail (ic1);   // Q27: OTA-style state rails
-                ic2 = rail (ic2);
+                ic1 += rsat * (rail (ic1) - ic1);   // Q27: rails blended by rsat (click-free engagement)
+                ic2 += rsat * (rail (ic2) - ic2);
             }
             bp  = v1;
             float filt;
