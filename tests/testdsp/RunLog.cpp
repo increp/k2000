@@ -1,8 +1,23 @@
 #include "RunLog.h"
-#include <unistd.h>
 #include <cmath>
 
+#ifdef _WIN32
+ #include <process.h>
+#else
+ #include <unistd.h>
+#endif
+
 namespace runlog {
+
+namespace {
+int currentPid() {
+#ifdef _WIN32
+    return _getpid();
+#else
+    return (int) getpid();
+#endif
+}
+} // namespace
 
 juce::String jsonEscape(const juce::String& s) {
     juce::String out;
@@ -31,12 +46,12 @@ static juce::File defaultDir() {
 Writer::Writer(const juce::String& kind) : Writer(kind, defaultDir(), 1000, 3600 * 1000) {}
 
 Writer::Writer(const juce::String& kind, const juce::File& dir, int64_t throttleMs, int64_t slowAfterMs)
-    : throttleMs_(throttleMs), slowAfterMs_(slowAfterMs) {
+    : throttleMs_(throttleMs), slowAfterMs_(slowAfterMs), kind_(kind) {
     if (std::getenv("BERNIE_NO_RUNLOG") != nullptr && juce::String(std::getenv("BERNIE_NO_RUNLOG")) == "1") { enabled_ = false; return; }
     dir.createDirectory();
     t0Ms_ = juce::Time::currentTimeMillis();
     auto stamp = juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S");
-    file_ = dir.getChildFile(stamp + "-" + kind + "-" + juce::String((int) getpid()) + ".ndjson");
+    file_ = dir.getChildFile(stamp + "-" + kind + "-" + juce::String(currentPid()) + ".ndjson");
     if (!file_.create().wasOk()) enabled_ = false;
 }
 
@@ -59,8 +74,8 @@ void Writer::start(const juce::StringArray& argv, const juce::String& model,
 #endif
     juce::String j;
     j << "{\"ev\":\"start\",\"ts\":" << juce::Time::currentTimeMillis()
-      << ",\"kind\":\"" << jsonEscape(file_.getFileName().contains("-suite-") ? "suite" : "chz")
-      << "\",\"argv\":[" << a << "],\"pid\":" << (int) getpid()
+      << ",\"kind\":\"" << jsonEscape(kind_)
+      << "\",\"argv\":[" << a << "],\"pid\":" << currentPid()
       << ",\"buildType\":\"" << bt << "\"";
     if (const char* sha = std::getenv("BERNIE_GIT_SHA")) j << ",\"gitSha\":\"" << jsonEscape(sha) << "\"";
     if (model.isNotEmpty()) j << ",\"model\":\"" << jsonEscape(model) << "\"";

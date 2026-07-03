@@ -34,6 +34,7 @@ public:
 private:
     void line(const juce::String& jsonObj);
     juce::File file_;
+    juce::String kind_;
     bool enabled_ = true;
     int64_t t0Ms_ = 0, lastMs_ = 0, throttleMs_ = 1000, slowAfterMs_ = 3600 * 1000;
 };
