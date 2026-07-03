@@ -16,7 +16,7 @@ set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 add_subdirectory(third_party/JUCE)
 
 juce_add_plugin(k2000
-    COMPANY_NAME "k2000"
+    COMPANY_NAME "Bernie"
     BUNDLE_ID com.k2000.k2000
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
@@ -27,7 +27,7 @@ juce_add_plugin(k2000
     PLUGIN_MANUFACTURER_CODE K2vs
     PLUGIN_CODE K2vs
     FORMATS VST3 Standalone
-    PRODUCT_NAME "k2000")
+    PRODUCT_NAME "Bernie")
 
 juce_generate_juce_header(k2000)
 

@@ -41,5 +41,7 @@ it lives in the register, the dashboard, and git.
 - Voice target: **64 voices, always, at EVERY OS tier** (binding case 64 x os8; register Q2).
 - All DSP voicing changes are HELD until real-hardware fingerprinting (SP-D);
   the standing stance is authenticity-purist.
-- The synth is **Bernie**, FX section **Ricky**; repo codename stays k2000.
+- The synth is **Bernie** on every user-facing surface (plugin name, panel, docs — L6
+  amended 2026-07-03), FX section **Ricky**; k2000 is the internal codename only
+  (repo, CMake targets, class prefixes) pending a possible later identifier pass.
 - Anchor references: Novation Summit + Kurzweil K2061/K2088 ONLY (K2000 dropped).

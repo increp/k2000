@@ -1,6 +1,6 @@
-# k2000 documentation
+# Bernie documentation
 
-VST3 synth plugin: a **K2061/K2088-class VAST engine** (user-wired per-voice DSP graph) bracketed by a **constant Novation Summit analog voice** (always-present filter + drive → VCA + modulation). See [ADR-0010](decisions/0010-k2061-repositioning-constant-summit-spine.md) and the [roadmap](roadmap/phases.md). (The earlier "Peak + Kurzweil K2000" framing is superseded — the K2000 is no longer a reference; "k2000" stays a repo codename.)
+**Bernie** — a VST3 synth plugin: a **K2061/K2088-class VAST engine** (user-wired per-voice DSP graph) bracketed by a **constant Novation Summit analog voice** (always-present filter + drive → VCA + modulation). See [ADR-0010](decisions/0010-k2061-repositioning-constant-summit-spine.md) and the [roadmap](roadmap/phases.md). (The earlier "Peak + Kurzweil K2000" framing is superseded — the K2000 is no longer a reference; "k2000" remains the repo/internal codename only, per register L6.)
 
 Built with JUCE, in C++. Linux for local development; Windows builds produced by GitHub Actions for testing in Ableton 12.
 

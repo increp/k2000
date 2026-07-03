@@ -66,7 +66,7 @@ Q** — precisely the resonance regime we care about (the paper flags the high-Q
 Applying ADAA to the *output only* gives little benefit. → We keep the **resonance saturator at base
 rate**; its alias products are masked near the resonant peak, and this avoids a per-sample solve.
 
-## The k2000 policy (resolves Q12)
+## The Bernie policy (resolves Q12)
 
 | Quality tier | Drive-shaper AA | Filter / resonance | Notes |
 |---|---|---|---|
