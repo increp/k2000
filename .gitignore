@@ -33,6 +33,7 @@ Builds/
 # Logs
 *.log
 .superpowers/
+.franklin/
 
 # Raw research inbox — drop files here; ingest + dispatch into docs/, don't commit raw
 docs/incoming_research/

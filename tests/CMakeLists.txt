@@ -83,6 +83,7 @@ add_executable(k2000_tests
     SyntheticReferenceTests.cpp
     RunnerLevelTests.cpp
     RunnerProgressTests.cpp
+    RunLogTests.cpp
     LevelDisparityTests.cpp
     AWeightingTests.cpp
     AliasSplitTests.cpp
@@ -94,7 +95,8 @@ add_executable(k2000_tests
     RenderFingerprintTests.cpp
     LargeSignalTests.cpp
     characterization/FilterUnderTest.cpp
-    characterization/CharacterizationRunner.cpp)
+    characterization/CharacterizationRunner.cpp
+    testdsp/RunLog.cpp)
 
 target_include_directories(k2000_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -130,6 +132,7 @@ add_executable(k2000_device_characterization
     characterization/characterize_main.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp
+    testdsp/RunLog.cpp
     ../src/dsp/spine/MoogLadder.cpp
     ../src/dsp/spine/HuggettFilter.cpp
     ../src/dsp/spine/HuggettHpStage.cpp
