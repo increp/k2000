@@ -110,3 +110,12 @@ The CI job builds the full plugin and runs `k2000_tests` (which includes the `Ch
 - **Deliberate deep dive** — run the characterization binary with `--quick` (10–25 min) or without (hours).
 - **After a deliberate DSP change** — update and commit the golden baseline before pushing.
 - **Trusted compile gate** — trigger MSVC CI manually on the feature branch before merging.
+
+## Live progress
+
+The heavy runner shows a single overwriting status line on **stderr** while it
+works — `[model] done/total (pct%)  elapsed  eta  current-point` — so long
+grids are never a black box (engagement item 6, 2026-07-03). stdout stays
+machine-readable. Disable with `BERNIE_NO_PROGRESS=1` when redirecting stderr
+to a log. Programmatic consumers pass a `CharacterizationRunner::Progress`
+sink (4th argument of `run`); tests omit it and stay silent.

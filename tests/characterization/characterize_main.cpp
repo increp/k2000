@@ -2,7 +2,9 @@
 #include "CharacterizationRunner.h"
 #include "FilterUnderTest.h"
 #include "../testdsp/GoldenIO.h"
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -35,7 +37,25 @@ static int runOne(const juce::String& model, bool quick) {
     std::printf("[%s] grid = %s\n", model.toRawUTF8(), gridName);
     std::fflush(stdout);
 
-    auto summary = chz::CharacterizationRunner::run(*fut, grid, outDir);
+    // Live progress (engagement item 6): one overwriting status line on stderr —
+    // stdout stays clean for the machine-readable digest. Disable with
+    // BERNIE_NO_PROGRESS=1 (e.g. when redirecting stderr to a log).
+    const bool showProgress = std::getenv("BERNIE_NO_PROGRESS") == nullptr;
+    const auto t0 = std::chrono::steady_clock::now();
+    chz::CharacterizationRunner::Progress progress;
+    if (showProgress)
+        progress = [&](int done, int total, const juce::String& label) {
+            const double elapsed = std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - t0).count();
+            const double eta = done > 0 ? elapsed / done * (total - done) : 0.0;
+            std::fprintf(stderr, "\r[%s] %d/%d (%d%%)  %5.0fs elapsed  eta %5.0fs  %-60.60s",
+                         model.toRawUTF8(), done, total, (int) ((100LL * done) / total),
+                         elapsed, eta, label.toRawUTF8());
+            if (done == total) std::fputc('\n', stderr);
+            std::fflush(stderr);
+        };
+
+    auto summary = chz::CharacterizationRunner::run(*fut, grid, outDir, progress);
 
     // Persist summary.csv next to the three battery CSVs.
     testdsp::GoldenIO::save(outDir.getChildFile("summary.csv"), summary);

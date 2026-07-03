@@ -506,13 +506,33 @@ Summary CharacterizationRunner::runGeneratorCapture(DeviceUnderTest& dut, const 
 }
 
 Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
-                                     const juce::File& outDir) {
+                                     const juce::File& outDir,
+                                     const Progress& progress) {
     outDir.createDirectory();
 
     // M4: Generator devices are excited by the Trigger driver, not the input
     // sweep — B1/B2/B3 are transfer-function batteries and do not apply.
-    if (fut.excitation() == Excitation::Trigger)
-        return runGeneratorCapture(fut, g, outDir);
+    if (fut.excitation() == Excitation::Trigger) {
+        auto s = runGeneratorCapture(fut, g, outDir);
+        if (progress) progress(1, 1, fut.name() + " gen capture");
+        return s;
+    }
+
+    // Progress accounting (item 6): resolve supported modes up front so the
+    // announced total is exact. supports() mutates the model's mode, which is
+    // safe here — setOperatingPoint re-applies mode before every measurement.
+    std::vector<Mode> supModes;
+    for (Mode m : g.modes)
+        if (fut.supports(m)) supModes.push_back(m);
+    const int perModeCutoff = 2 /* B2 + noise */
+        + (int) (g.resonances.size() * g.drives.size() * g.osFactors.size()
+                 * g.osModes.size() * g.hostRates.size())          /* B1 */
+        + (int) g.osFactors.size();                                /* B3 */
+    const int total = (int) (supModes.size() * g.cutoffs.size()) * perModeCutoff;
+    int done = 0;
+    auto tick = [&](const juce::String& label) {
+        if (progress) progress(++done, total, label);
+    };
 
     // CSV headers for all three batteries.
     juce::String b1CsvRows;
@@ -564,10 +584,7 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
         return best;
     }();
 
-    for (Mode mode : g.modes) {
-        // supports() is non-const and mutates mode — call OUTSIDE any measurement loop.
-        if (!fut.supports(mode))
-            continue;
+    for (Mode mode : supModes) {
 
         for (double cutoff : g.cutoffs) {
             // Build the (stable) summary key prefix for this (model, mode, cutoff) triple.
@@ -591,6 +608,7 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                 const double soCe = std::isfinite(b2r.selfoscCentsErr) ? b2r.selfoscCentsErr : -1.0;
                 summary[keyBase + "/selfosc_cents_err"] = soCe;
                 (void) soHz;  // selfosc_cents_err is the headline; Hz is in CSV
+                tick(keyBase + " B2 selfosc");
             }
 
             // --- M4: idle noise floor at the base point (silence in -> output level) ---
@@ -611,6 +629,7 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                 summary[keyBase + "/noise_floor_dbfs"]  = testdsp::Level::rmsDbfs(ns);
                 summary[keyBase + "/noise_floor_dbfsA"] =
                     testdsp::AWeighting::aWeightedRmsDbfs(ns, baseHost);
+                tick(keyBase + " noise floor");
             }
 
             for (double resonance : g.resonances) {
@@ -664,6 +683,12 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
                                     summary[keyBase + "/peak_gain_db"]     = pk;
                                     summary[keyBase + "/passband_gain_db"] = pb;
                                 }
+
+                                tick(keyBase + " B1 res" + juce::String(resonance, 2)
+                                     + " drv" + juce::String(drive, 2)
+                                     + " os" + juce::String(osFactor)
+                                     + (osMode == OsMode::Live ? " live " : " render ")
+                                     + juce::String((int) hostRate));
                             }
                         }
                     }
@@ -689,6 +714,7 @@ Summary CharacterizationRunner::run(DeviceUnderTest& fut, const Grid& g,
 
                 const double adb = std::isfinite(b3r.aliasDb) ? b3r.aliasDb : -1.0;
                 summary[keyBase + "/alias_db@os" + juce::String(osFactor)] = adb;
+                tick(keyBase + " B3 os" + juce::String(osFactor));
 
                 if (osFactor == 1) {
                     const double tdb = std::isfinite(b3r.thdDb) ? b3r.thdDb : -1.0;
