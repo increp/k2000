@@ -182,6 +182,13 @@
             "priority"
           ],
           "summary": "Closes the L2 identity gap (register Q24, resolved 2026-07-02): the constant spine promises LFOs/mod envelopes/mod matrix but only the amp envelope exists, and v16 'Modulation Deepening' had nothing to deepen. Scope: 2 LFOs + 1 mod envelope + a small fixed-slot mod matrix targeting spine common-core params (cutoff/res/drive/output, separation). Scheduled BEFORE v6 design; also the easy on-ramp to Q7 (matrix addressing) by solving spine-only targets first. From the 2026-07-02 fit-for-purpose review."
+        },
+        {
+          "id": "v5-thermal-bloom",
+          "title": "Spine thermal-noise bloom (analog self-osc onset)",
+          "status": "planned",
+          "kind": "point",
+          "summary": "In the analog original, thermal noise rides the near-self-osc resonance gain into the audible bloom-into-scream; in the box, digital silence is exact zero so max resonance stays silent until played. Add a tiny calibrated noise floor seeding the resonance loop (both models) so self-osc onset blooms like hardware. Noise LEVEL and spectrum are calibrated from the real Summit/Arturia noise floors at SP-D — this item ships the mechanism with a conservative placeholder. Born from the Q27 fix discussion (2026-07-02); see docs/reviews/2026-07-02-huggett-large-signal-read.md."
         }
       ]
     },

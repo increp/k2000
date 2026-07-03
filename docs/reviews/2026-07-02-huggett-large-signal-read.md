@@ -72,6 +72,39 @@ possibly compounded, before 2026-07-02, by the since-fixed re-prepare
 use-after-free (audit P0), which fired on OS changes. Either way the source is
 this defect; fixing the expansive loop removes the trigger.
 
+## Addendum 2 — THE FIX (same day, fix/huggett-bounded-resonance)
+
+Root cause confirmed by reading `NlSvfCell::step()`: the satRes delta had its
+operands transposed — `v0 -= k·s·(satRes(bp) − bp)` is POSITIVE band-pass
+feedback growing with amplitude (anti-damping). Fix: (1) operand swap, so the
+delta is extra damping that grows as the loop saturates; (2) OTA-style soft
+state rails at ±4 (the absolute bound real integrators have). Mirrored into
+`NlSvf.cmajor`/`NlSvfDrive.cmajor` and regenerated (bit-exact equivalence
+kept). Post-fix, res 0.9: gain 61 dB small-signal → **+8 dB at −6 dBFS in**
+(was +86); voice path at res 1.0/os8 peaks at **−1.5 dBFS** (was +22);
+1 dB knee at −83 dBFS (analog-early); small-signal response and Moog
+byte-identical. Both `// CALIB` dials (rail level, asymmetry) remain SP-D
+calibration targets — the *law* is now the right shape; the *numbers* await
+the real Summit.
+
+## Addendum 3 — UAT iteration: the whistle and the knob (2026-07-03)
+
+User audition of the first fix found two regressions the metrics missed:
+**(a) no self-oscillation at max resonance** — the old "whistle" had been powered
+by the anti-damping defect itself (linear Q caps at ~50, always decaying), so
+removing the defect removed the whistle; **(b) a click + sudden character change
+at the first resonance increment** — the rails engaged binarily at full
+strength. Fix iteration: the top 5 % of the resonance range is now genuinely
+**regenerative** (damping fades through zero to −0.012 at max — how analog
+actually crosses the oscillation threshold), with the state rails setting the
+whistle amplitude; the rails (and the saturation delta via |k|) blend in
+**proportionally with resonance**, so engagement is continuous in the knob.
+Regression tests added: sustained-whistle (kick → amplitude at 3 s within 50 %
+of 0.5 s, rail-limited) and a twin-run click-burst guard. Both `.cmajor`
+sources mirrored + regenerated, equivalence bit-exact; goldens churned
+surgically once more (Huggett-active rows only; Moog + init_saw byte-identical).
+`kOscStart`/`kOscDepth` join the `// CALIB` dials for SP-D.
+
 ## Follow-ups (SP-B proper)
 
 - Drive axis (this read was drive 0 — the pre/post shapers add another level

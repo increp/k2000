@@ -28,15 +28,32 @@ public:
 
 private:
     float step(float v0, int ch, int tap) noexcept {
-        if (resSat_ > 0.0f) {
+        const bool nl = resSat_ > 0.0f;
+        if (nl) {
             const float bpPrev = bp_[ch];
-            v0 -= k_ * resSat_ * (satRes(bpPrev) - bpPrev);   // nonlinear correction only
+            // Q27 fix (2026-07-02): operands were transposed — the delta used to be
+            // (satRes(bp) - bp), i.e. POSITIVE band-pass feedback growing with
+            // amplitude (anti-damping -> +86 dB gain, +89 dBFS output at musical
+            // input). Correct sense: extra DAMPING that grows as the loop saturates,
+            // still O(x^2) so the low-level linear equivalence is untouched.
+            // |k_|: in the regenerative top of the knob k_ goes negative (self-osc);
+            // the saturation delta must stay a damping term regardless.
+            v0 -= std::abs(k_) * resSat_ * (bpPrev - satRes(bpPrev));
         }
         const float v3 = v0 - ic2_[ch];
         const float v1 = a1_ * ic1_[ch] + a2_ * v3;
         const float v2 = ic2_[ch] + a2_ * ic1_[ch] + a3_ * v3;
         ic1_[ch] = 2.0f * v1 - ic1_[ch];
         ic2_[ch] = 2.0f * v2 - ic2_[ch];
+        if (nl) {
+            // OTA-style state rails: the absolute bound (real integrators clip at the
+            // supply; this is what makes analog resonance self-limit and what sets the
+            // self-osc amplitude). Blended by resSat so engagement is CONTINUOUS in
+            // the knob — a binary gate here clicked on the first increment (field bug
+            // 2026-07-02).
+            ic1_[ch] += resSat_ * (rail(ic1_[ch]) - ic1_[ch]);
+            ic2_[ch] += resSat_ * (rail(ic2_[ch]) - ic2_[ch]);
+        }
         bp_[ch]  = v1;
         switch (tap) {
             case HP:    return v0 - k_ * v1 - v2;
@@ -65,13 +82,29 @@ private:
         const float x2 = x * x;
         return std::clamp(x * (27.0f + x2) / (27.0f + 9.0f * x2), -1.0f, 1.0f);
     }
+    // Soft state rail at ±4 (OTA supply analogue). Unit slope at 0; deviation is
+    // negligible for |x| < 1, so normal-level audio never touches it. // CALIB
+    static float rail(float x) noexcept { return padTanh(x * 0.25f) * 4.0f; }
     void recompute() noexcept {
         const float cutoff = std::clamp(cutoffHz_, 16.0f, float(sampleRate_ * 0.45));
         const float res    = std::clamp(resonance_, 0.0f, 0.999f);
-        const float Q = 0.5f + res * res * 49.5f;      // reaches Q~50 (self-osc) // CALIB
+        const float Q = 0.5f + res * res * 49.5f;      // reaches Q~50 // CALIB
         constexpr double kPi = 3.14159265358979323846;
         g_ = float(std::tan(kPi * cutoff / sampleRate_));
         k_ = 1.0f / Q;
+        // Regenerative top of the knob (field bug 2026-07-02: after the Q27 fix the
+        // filter no longer whistled — the old 'self-osc' was powered by the defect).
+        // Real analog crosses the oscillation threshold near max resonance: damping
+        // fades through zero to slightly negative; the state rails set the whistle
+        // amplitude. res is clamped to 0.999 so t <= 0.98. // CALIB start + depth
+        {
+            constexpr float kOscStart = 0.95f;
+            constexpr float kOscDepth = 0.012f;
+            if (res > kOscStart) {
+                const float t = (res - kOscStart) / (1.0f - kOscStart);
+                k_ = k_ * (1.0f - t) - kOscDepth * t;
+            }
+        }
         a1_ = 1.0f / (1.0f + g_ * (g_ + k_));
         a2_ = g_ * a1_;
         a3_ = g_ * a2_;

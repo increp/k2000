@@ -486,11 +486,12 @@ struct NlSvf
     using std_intrinsics_T_0 = float;
     using std_intrinsics_T_1 = float;
     using std_intrinsics_T_2 = float;
+    using std_intrinsics_T_3 = float;
 
     //==============================================================================
     double getMaxFrequency() const
     {
-        return 192000.0;
+        return 1536000.0;
     }
 
     void initialise (int32_t sessionID, double frequency)
@@ -742,13 +743,18 @@ struct NlSvf
             if (_state.rsat > 0.0f)
             {
                 bpPrev = _state.bp;
-                v0 = (v0 - ((_state.k * _state.rsat) * (_NlSvf__satRes (bpPrev) - bpPrev)));
+                v0 = (v0 - ((intrinsics::abs (_state.k) * _state.rsat) * (bpPrev - _NlSvf__satRes (bpPrev))));
             }
             v3 = v0 - _state.ic2;
             v1 = (_state.a1 * _state.ic1) + (_state.a2 * v3);
             v2 = (_state.ic2 + (_state.a2 * _state.ic1)) + (_state.a3 * v3);
             _state.ic1 = ((2.0f * v1) - _state.ic1);
             _state.ic2 = ((2.0f * v2) - _state.ic2);
+            if (_state.rsat > 0.0f)
+            {
+                _state.ic1 = (_state.ic1 + (_state.rsat * (_NlSvf__rail (_state.ic1) - _state.ic1)));
+                _state.ic2 = (_state.ic2 + (_state.rsat * (_NlSvf__rail (_state.ic2) - _state.ic2)));
+            }
             _state.bp = v1;
             result = {};
             if (_state.tapSel == int32_t {1})
@@ -777,6 +783,8 @@ struct NlSvf
         float  c;
         float  r;
         float  Q;
+        float  oscStart;
+        float  t;
 
         sr = static_cast<float> (1.0 * g__frequency);
         c = intrinsics::clamp (_state.cutoff, 16.0f, sr * 0.45f);
@@ -784,6 +792,12 @@ struct NlSvf
         Q = 0.5f + ((r * r) * 49.5f);
         _state.g = intrinsics::tan ((3.1415927f * c) / sr);
         _state.k = (1.0f / Q);
+        oscStart = 0.95f;
+        if (r > oscStart)
+        {
+            t = (r - oscStart) / 0.050000012f;
+            _state.k = ((_state.k * (1.0f - t)) - (0.012f * t));
+        }
         _state.a1 = (1.0f / (1.0f + (_state.g * (_state.g + _state.k))));
         _state.a2 = (_state.g * _state.a1);
         _state.a3 = (_state.g * _state.a2);
@@ -816,6 +830,13 @@ struct NlSvf
         }
     }
 
+    float std__intrinsics__abs (float n) noexcept
+    {
+        {
+            return (n < static_cast<float> (int32_t {0})) ? (- n) : n;
+        }
+    }
+
     float _NlSvf__satRes (float x) noexcept
     {
         float  b;
@@ -844,6 +865,11 @@ struct NlSvf
 
         x2 = x * x;
         return intrinsics::clamp ((x * (27.0f + x2)) / (27.0f + (9.0f * x2)), -1.0f, 1.0f);
+    }
+
+    float _NlSvf__rail (float x) noexcept
+    {
+        return _NlSvf__padTanh (x * 0.25f) * 4.0f;
     }
 
     //==============================================================================
