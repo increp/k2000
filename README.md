@@ -1,8 +1,8 @@
-# k2000
+# Bernie
 
-VST3 synth plugin: a **K2061/K2088-class VAST engine** (a user-wired per-voice DSP graph for sound *generation*) **bracketed by a constant Novation Summit analog voice** — the always-present *shaping* spine: a selectable analog filter model + drive → VCA, plus the modulation system (envelopes, LFOs, mod matrix, voice modes). You can never reach a dead control.
+**Bernie** — a VST3 synth plugin: a **K2061/K2088-class VAST engine** (a user-wired per-voice DSP graph for sound *generation*) **bracketed by a constant Novation Summit analog voice** — the always-present *shaping* spine: a selectable analog filter model + drive → VCA, plus the modulation system (envelopes, LFOs, mod matrix, voice modes). You can never reach a dead control. The FX section is **Ricky**.
 
-The end-state: build a sound from an arbitrary VAST source/DSP graph, always played through the constant Summit spine, with Summit's full modulation depth. See [ADR-0010](docs/decisions/0010-k2061-repositioning-constant-summit-spine.md). (The earlier "Summit-as-a-preset / Kurzweil K2000" framing is superseded — the K2000 is no longer a reference; `k2000` stays a repo codename.)
+The end-state: build a sound from an arbitrary VAST source/DSP graph, always played through the constant Summit spine, with Summit's full modulation depth. See [ADR-0010](docs/decisions/0010-k2061-repositioning-constant-summit-spine.md). (The earlier "Summit-as-a-preset / Kurzweil K2000" framing is superseded — the K2000 is no longer a reference; `k2000` remains the repo/internal codename only, per register L6.)
 
 Built with [JUCE](https://juce.com) 8.0.4, in C++. Linux for local development; Windows builds produced by GitHub Actions for testing in Ableton 12.
 
@@ -16,7 +16,7 @@ Built with [JUCE](https://juce.com) 8.0.4, in C++. Linux for local development; 
 
 **v4.0.0** (2026-06-16) multi-Layer Programs — a `Program` holds 2 Layers over a shared 64-voice pool with key/velocity/channel/level routing (Layer/Split/Dual). · **v3.0.0** (2026-06-15) selectable algorithm + per-Layer block palette. · **v2.0.0** (2026-06-14) Voice/Layer split. · **v1.0.0** (2026-05-30) end-to-end skeleton.
 
-**Next — v5.1:** HQ oversampling tiers (Light/Normal/Heavy/Full, separate live + render) + an on-screen visual keyboard; then Moog (v5.2) and Oberheim SEM (v5.3) filter models. See [`docs/roadmap/phases.md`](docs/roadmap/phases.md) for the full phase plan.
+**Roadmap truth is the live dashboard** (`cd tools/roadmap-dashboard && npm run dashboard`); [`docs/roadmap/phases.md`](docs/roadmap/phases.md) is vision-only, never status.
 
 ## Documentation
 

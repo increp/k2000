@@ -23,7 +23,7 @@ K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
 
 // One-time setup: section children, combo item lists, captions, edit-layer combo.
 void K2000AudioProcessorEditor::buildStaticControls() {
-    title_.setText(juce::String("k2000  v") + JucePlugin_VersionString,
+    title_.setText(juce::String("Bernie  v") + JucePlugin_VersionString,
                    juce::dontSendNotification);
     title_.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
     addAndMakeVisible(title_);
