@@ -213,6 +213,33 @@ def chk_hooks(root, ctx):
         return "warn", "hooks not installed: run  git config core.hooksPath .githooks"
     return "ok", "pre-commit gate installed"
 
+@check("franklin-catalog", {"session", "ci"}, "warn")
+def chk_franklin_catalog(root, ctx):
+    """Every suite test has a catalog entry and vice versa (Franklin explains every test)."""
+    cat_p = root / "docs/franklin/test-catalog.json"
+    if not cat_p.exists():
+        return "warn", "docs/franklin/test-catalog.json missing"
+    try:
+        cat = {e["key"] for e in json.loads(cat_p.read_text(encoding="utf-8"))["entries"]}
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        return "warn", f"test-catalog.json unreadable: {e}"
+    runs_dir = root / ".franklin/runs"
+    suites = sorted(runs_dir.glob("*-suite-*.ndjson")) if runs_dir.exists() else []
+    if not suites:
+        return "skip", "no suite runlog in .franklin/runs — run the suite once"
+    seen = set()
+    for line in suites[-1].read_text(encoding="utf-8").splitlines():
+        try: e = json.loads(line)
+        except json.JSONDecodeError: continue
+        if e.get("ev") == "test": seen.add(f'{e["name"]} / {e["sub"]}')
+    missing, orphaned = sorted(seen - cat), sorted(cat - seen)
+    if missing or orphaned:
+        parts = []
+        if missing:  parts.append(f"{len(missing)} test(s) without catalog entry: {', '.join(missing[:3])}…")
+        if orphaned: parts.append(f"{len(orphaned)} catalog entr(ies) without test: {', '.join(orphaned[:3])}…")
+        return "warn", "; ".join(parts)
+    return "ok", f"catalog covers all {len(seen)} suite tests"
+
 # ---- fixtures ---------------------------------------------------------------
 @fixture("root-md-litter")
 def fx_root_md(d, passing):
@@ -284,6 +311,15 @@ def fx_hooks(d, passing):
     (d / ".githooks").mkdir(); (d / ".githooks/pre-commit").write_text("#!/bin/sh\n")
     if passing:
         subprocess.run(["git", "-C", str(d), "config", "core.hooksPath", ".githooks"], check=True)
+
+@fixture("franklin-catalog")
+def fx_franklin_catalog(dir, passing):
+    runs = dir / ".franklin/runs"; runs.mkdir(parents=True)
+    (runs / "20260703-000000-suite-1.ndjson").write_text(
+        '{"ev":"test","name":"A","sub":"b","ok":true,"passes":1,"failures":0,"messages":[]}\n', encoding="utf-8")
+    entries = [{"key": "A / b", "file": "tests/x.cpp", "what": "w", "why": "y", "deviationMeans": "d", "links": []}] if passing else []
+    cat = dir / "docs/franklin"; cat.mkdir(parents=True)
+    (cat / "test-catalog.json").write_text(json.dumps({"version": 1, "entries": entries}), encoding="utf-8")
 
 # ---- engine ------------------------------------------------------------------
 def run_tier(root, tier, ctx):
