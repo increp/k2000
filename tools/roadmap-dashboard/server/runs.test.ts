@@ -13,7 +13,7 @@ async function tmpDir(): Promise<string> {
 }
 
 // Real event shapes lifted from actual .franklin/runs/*.ndjson output (Task 1-3).
-const SUITE_START = '{"ev":"start","ts":1783116948810,"kind":"suite","argv":["./build/tests/k2000_tests"],"pid":342689,"buildType":"Release"}';
+const SUITE_START = '{"ev":"start","ts":1783116948810,"kind":"suite","argv":["./build/tests/k2000_tests"],"pid":342689,"buildType":"Release","gitSha":"de6bff5"}';
 const CHZ_START = '{"ev":"start","ts":1783116775571,"kind":"chz","argv":["./build/tests/k2000_device_characterization","--model","moog","--quick"],"pid":341448,"buildType":"Release","model":"moog","grid":"quick"}';
 function progressLine(done: number, total: number, label: string, ts = 1783116775572 + done): string {
   return JSON.stringify({ ev: "progress", ts, done, total, label });
@@ -44,6 +44,7 @@ test("parseRun: complete suite run parses to status pass w/ tests/failed populat
   assert.equal(detail.testsList.length, 2);
   assert.equal(detail.testsList[0].name, "Smoke");
   assert.equal(detail.buildType, "Release");
+  assert.equal(detail.gitSha, "de6bff5");
   assert.deepEqual(detail.checks, []);
 });
 
