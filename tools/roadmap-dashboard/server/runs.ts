@@ -170,12 +170,18 @@ export async function readRun(dir: string, id: string): Promise<RunDetail | null
 /** Downsamples an already-parsed progress list to <=MAX_PROGRESS_KEPT, evenly indexed, order preserved. */
 function downsampleProgress(progress: RawEvent[]): RawEvent[] {
   if (progress.length <= MAX_PROGRESS_KEPT) return progress;
-  const kept: RawEvent[] = [];
-  const step = progress.length / MAX_PROGRESS_KEPT;
-  for (let i = 0; i < MAX_PROGRESS_KEPT; i++) {
-    kept.push(progress[Math.floor(i * step)]);
+  const indices = new Set<number>();
+  // Reserve space for the final event by sampling up to MAX_PROGRESS_KEPT - 1
+  const step = progress.length / (MAX_PROGRESS_KEPT - 1);
+  for (let i = 0; i < MAX_PROGRESS_KEPT - 1; i++) {
+    indices.add(Math.floor(i * step));
   }
-  return kept;
+  // Always include the final event
+  indices.add(progress.length - 1);
+
+  // Sort indices and collect in order
+  const sortedIndices = Array.from(indices).sort((a, b) => a - b);
+  return sortedIndices.map(i => progress[i]);
 }
 
 /**

@@ -108,7 +108,8 @@ test("compactFinished: shrinks a 2000-progress-line finished file to <=500+marke
   const lines = [CHZ_START];
   for (let i = 1; i <= 2000; i++) lines.push(progressLine(i, 2000, `step ${i}`, 1783116775571 + i));
   lines.push(testLine("Check", "sub"));
-  lines.push('{"ev":"end","ts":1783116965554,"outcome":"pass","durationS":1.0,"tests":1,"failed":0,"checks":[]}');
+  const endLine = '{"ev":"end","ts":1783116965554,"outcome":"pass","durationS":1.0,"tests":1,"failed":0,"checks":[]}';
+  lines.push(endLine);
   const file = join(dir, "big.ndjson");
   await writeFile(file, lines.join("\n") + "\n");
 
@@ -117,12 +118,19 @@ test("compactFinished: shrinks a 2000-progress-line finished file to <=500+marke
 
   const rewritten = (await readFile(file, "utf8")).split("\n").filter((l) => l.length > 0);
   assert.equal(rewritten[0], COMPACT_MARKER);
-  const progressCount = rewritten.filter((l) => JSON.parse(l).ev === "progress").length;
+  const progressLines = rewritten.filter((l) => JSON.parse(l).ev === "progress");
+  const progressCount = progressLines.length;
   assert.ok(progressCount <= MAX_PROGRESS_KEPT, `expected <=${MAX_PROGRESS_KEPT} progress lines, got ${progressCount}`);
   assert.ok(rewritten.some((l) => JSON.parse(l).ev === "start"));
   assert.ok(rewritten.some((l) => JSON.parse(l).ev === "test"));
   const last = JSON.parse(rewritten[rewritten.length - 1]);
   assert.equal(last.ev, "end");
+
+  // Verify the final progress event is preserved with the correct done value
+  const finalProgress = JSON.parse(progressLines[progressLines.length - 1]);
+  assert.equal(finalProgress.done, 2000, "final progress event should have done=2000");
+  assert.equal(finalProgress.total, 2000, "final progress event should have total=2000");
+  assert.equal(finalProgress.label, "step 2000", "final progress event should have label='step 2000'");
 
   // idempotent: second pass finds nothing left to compact (marker already present)
   const again = await compactFinished(dir);
