@@ -4,8 +4,11 @@ import { join, normalize, extname, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadRoadmap, saveRoadmap, validateDoc } from "./store.ts";
 import { buildDecomposeRequest, writeDecomposeRequest } from "./decompose.ts";
+import { listRuns, readRun, compactFinished } from "./runs.ts";
+import { getCi } from "./ci.ts";
+import { templates, startRun, stopRun, staleBinaryInfo } from "./control.ts";
 
-interface Options { roadmapPath: string; rootDir: string; }
+interface Options { roadmapPath: string; rootDir: string; franklinRunsDir?: string; }
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -56,6 +59,47 @@ export function createServer(opts: Options): http.Server {
         return send(res, 200, MIME[".json"], JSON.stringify({ prompt: request.prompt, file }));
       }
 
+      const runsDir = opts.franklinRunsDir ?? join(opts.rootDir, "../../.franklin/runs");
+
+      if (path === "/api/runs" && req.method === "GET") {
+        const runs = await listRuns(runsDir);
+        const disk = runs.reduce((sum, r) => sum + r.sizeBytes, 0);
+        // Fire-and-forget: compaction is housekeeping, must not delay the response.
+        compactFinished(runsDir).catch(() => { /* best-effort; next poll retries */ });
+        return send(res, 200, MIME[".json"], JSON.stringify({ runs, disk }));
+      }
+
+      if (path.startsWith("/api/runs/") && req.method === "GET") {
+        const id = decodeURIComponent(path.slice("/api/runs/".length));
+        const detail = await readRun(runsDir, id);
+        if (!detail) return send(res, 404, MIME[".json"], JSON.stringify({ error: "run not found" }));
+        return send(res, 200, MIME[".json"], JSON.stringify(detail));
+      }
+
+      if (path === "/api/ci" && req.method === "GET") {
+        const payload = await getCi(opts.rootDir);
+        return send(res, 200, MIME[".json"], JSON.stringify(payload));
+      }
+
+      if (path === "/api/control/templates" && req.method === "GET") {
+        const stale = await staleBinaryInfo(opts.rootDir);
+        return send(res, 200, MIME[".json"], JSON.stringify({ templates: templates(), stale }));
+      }
+
+      if (path === "/api/control/start" && req.method === "POST") {
+        const raw = await readBody(req);
+        const { templateId, params } = JSON.parse(raw) as { templateId?: string; params?: { model?: string; grid?: string } };
+        const result = await startRun(opts.rootDir, templateId ?? "", params ?? {});
+        return send(res, result.ok ? 200 : 400, MIME[".json"], JSON.stringify(result));
+      }
+
+      if (path === "/api/control/stop" && req.method === "POST") {
+        const raw = await readBody(req);
+        const { id } = JSON.parse(raw) as { id?: string };
+        const result = await stopRun(opts.rootDir, runsDir, id ?? "");
+        return send(res, result.ok ? 200 : 400, MIME[".json"], JSON.stringify(result));
+      }
+
       // Static files (index.html for "/", otherwise the requested path under rootDir).
       const rel = path === "/" ? "index.html" : path.replace(/^\/+/, "");
       const safe = normalize(rel).replace(/^(\.\.[/\\])+/, "");
@@ -82,7 +126,7 @@ if (isMain) {
   const rootDir = join(import.meta.dirname, "..");
   const roadmapPath = join(rootDir, "roadmap.json");
   const port = Number(process.env.PORT ?? 4173);
-  createServer({ roadmapPath, rootDir }).listen(port, () => {
+  createServer({ roadmapPath, rootDir }).listen(port, "127.0.0.1", () => {
     console.log(`Bernie roadmap dashboard → http://localhost:${port}`);
   });
 }
