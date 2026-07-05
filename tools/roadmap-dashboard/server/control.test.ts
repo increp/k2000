@@ -4,7 +4,7 @@ import { mkdtemp, writeFile, readFile, mkdir, chmod, utimes } from "node:fs/prom
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { templates, startRun, stopRun, staleBinaryInfo } from "./control.ts";
+import { templates, startRun, stopRun, staleBinaryInfo, pgidOf } from "./control.ts";
 
 async function tmpDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "franklin-control-"));
@@ -313,4 +313,72 @@ test("staleBinaryInfo: only considers .h/.cpp/.cmajor under src/** and tests/**,
   const info = await staleBinaryInfo(rootDir);
   const suiteBinInfo = info.find((i) => i.binary === "build/tests/k2000_tests")!;
   assert.equal(suiteBinInfo.stale, false, "the .md file must not count as source, so binary should not appear stale");
+});
+
+// --- pgidOf / group-leader check -------------------------------------------------
+
+test("pgidOf: detached spawned process identifies itself as its own group leader", async () => {
+  const { writeFileSync, unlinkSync } = await import("node:fs");
+  const scriptPath = "/tmp/franklin-detached-fixture.sh";
+  // Create a simple script that sleeps so we can query it while alive.
+  writeFileSync(scriptPath, "#!/bin/sh\nsleep 300\n", { mode: 0o755 });
+  try {
+    const child = spawn(scriptPath, [], { detached: true, stdio: "ignore" });
+    child.unref();
+    const pid = child.pid!;
+    assert.ok(pid > 0);
+
+    // A detached process spawned with detached:true should be its own pgrp leader.
+    const pgrp = pgidOf(pid);
+    assert.equal(pgrp, pid, `expected pgidOf(${pid}) === ${pid}, got ${pgrp}`);
+
+    // Clean up.
+    try { process.kill(-pid, "SIGKILL"); } catch { /* already gone */ }
+  } finally {
+    try { unlinkSync(scriptPath); } catch { /* ignore */ }
+  }
+});
+
+// --- stopRun: duplicate-end race condition ----------------------------------------
+
+test("stopRun: duplicate-end race test — calling stopRun twice appends end event only once", async () => {
+  const rootDir = await tmpDir();
+  const runsDir = join(rootDir, ".franklin", "runs");
+  await mkdir(runsDir, { recursive: true });
+
+  // Create a script that will be "already dead" by the time we call stopRun.
+  const scriptPath = join(rootDir, "quick-exit.sh");
+  await writeFile(scriptPath, "#!/bin/sh\nexit 0\n");
+  await chmod(scriptPath, 0o755);
+
+  const child = spawn(scriptPath, [], { detached: true, stdio: "ignore" });
+  const deadPid = child.pid!;
+  // Wait for it to actually exit and be reaped from /proc.
+  await new Promise<void>((resolve) => child.on("exit", () => resolve()));
+  await waitFor(() => !pidAlive(deadPid));
+
+  const runFile = join(runsDir, "duplicate-end-test.ndjson");
+  const startEvent = {
+    ev: "start",
+    ts: Date.now() - 5000,
+    kind: "suite",
+    argv: [scriptPath],
+    pid: deadPid,
+    buildType: "Release",
+  };
+  await writeFile(runFile, JSON.stringify(startEvent) + "\n");
+
+  // Call stopRun twice sequentially on the already-dead process.
+  const result1 = await stopRun(rootDir, runsDir, "duplicate-end-test.ndjson");
+  assert.equal(result1.ok, true, "first stopRun call must succeed");
+
+  const result2 = await stopRun(rootDir, runsDir, "duplicate-end-test.ndjson");
+  assert.equal(result2.ok, true, "second stopRun call must also succeed");
+
+  // File must end with exactly ONE end event.
+  const finalText = await readFile(runFile, "utf8");
+  const lines = finalText.split("\n").filter((l) => l.trim().length > 0).map((l) => JSON.parse(l));
+  const endEvents = lines.filter((l) => l.ev === "end");
+  assert.equal(endEvents.length, 1, `expected exactly 1 end event, found ${endEvents.length}`);
+  assert.equal(endEvents[0].outcome, "stopped");
 });

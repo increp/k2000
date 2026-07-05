@@ -1,4 +1,5 @@
 import { spawn, execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { open, readFile, writeFile, appendFile, readdir, stat } from "node:fs/promises";
 import { join, basename } from "node:path";
 
@@ -104,21 +105,50 @@ function procExists(pid: number): boolean {
 }
 
 /**
+ * Parses /proc/<pid>/stat to extract the process group id (pgid).
+ * Returns null if /proc/<pid>/stat is unreadable or malformed.
+ * The pgrp field is at position 5 in the fields after the final ')' in comm.
+ */
+export function pgidOf(pid: number): number | null {
+  try {
+    const statPath = `/proc/${pid}/stat`;
+    const data = readFileSync(statPath, "utf8");
+    // Find the last ')' to skip the comm field (which can contain spaces/parens).
+    const lastParen = data.lastIndexOf(")");
+    if (lastParen === -1) return null;
+    // Split the remainder on whitespace and extract field index 2 (pgrp, after the ')').
+    const remainder = data.slice(lastParen + 1).trim().split(/\s+/);
+    if (remainder.length < 3) return null;
+    const pgrp = parseInt(remainder[2], 10);
+    return isNaN(pgrp) ? null : pgrp;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Signals pid's whole process group (negative pid), not just pid itself.
  * startRun always spawns with detached:true, which makes the child its own
  * group leader (pgid === pid) — so this also reaps any descendants a
  * whitelisted binary forks (e.g. a shell-script harness that forks a real
  * worker instead of exec-replacing itself). Falls back to signaling the bare
- * pid if group-kill fails for any reason (e.g. pid no longer heads its group).
+ * pid if the process is not its own group leader or if group-kill fails
+ * for any reason.
  */
 function signalProcessTree(pid: number, signal: NodeJS.Signals): void {
-  try {
-    process.kill(-pid, signal);
-    return;
-  } catch {
-    // Group kill failed (e.g. ESRCH if the group is already gone, or EPERM/
-    // EINVAL edge cases) — fall back to signaling the bare pid.
+  // Check if pid is its own group leader; if so, use group kill.
+  const pgrp = pgidOf(pid);
+  if (pgrp === pid) {
+    try {
+      process.kill(-pid, signal);
+      return;
+    } catch {
+      // Group kill failed despite pgrp === pid (race condition edge case);
+      // fall back to signaling the bare pid.
+    }
   }
+  // pid is not the group leader, or we couldn't read /proc/<pid>/stat;
+  // signal the bare pid only.
   try {
     process.kill(pid, signal);
   } catch {
@@ -199,7 +229,8 @@ export async function stopRun(
     signalProcessTree(pid, "SIGTERM");
 
     const timer = setTimeout(() => {
-      if (procExists(pid)) signalProcessTree(pid, "SIGKILL");
+      // Always attempt escalation; swallow all errors.
+      signalProcessTree(pid, "SIGKILL");
     }, SIGKILL_ESCALATION_MS);
     timer.unref();
   }
@@ -207,6 +238,19 @@ export async function stopRun(
 
   const durationS = (Date.now() - ts) / 1000;
   const endEvent = { ev: "end", ts: Date.now(), outcome: "stopped", durationS };
+
+  // Re-read the file and check again for a duplicate end event (race condition guard).
+  try {
+    const freshText = await readFile(filePath, "utf8");
+    const { hasEnd: freshHasEnd } = parseRunFile(freshText);
+    if (freshHasEnd) {
+      // Another caller already appended an end event; skip append and report success.
+      return { ok: true };
+    }
+  } catch {
+    // If re-read fails, proceed with the append anyway (file may be in flux).
+  }
+
   await appendFile(filePath, JSON.stringify(endEvent) + "\n");
 
   return { ok: true };
