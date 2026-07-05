@@ -47,3 +47,123 @@ body { margin: 0; background: var(--bg); color: var(--ink);
 .add-version, .filters button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 .filters button.active { background: var(--accent); color: #1a1300; }
 .item.drag-over { outline: 2px dashed var(--accent); }
+
+/* ==========================================================================
+   Franklin dashboard (Task 10) — live run cards, CI strip, control, archive,
+   deviations-first detail. Reuses the roadmap palette (:root vars above).
+   Status colors: running/stalled-active = blue-ish, pass = green,
+   fail/stalled = red, stopped/error/info = grey. Severity-0 deviation rows
+   get a red highlight.
+   ========================================================================== */
+
+/* --- tab nav (shared shell) --- */
+#tabs { display: flex; gap: 6px; padding: 10px 14px 0; }
+#tabs button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-bottom: none; border-radius: 8px 8px 0 0; padding: 6px 14px; cursor: pointer; font-weight: 600; }
+#tabs button.active { background: var(--accent); color: #1a1300; }
+
+/* When Franklin owns #app, drop the roadmap grid so sections stack. */
+.fr-root { display: flex; flex-direction: column; gap: 14px; }
+.fr-section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.fr-section > h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
+  display: flex; align-items: center; gap: 10px; }
+.fr-empty { color: var(--muted); font-size: 12px; margin: 4px 0; }
+.fr-spacer { flex: 1; }
+.fr-hidden { display: none !important; }
+
+/* --- status coloring (cards, badges, rows share these) --- */
+.status-running .status-badge, .status-badge { color: var(--muted); }
+.fr-card.status-running { border-left-color: var(--inprogress); }
+.fr-card.status-stalled { border-left-color: var(--blocked); }
+.status-pass  .status-badge { color: var(--shipped); }
+.status-fail  .status-badge { color: var(--blocked); }
+.status-stalled .status-badge { color: var(--blocked); }
+.status-error .status-badge { color: var(--muted); }
+.status-stopped .status-badge { color: var(--tentative); }
+.status-running .status-badge { color: var(--inprogress); }
+
+/* --- active run cards --- */
+.fr-card { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--inprogress);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.fr-card-head { display: flex; align-items: center; gap: 8px; }
+.fr-kind { font-size: 10px; text-transform: uppercase; background: var(--line); color: var(--ink); border-radius: 4px; padding: 1px 6px; }
+.fr-card-meta { color: var(--muted); font-size: 12px; }
+.fr-counter { font-variant-numeric: tabular-nums; font-weight: 600; }
+.fr-eta { color: var(--inprogress); font-size: 12px; }
+.fr-card-head button { background: transparent; border: 1px solid var(--line); color: var(--muted);
+  border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.fr-card-head button:hover { background: var(--blocked); color: #1a0000; border-color: var(--blocked); }
+.fr-progress { height: 5px; background: var(--line); border-radius: 3px; margin: 7px 0; overflow: hidden; }
+.fr-bar { height: 100%; background: var(--accent); transition: width .3s ease; }
+.fr-card-label { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.fr-label-title { color: var(--ink); font-size: 12px; font-weight: 600; }
+.fr-label-raw { color: var(--muted); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* --- CI strip --- */
+.fr-ci-branch { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; flex-wrap: wrap; }
+.fr-ci-ref { font-weight: 600; min-width: 140px; }
+.fr-ci-checks { display: flex; gap: 6px; flex-wrap: wrap; }
+.fr-ci-check { font-size: 11px; border-radius: 4px; padding: 1px 6px; border: 1px solid var(--line); }
+.fr-ci-pass { color: var(--shipped); border-color: var(--shipped); }
+.fr-ci-fail { color: var(--blocked); border-color: var(--blocked); }
+.fr-ci-running { color: var(--inprogress); border-color: var(--inprogress); }
+.fr-ci-info { color: var(--muted); }
+.fr-ci-link { text-decoration: none; }
+
+/* --- new-run form --- */
+.fr-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.fr-form label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.fr-form select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+.fr-form button { background: var(--accent); color: #1a1300; border: none; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-weight: 600; }
+.fr-stale-chip { color: #1a1300; background: var(--accent); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.fr-form-msg { color: var(--muted); font-size: 12px; margin: 8px 0 0; min-height: 1em; }
+.fr-catalog-warn { color: var(--blocked); font-size: 12px; margin: 8px 14px; }
+
+/* --- archive table --- */
+.fr-disk { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.fr-arch-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.fr-arch-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.fr-arch-row { cursor: pointer; }
+.fr-arch-row td { padding: 5px 8px; border-bottom: 1px solid var(--line); }
+.fr-arch-row:hover { background: var(--panel-2); }
+.fr-arch-when { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+.fr-arch-table button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.fr-arch-table button:hover { background: var(--accent); color: #1a1300; }
+
+/* --- detail drawer --- */
+.fr-drawer:not(:empty) { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.fr-detail-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.fr-detail-head button { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
+.fr-detail h3 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
+
+/* deviations panel (rendered first) */
+.fr-deviations { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.fr-dev-row { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-size: 12px; }
+.fr-dev-sev { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 0 5px; }
+.fr-dev-crit { color: var(--blocked); }
+.fr-dev-crit .fr-dev-sev { background: var(--blocked); color: #1a0000; }
+.fr-dev-warn .fr-dev-sev { background: var(--accent); color: #1a1300; }
+.fr-dev-info .fr-dev-sev { background: var(--line); color: var(--muted); }
+.fr-dev-title { font-weight: 600; }
+.fr-dev-detail { color: var(--muted); }
+
+/* tests list with catalog prose */
+.fr-test { margin: 4px 0; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+.fr-test.fr-test-fail { border-left: 3px solid var(--blocked); }
+.fr-test.fr-test-ok { border-left: 3px solid var(--shipped); }
+.fr-test summary { cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.fr-test-counts { color: var(--muted); font-size: 11px; margin-left: auto; }
+.fr-msg-list { margin: 6px 0; padding-left: 18px; }
+.fr-msg-fail, .deviation-fail { color: var(--blocked); background: rgba(248, 81, 73, .1); border-radius: 4px;
+  padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.fr-test-prose { margin: 6px 0 2px; color: var(--muted); font-size: 12px; border-left: 2px dashed var(--line); padding-left: 8px; }
+.fr-prose-what { color: var(--ink); }
+.fr-prose-dev em { color: var(--accent); font-style: normal; }
+.fr-prose-file { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; opacity: .8; }
+
+/* chz operating-point + metadata */
+.fr-chz-explain { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+.fr-label-body { color: var(--muted); font-size: 12px; margin: 4px 0; }
+.fr-meta-row { display: flex; gap: 10px; font-size: 12px; padding: 2px 0; }
+.fr-meta-k { color: var(--muted); min-width: 80px; }
+.fr-meta-v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }

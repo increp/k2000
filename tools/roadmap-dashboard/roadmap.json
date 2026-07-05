@@ -163,6 +163,12 @@
           "summary": "Tooling to load + measure external reference VSTs (e.g. Arturia Mini V) and capture golden response data — magnitude/phase grids, self-osc pitch tracking, driven harmonic snapshots — for filter-model validation and A/B. Directly unblocks the Moog Arturia-match calibration gate (2026-06-22-moog-cmajor-dsp-design.md, Spec 1) and any future model-vs-reference comparison."
         },
         {
+          "id": "franklin-dashboard",
+          "kind": "feature",
+          "status": "in-progress",
+          "title": "Franklin — live runs dashboard (runlog + archive + control)"
+        },
+        {
           "id": "v5-filter-sweep-standard",
           "title": "v5 — Filter-validation standard: 7000-pt log dual-sweep",
           "status": "planned",

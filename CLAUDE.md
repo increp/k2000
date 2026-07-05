@@ -45,3 +45,4 @@ it lives in the register, the dashboard, and git.
   amended 2026-07-03), FX section **Ricky**; k2000 is the internal codename only
   (repo, CMake targets, class prefixes) pending a possible later identifier pass.
 - Anchor references: Novation Summit + Kurzweil K2061/K2088 ONLY (K2000 dropped).
+- The measurement product is **Franklin** (SP-A/B/C/D + dashboards); .franklin/ is its state dir.

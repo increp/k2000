@@ -23,6 +23,23 @@ Requires **Node 24+** (native TypeScript type-stripping + built-in test runner).
   clipboard. Paste it into Claude Code; Claude appends the task breakdown to that item in
   `roadmap.json`; reload to see it.
 
+## Franklin tab
+
+Beside **Roadmap**, a **Franklin** tab shows Franklin's runs (device
+characterization + the test suite) live: running/stalled cards with progress,
+a CI strip, a new-run form (whitelisted templates only), and an archive with a
+deviations-first run-detail view. See `docs/franklin/dashboard.md` for the full
+operator's manual and `docs/franklin/charter.md` for what Franklin is.
+
+Runs record to `.franklin/runs/*.ndjson` the moment a Franklin producer starts —
+**even when this dashboard isn't running.** The dashboard only reads and displays
+what's already on disk; starting/stopping the server never affects whether a run
+is captured.
+
+Two independent poll cadences drive the tab: run state (`/api/runs`) refreshes
+every **2 s**, CI status (`/api/ci`, via `gh`) refreshes every **60 s** server-side
+and is polled by the frontend every **10 s**.
+
 ## Tests
 
 ```bash

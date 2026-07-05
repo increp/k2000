@@ -2,12 +2,21 @@ import { getRoadmap, putRoadmap } from "./api.ts";
 import { renderDoc } from "./render.ts";
 import { findItem, updateItem, deleteItem, addChild, addVersion, newItem } from "./edit.ts";
 import { moveItem } from "./reorder.ts";
+import { mountFranklin, unmountFranklin } from "./franklin.ts";
 import type { RoadmapDoc, RoadmapItem, Status, ItemKind } from "./types.ts";
 
 let doc: RoadmapDoc;
 const app = () => document.getElementById("app") as HTMLElement;
 
-function paint(): void { app().innerHTML = renderDoc(doc); }
+// Which top-level view owns #app. Roadmap is the default and its behavior stays
+// byte-identical whenever the Franklin view is never opened.
+type View = "roadmap" | "franklin";
+let view: View = "roadmap";
+
+function paint(): void {
+  // Roadmap only paints while it owns #app; Franklin manages its own DOM.
+  if (view === "roadmap") app().innerHTML = renderDoc(doc);
+}
 
 async function commit(next: RoadmapDoc): Promise<void> {
   doc = next;
@@ -62,6 +71,38 @@ async function refresh(): Promise<void> {
 }
 
 app().addEventListener("click", (ev) => { void onClick(ev as MouseEvent); });
+
+// --- View switching (Roadmap / Franklin tabs) -------------------------------
+
+function setActiveTab(next: View): void {
+  const nav = document.getElementById("tabs");
+  if (!nav) return;
+  for (const btn of nav.querySelectorAll<HTMLButtonElement>("button[data-view]")) {
+    btn.classList.toggle("active", btn.dataset.view === next);
+  }
+}
+
+function switchView(next: View): void {
+  if (next === view) return;
+  if (view === "franklin") unmountFranklin(); // tear down Franklin's timers/listeners
+  view = next;
+  setActiveTab(next);
+  if (next === "roadmap") {
+    paint(); // repaint roadmap from the in-memory doc (byte-identical to first render)
+  } else {
+    mountFranklin(app());
+  }
+}
+
+const tabsNav = document.getElementById("tabs");
+if (tabsNav) {
+  tabsNav.addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest<HTMLButtonElement>("button[data-view]");
+    const next = btn?.dataset.view;
+    if (next === "roadmap" || next === "franklin") switchView(next);
+  });
+  setActiveTab(view);
+}
 
 refresh().catch((e) => { app().textContent = `Failed to load roadmap: ${(e as Error).message}`; });
 
