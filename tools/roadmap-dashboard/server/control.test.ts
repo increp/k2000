@@ -116,6 +116,41 @@ test("startRun: spawns the template binary, writes a sidecar log, returns a live
   assert.match(content, /hello/);
 });
 
+test("startRun: missing binary settles as ok:false instead of crashing the process (unhandled 'error' regression)", async () => {
+  const rootDir = await tmpDir();
+  // Deliberately do NOT create build/tests/k2000_tests — this is the routine
+  // post-`rm -rf build/` state that used to crash the whole server via an
+  // unhandled spawn 'error' event (ENOENT), one tick after startRun returned.
+  const result = await startRun(rootDir, "suite", {});
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.error, /spawn|ENOENT/i);
+
+  // The regression was an UNHANDLED 'error' event crashing the test/server
+  // process asynchronously, one tick after this call already returned. There's
+  // no direct assertion for "did not crash" — surviving this await plus the
+  // tick below, to reach the assertion after it, IS the regression check.
+  await new Promise((r) => setTimeout(r, 60));
+  assert.ok(true, "process survived the tick where the unhandled 'error' event used to crash it");
+});
+
+test("startRun: creates the sidecar .franklin/runs dir when it doesn't exist yet (fresh clone)", async () => {
+  const rootDir = await tmpDir();
+  await mkdir(join(rootDir, "build", "tests"), { recursive: true });
+  const fakeBin = join(rootDir, "build", "tests", "k2000_tests");
+  await writeFile(fakeBin, "#!/bin/sh\nexit 0\n");
+  await chmod(fakeBin, 0o755);
+  // Deliberately do NOT create .franklin/runs — simulates the first-ever
+  // dashboard-started run on a fresh clone.
+
+  const result = await startRun(rootDir, "suite", {});
+  assert.equal(result.ok, true);
+
+  const runsDir = join(rootDir, ".franklin", "runs");
+  const { readdir } = await import("node:fs/promises");
+  const files = await readdir(runsDir); // throws if runsDir doesn't exist
+  assert.ok(files.some((f) => f.endsWith("-suite.log")), `expected a sidecar log in ${files.join(", ")}`);
+});
+
 // --- stopRun: pid-verified stop lifecycle ----------------------------------
 
 test("stopRun: terminates a real spawned process and appends a stopped end event", async () => {

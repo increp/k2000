@@ -1,6 +1,6 @@
 import { spawn, execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { open, readFile, writeFile, appendFile, readdir, stat } from "node:fs/promises";
+import { open, readFile, writeFile, appendFile, readdir, stat, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 
 export interface Template {
@@ -72,6 +72,7 @@ export async function startRun(
   if (!t) return { ok: false, error: `unknown template: ${templateId}` };
 
   const runsDir = join(rootDir, ".franklin", "runs");
+  await mkdir(runsDir, { recursive: true });
   const stamp = timestampStamp();
   const logPath = join(runsDir, `${stamp}-${t.id}.log`);
   const sha = await gitSha(rootDir);
@@ -84,12 +85,19 @@ export async function startRun(
       detached: true,
       stdio: ["ignore", fd.fd, fd.fd],
     });
-    child.unref();
 
-    if (typeof child.pid !== "number") {
-      return { ok: false, error: "spawn failed: no pid" };
-    }
-    return { ok: true, pid: child.pid };
+    // Settle the spawn outcome explicitly. spawn() emits 'error' asynchronously
+    // (e.g. ENOENT when the binary is missing, routine after `rm -rf build/`);
+    // without a listener that event is unhandled and crashes the whole server
+    // one tick after we'd otherwise have returned. Racing 'spawn' vs 'error'
+    // here means startRun never lets 'error' escape unhandled.
+    const outcome = await new Promise<{ ok: true; pid: number } | { ok: false; error: string }>((resolve) => {
+      child.once("spawn", () => resolve({ ok: true, pid: child.pid! }));
+      child.once("error", (e) => resolve({ ok: false, error: `spawn failed: ${(e as Error).message}` }));
+    });
+
+    if (outcome.ok) child.unref();
+    return outcome;
   } finally {
     await fd.close();
   }
