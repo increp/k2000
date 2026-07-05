@@ -318,10 +318,11 @@ test("staleBinaryInfo: only considers .h/.cpp/.cmajor under src/** and tests/**,
 // --- pgidOf / group-leader check -------------------------------------------------
 
 test("pgidOf: detached spawned process identifies itself as its own group leader", async () => {
-  const { writeFileSync, unlinkSync } = await import("node:fs");
-  const scriptPath = "/tmp/franklin-detached-fixture.sh";
+  const tmpDir_ = await tmpDir();
+  const scriptPath = join(tmpDir_, "franklin-detached-fixture.sh");
   // Create a simple script that sleeps so we can query it while alive.
-  writeFileSync(scriptPath, "#!/bin/sh\nsleep 300\n", { mode: 0o755 });
+  await writeFile(scriptPath, "#!/bin/sh\nsleep 300\n");
+  await chmod(scriptPath, 0o755);
   try {
     const child = spawn(scriptPath, [], { detached: true, stdio: "ignore" });
     child.unref();
@@ -335,13 +336,34 @@ test("pgidOf: detached spawned process identifies itself as its own group leader
     // Clean up.
     try { process.kill(-pid, "SIGKILL"); } catch { /* already gone */ }
   } finally {
-    try { unlinkSync(scriptPath); } catch { /* ignore */ }
+    try { await import("node:fs/promises").then(m => m.rm(tmpDir_, { recursive: true, force: true })); } catch { /* ignore */ }
+  }
+});
+
+test("pgidOf: non-detached spawned process does not identify itself as group leader", async () => {
+  const tmpDir_ = await tmpDir();
+  const scriptPath = join(tmpDir_, "franklin-non-detached-fixture.sh");
+  // Create a simple script that sleeps so we can query it while alive.
+  await writeFile(scriptPath, "#!/bin/sh\nsleep 300\n");
+  await chmod(scriptPath, 0o755);
+  const child = spawn(scriptPath, [], { stdio: "ignore" });
+  const pid = child.pid!;
+  try {
+    assert.ok(pid > 0);
+
+    // A non-detached process should NOT be its own group leader (pgidOf(pid) !== pid).
+    const pgrp = pgidOf(pid);
+    assert.notEqual(pgrp, pid, `expected pgidOf(${pid}) !== ${pid}`);
+  } finally {
+    // Clean up the spawned process directly (not a group leader, so no -pid).
+    try { process.kill(pid, "SIGKILL"); } catch { /* already gone */ }
+    try { await import("node:fs/promises").then(m => m.rm(tmpDir_, { recursive: true, force: true })); } catch { /* ignore */ }
   }
 });
 
 // --- stopRun: duplicate-end race condition ----------------------------------------
 
-test("stopRun: duplicate-end race test — calling stopRun twice appends end event only once", async () => {
+test("stopRun: stopRun is idempotent when called sequentially (end event appended once)", async () => {
   const rootDir = await tmpDir();
   const runsDir = join(rootDir, ".franklin", "runs");
   await mkdir(runsDir, { recursive: true });

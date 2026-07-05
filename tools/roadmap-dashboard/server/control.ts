@@ -95,19 +95,11 @@ export async function startRun(
   }
 }
 
-function procExists(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Parses /proc/<pid>/stat to extract the process group id (pgid).
  * Returns null if /proc/<pid>/stat is unreadable or malformed.
- * The pgrp field is at position 5 in the fields after the final ')' in comm.
+ * The pgrp field is stat field 5 overall = index 2 of the fields after the final ')' in comm.
  */
 export function pgidOf(pid: number): number | null {
   try {
@@ -229,7 +221,7 @@ export async function stopRun(
     signalProcessTree(pid, "SIGTERM");
 
     const timer = setTimeout(() => {
-      // Always attempt escalation; swallow all errors.
+      // Always attempt escalation; escalation relies on signalProcessTree's internal error swallowing.
       signalProcessTree(pid, "SIGKILL");
     }, SIGKILL_ESCALATION_MS);
     timer.unref();
