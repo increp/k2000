@@ -21,6 +21,11 @@
 - The chz binary takes `--model moog|huggett|all` (flag, NOT positional) and `--quick`.
 - New docs carry `Version:` fields (charter 5.17, dashboard manual 5.18).
 
+**Sanctioned amendments (recorded during execution):**
+1. `progress` events carry NO per-point metrics (Progress sink is `(done,total,label)`; runner untouchable) — all numbers ride `end.checks[]` + suite failure messages.
+2. CI cache TTL split: success 60 s / failure 10 s (review-directed; transient gh flakes recover fast).
+3. Archive kind/outcome filters (spec §8.4) dropped from the v1 UI — the single newest-first table + deviations-first detail covers triage; revisit if the archive grows unwieldy (final whole-branch review, 2026-07-05).
+
 ---
 
 ### Task 1: runlog::Writer (C++ producer core)
