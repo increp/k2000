@@ -23,6 +23,7 @@ Built with [JUCE](https://juce.com) 8.0.4, in C++. Linux for local development; 
 All documentation lives in [`docs/`](docs/). Start there.
 
 - [Project docs index](docs/README.md)
+- [Franklin — the measurement product: charter + runs-dashboard manual](docs/franklin/)
 - [Roadmap (K2061/K2088 VAST + constant Summit spine)](docs/roadmap/phases.md)
 - [v5.0 spec — nonlinear Huggett + HP pre-filter](docs/specs/2026-06-17-v5-huggett-nonlinear-hp-prefilter-design.md) · [v5 constant-Summit-voice spec](docs/specs/2026-06-16-v5-constant-summit-voice-design.md)
 - [v4.5 re-positioning spec](docs/specs/2026-06-16-v4.5-k2061-repositioning-design.md) · [engine register](docs/architecture/engine-questions.md)
