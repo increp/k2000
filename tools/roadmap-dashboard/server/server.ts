@@ -8,7 +8,7 @@ import { listRuns, readRun, compactFinished } from "./runs.ts";
 import { getCi } from "./ci.ts";
 import { templates, startRun, stopRun, staleBinaryInfo } from "./control.ts";
 
-interface Options { roadmapPath: string; rootDir: string; franklinRunsDir?: string; }
+interface Options { roadmapPath: string; rootDir: string; franklinRunsDir?: string; catalogPath?: string; }
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -78,6 +78,14 @@ export function createServer(opts: Options): http.Server {
 
       if (path === "/api/ci" && req.method === "GET") {
         const payload = await getCi(opts.rootDir);
+        return send(res, 200, MIME[".json"], JSON.stringify(payload));
+      }
+
+      if (path === "/api/catalog" && req.method === "GET") {
+        const catalogPath = opts.catalogPath ?? join(opts.rootDir, "../../docs/franklin/test-catalog.json");
+        let payload: unknown;
+        try { payload = JSON.parse(await readFile(catalogPath, "utf8")); }
+        catch { payload = { version: 0, entries: [] }; }
         return send(res, 200, MIME[".json"], JSON.stringify(payload));
       }
 

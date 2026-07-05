@@ -179,3 +179,69 @@ test("POST /api/control/start with malformed JSON body returns 400 and error", a
   assert.equal(body.ok, false);
   assert.match(body.error, /invalid JSON/i);
 });
+
+// --- /api/catalog ----------------------------------------------------------------
+
+test("GET /api/catalog serves the JSON at a seeded tmp catalogPath", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "rm-srv-catalog-"));
+  const catalogPath = join(dir, "test-catalog.json");
+  const seeded = {
+    version: 1,
+    entries: [
+      { key: "Smoke / test harness is wired", file: "tests/SmokeTests.cpp", what: "w", why: "y", deviationMeans: "d", links: [] },
+    ],
+  };
+  await writeFile(catalogPath, JSON.stringify(seeded));
+
+  const catalogServer = createServer({ roadmapPath, rootDir, franklinRunsDir, catalogPath });
+  await new Promise<void>((res) => catalogServer.listen(0, res));
+  try {
+    const port = (catalogServer.address() as AddressInfo).port;
+    const r = await fetch(`http://127.0.0.1:${port}/api/catalog`);
+    assert.equal(r.status, 200);
+    const body = await r.json() as { version: number; entries: Array<{ key: string }> };
+    assert.equal(body.version, 1);
+    assert.equal(body.entries.length, 1);
+    assert.equal(body.entries[0].key, "Smoke / test harness is wired");
+  } finally {
+    catalogServer.close();
+  }
+});
+
+test("GET /api/catalog returns the empty shape when catalogPath is unset and the default file is missing", async () => {
+  // rootDir here is tools/roadmap-dashboard (test dir's parent); the default resolves to
+  // <repo>/docs/franklin/test-catalog.json, which DOES exist in this repo (Task 4's real
+  // catalog) — so to exercise the "missing" branch we point catalogPath at a path that
+  // doesn't exist, which is the same code path unset-default would take on a fresh clone
+  // without docs/franklin populated.
+  const dir = await mkdtemp(join(tmpdir(), "rm-srv-catalog-missing-"));
+  const missingPath = join(dir, "does-not-exist.json");
+
+  const catalogServer = createServer({ roadmapPath, rootDir, franklinRunsDir, catalogPath: missingPath });
+  await new Promise<void>((res) => catalogServer.listen(0, res));
+  try {
+    const port = (catalogServer.address() as AddressInfo).port;
+    const r = await fetch(`http://127.0.0.1:${port}/api/catalog`);
+    assert.equal(r.status, 200);
+    const body = await r.json() as { version: number; entries: unknown[] };
+    assert.equal(body.version, 0);
+    assert.deepEqual(body.entries, []);
+  } finally {
+    catalogServer.close();
+  }
+});
+
+test("GET /api/catalog with catalogPath unset falls back to the real docs/franklin/test-catalog.json (non-empty in this repo)", async () => {
+  const catalogServer = createServer({ roadmapPath, rootDir, franklinRunsDir });
+  await new Promise<void>((res) => catalogServer.listen(0, res));
+  try {
+    const port = (catalogServer.address() as AddressInfo).port;
+    const r = await fetch(`http://127.0.0.1:${port}/api/catalog`);
+    assert.equal(r.status, 200);
+    const body = await r.json() as { version: number; entries: unknown[] };
+    assert.equal(body.version, 1);
+    assert.ok(body.entries.length > 0);
+  } finally {
+    catalogServer.close();
+  }
+});
