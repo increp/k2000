@@ -245,3 +245,21 @@ test("GET /api/catalog with catalogPath unset falls back to the real docs/frankl
     catalogServer.close();
   }
 });
+
+test("GET /api/catalog with corrupt JSON returns 500 and error message", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "rm-srv-catalog-corrupt-"));
+  const catalogPath = join(dir, "test-catalog.json");
+  await writeFile(catalogPath, "{broken");
+
+  const catalogServer = createServer({ roadmapPath, rootDir, franklinRunsDir, catalogPath });
+  await new Promise<void>((res) => catalogServer.listen(0, res));
+  try {
+    const port = (catalogServer.address() as AddressInfo).port;
+    const r = await fetch(`http://127.0.0.1:${port}/api/catalog`);
+    assert.equal(r.status, 500);
+    const body = await r.json() as { error?: string };
+    assert.match(body.error ?? "", /unreadable/);
+  } finally {
+    catalogServer.close();
+  }
+});
