@@ -23,8 +23,9 @@ whether a run is captured.
 
 ## Event-file contract
 
-Every run writes one NDJSON file to `.franklin/runs/<ISO8601>-<kind>.ndjson`
-(`kind` is `chz` or `suite`), one JSON object per line, append-only. The full event
+Every run writes one NDJSON file to `.franklin/runs/<stamp>-<kind>-<pid>.ndjson`
+(`kind` is `chz` or `suite`; the pid suffix disambiguates same-second starts), one
+JSON object per line, append-only. The full event
 schema (`start` / `progress` / `test` / `end`, exact fields, and the write-throttle
 rule) is specified in
 `docs/superpowers/specs/2026-07-03-franklin-dashboard-design.md` §4 — that section
@@ -89,9 +90,11 @@ went*, not a replacement for the CSV output.
 `docs/franklin/test-catalog.json` holds one entry per test-suite test (what it
 does, why it exists, what a deviation would mean, and related links), rendered in
 the run-detail view next to each test's pass/fail. The `franklin-catalog`
-drift-check rule (`tools/drift-check`) cross-references the catalog against
-`build/last-test-run.log` in both directions — a test with no catalog entry, or a
-catalog entry with no matching test, is a WARN. Chz points are not cataloged;
+drift-check rule (`tools/drift-check`) cross-references the catalog against the
+**latest suite runlog** in `.franklin/runs/` (picked by file mtime — the runlog
+carries the full `name / subcategory` pair that the plain suite log does not), in
+both directions — a test with no catalog entry, or a catalog entry with no
+matching test, is a WARN. Chz points are not cataloged;
 their explanations are generated client-side from battery templates + the
 operating-point fields already present in the events.
 
