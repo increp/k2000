@@ -88,14 +88,20 @@ export function createServer(opts: Options): http.Server {
 
       if (path === "/api/control/start" && req.method === "POST") {
         const raw = await readBody(req);
-        const { templateId, params } = JSON.parse(raw) as { templateId?: string; params?: { model?: string; grid?: string } };
+        let body;
+        try { body = JSON.parse(raw); }
+        catch { return send(res, 400, MIME[".json"], JSON.stringify({ ok: false, error: "invalid JSON body" })); }
+        const { templateId, params } = body as { templateId?: string; params?: { model?: string; grid?: string } };
         const result = await startRun(opts.rootDir, templateId ?? "", params ?? {});
         return send(res, result.ok ? 200 : 400, MIME[".json"], JSON.stringify(result));
       }
 
       if (path === "/api/control/stop" && req.method === "POST") {
         const raw = await readBody(req);
-        const { id } = JSON.parse(raw) as { id?: string };
+        let body;
+        try { body = JSON.parse(raw); }
+        catch { return send(res, 400, MIME[".json"], JSON.stringify({ ok: false, error: "invalid JSON body" })); }
+        const { id } = body as { id?: string };
         const result = await stopRun(opts.rootDir, runsDir, id ?? "");
         return send(res, result.ok ? 200 : 400, MIME[".json"], JSON.stringify(result));
       }

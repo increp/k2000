@@ -169,3 +169,25 @@ test("getCi: _resetCiCache forces a fresh fetch (new fetchedAt)", async () => {
     process.env.PATH = savedPath;
   }
 });
+
+test("getCi: failure cache applies — after _resetCiCache and forced failure, a second call with good path returns the cached failure", async () => {
+  const rootDir = await tmpDir();
+  const emptyPathDir = await tmpDir();
+  const savedPath = process.env.PATH;
+  try {
+    // Force a failure cache.
+    _resetCiCache();
+    process.env.PATH = emptyPathDir;
+    const failedPayload = await getCi(rootDir);
+    assert.equal(failedPayload.available, false);
+    const failedAt = failedPayload.fetchedAt;
+    // Now restore PATH (so gh would be available) and immediately call getCi again.
+    process.env.PATH = savedPath;
+    const cachedPayload = await getCi(rootDir);
+    // Within 10s, the failure should still be cached, so fetchedAt matches.
+    assert.equal(cachedPayload.fetchedAt, failedAt, "failure payload must be cached");
+    assert.equal(cachedPayload.available, false, "cached failure must not flip to available");
+  } finally {
+    process.env.PATH = savedPath;
+  }
+});

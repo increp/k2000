@@ -3,7 +3,8 @@ import { promisify } from "node:util";
 
 const execFileP = promisify(execFile);
 
-const CACHE_MS = 60_000;
+const CACHE_OK_MS = 60_000;
+const CACHE_FAIL_MS = 10_000;
 
 export interface CiCheck {
   name: string;
@@ -76,15 +77,18 @@ export function parseRunList(json: string): CiBranch {
 
 let cache: { fetchedAt: number; payload: CiPayload } | null = null;
 
-/** Test-only: clears the 60s in-memory cache so the next getCi() call re-fetches. */
+/** Test-only: clears the in-memory cache so the next getCi() call re-fetches. */
 export function _resetCiCache(): void {
   cache = null;
 }
 
-/** Shells out to `gh` for open-PR checks + recent main-branch runs. 60s cached; any failure -> {available:false}. */
+/** Shells out to `gh` for open-PR checks + recent main-branch runs. Success cached 60s, failure cached 10s (transient gh flake recovers within 10s; confirmed-up data refreshes each minute); any failure -> {available:false}. */
 export async function getCi(rootDir: string): Promise<CiPayload> {
   const now = Date.now();
-  if (cache && now - cache.fetchedAt < CACHE_MS) return cache.payload;
+  if (cache) {
+    const ttl = cache.payload.available ? CACHE_OK_MS : CACHE_FAIL_MS;
+    if (now - cache.fetchedAt < ttl) return cache.payload;
+  }
 
   try {
     const [prResult, runResult] = await Promise.all([

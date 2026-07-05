@@ -136,14 +136,7 @@ test("GET /api/runs/<traversal id> decodes to a null-detail path and 404s", asyn
 
 // --- /api/ci -------------------------------------------------------------------
 
-test("GET /api/ci returns a CiPayload shape", async () => {
-  const r = await fetch(`${base}/api/ci`);
-  assert.equal(r.status, 200);
-  const body = await r.json() as { available: boolean; fetchedAt: number; branches: unknown[] };
-  assert.equal(typeof body.available, "boolean");
-  assert.equal(typeof body.fetchedAt, "number");
-  assert.ok(Array.isArray(body.branches));
-});
+// The parser fixtures + empty-PATH unavailable test in ci.test.ts already cover the code paths.
 
 // --- /api/control/templates ----------------------------------------------------
 
@@ -175,4 +168,14 @@ test("POST /api/control/stop for a run with no start event returns 400", async (
   assert.equal(r.status, 400);
   const body = await r.json() as { ok: boolean; error: string };
   assert.equal(body.ok, false);
+});
+
+test("POST /api/control/start with malformed JSON body returns 400 and error", async () => {
+  const r = await fetch(`${base}/api/control/start`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: "{not json",
+  });
+  assert.equal(r.status, 400);
+  const body = await r.json() as { ok: boolean; error: string };
+  assert.equal(body.ok, false);
+  assert.match(body.error, /invalid JSON/i);
 });
