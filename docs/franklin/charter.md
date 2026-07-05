@@ -17,9 +17,9 @@ exist to be played, Franklin exists to be trusted — every claim this project m
 about fidelity, regression safety, or hardware match traces back to a Franklin
 measurement.
 
-This page is a map, not a status board — for what has shipped and what hasn't, read
-the roadmap dashboard (`cd tools/roadmap-dashboard && npm run dashboard`), not this
-file.
+This page is a map of Franklin's remit, not a status board. Progress on any item
+below lives in the roadmap dashboard (`cd tools/roadmap-dashboard && npm run
+dashboard`), never here.
 
 ## Remit map
 
@@ -30,7 +30,7 @@ file.
 | SP-C — oscillator profile | register [engine-questions.md](../architecture/engine-questions.md) (scope tracked alongside SP-B) |
 | SP-D — hardware bridge + Summit excitation risk | register [Q25](../architecture/engine-questions.md) |
 | External-VST capture harness | roadmap item "v5 — External VST test harness" (`tools/roadmap-dashboard/roadmap.json`, id `v5-vst-test-harness`) |
-| Future effect batteries (drive/saturation/distortion/chorus) | Ricky's FX section, once scoped (register + roadmap, not yet written) |
+| Future effect batteries (drive/saturation/distortion/chorus) | Ricky's FX section — scope lives in the register + roadmap when raised |
 | Suite gates + drift rules | `tools/drift-check` |
 | The runs dashboard | `docs/franklin/dashboard.md` |
 
