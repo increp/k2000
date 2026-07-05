@@ -187,6 +187,29 @@ test("CI strip shows an unavailable note when gh is down (never crashes)", () =>
   assert.match(html, /CI/); // section still present
 });
 
+test("CI strip never renders a non-http(s) check url as a clickable href", () => {
+  const ci: CiPayload = {
+    available: true, fetchedAt: 0,
+    branches: [
+      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "javascript:alert(1)" }] },
+    ],
+  };
+  const html = renderRunsPage([], ci, 0, []);
+  assert.match(html, /build/); // check name still shown as plain text
+  assert.doesNotMatch(html, /href="javascript:/);
+});
+
+test("CI strip still renders a normal https check url as a clickable anchor", () => {
+  const ci: CiPayload = {
+    available: true, fetchedAt: 0,
+    branches: [
+      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "https://github.com/example/repo/actions/runs/1" }] },
+    ],
+  };
+  const html = renderRunsPage([], ci, 0, []);
+  assert.match(html, /href="https:\/\/github\.com\/example\/repo\/actions\/runs\/1"/);
+});
+
 // ---- deviationRows ---------------------------------------------------------
 
 test("deviationRows: a failed-test message is severity 0, one row per message", () => {

@@ -20,18 +20,28 @@ interface FranklinState {
   catalog: CatalogEntry[];
   catalogError: boolean;
   openDetailId: string | null;
+  /** Last-fetched detail for openDetailId, reused by repaint when the run is finished. */
+  openDetailData: RunDetail | null;
 }
 
 const EMPTY_CI: CiPayload = { available: false, fetchedAt: 0, branches: [] };
 
 let host: HTMLElement | null = null;
 let state: FranklinState = {
-  runs: [], disk: 0, ci: EMPTY_CI, stale: [], catalog: [], catalogError: false, openDetailId: null,
+  runs: [], disk: 0, ci: EMPTY_CI, stale: [], catalog: [], catalogError: false,
+  openDetailId: null, openDetailData: null,
 };
 const timers: ReturnType<typeof setInterval>[] = [];
 let clickHandler: ((ev: Event) => void) | null = null;
 let submitHandler: ((ev: Event) => void) | null = null;
 let changeHandler: ((ev: Event) => void) | null = null;
+
+// Bumped on every mount/unmount. Async refreshers capture the generation
+// before their first await and bail before touching state/DOM if it has
+// since changed — otherwise a late resolver from a stale mount (e.g. a
+// fetch that outlives an unmount+remount cycle in tests or fast nav) can
+// clobber the fresh mount's state or repaint into a torn-down host.
+let mountGen = 0;
 
 // --- fetch helpers ----------------------------------------------------------
 
@@ -42,8 +52,10 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 async function refreshRuns(): Promise<void> {
+  const gen = mountGen;
   try {
     const { runs, disk } = await getJson<{ runs: RunSummary[]; disk: number }>("/api/runs");
+    if (gen !== mountGen) return; // a later mount/unmount has already superseded this fetch
     state.runs = runs;
     state.disk = disk;
     paint();
@@ -51,28 +63,41 @@ async function refreshRuns(): Promise<void> {
 }
 
 async function refreshCi(): Promise<void> {
+  const gen = mountGen;
   try {
-    state.ci = await getJson<CiPayload>("/api/ci");
+    const ci = await getJson<CiPayload>("/api/ci");
+    if (gen !== mountGen) return;
+    state.ci = ci;
     paint();
   } catch { /* keep last-known CI */ }
 }
 
 async function refreshTemplates(): Promise<void> {
+  const gen = mountGen;
   try {
     const { stale } = await getJson<{ stale: StaleInfo[] }>("/api/control/templates");
+    if (gen !== mountGen) return;
     state.stale = stale;
     paint();
   } catch { /* keep last-known stale info */ }
 }
 
 async function refreshCatalog(): Promise<void> {
+  const gen = mountGen;
   try {
     const r = await fetch("/api/catalog");
-    if (r.status === 500) { state.catalogError = true; state.catalog = []; return; }
+    if (r.status === 500) {
+      if (gen !== mountGen) return;
+      state.catalogError = true;
+      state.catalog = [];
+      return;
+    }
     const payload = (await r.json()) as { version: number; entries: CatalogEntry[] };
+    if (gen !== mountGen) return;
     state.catalog = Array.isArray(payload.entries) ? payload.entries : [];
     state.catalogError = false;
   } catch {
+    if (gen !== mountGen) return;
     state.catalogError = true;
     state.catalog = [];
   }
@@ -114,8 +139,10 @@ function paint(): void {
   restoreForm(form);
   // Reflect chz-only field visibility for the current template selection.
   syncFormVisibility();
-  // Re-attach the open detail drawer, if any.
-  if (state.openDetailId) void openDetail(state.openDetailId);
+  // Re-attach the open detail drawer, if any. Finished runs are immutable —
+  // only re-fetch when the run is still running/stalled (fix: this used to
+  // re-invoke a full detail fetch every 2s poll even for archived runs).
+  if (state.openDetailId) void openDetail(state.openDetailId, isRunLive(state.openDetailId));
 }
 
 /** Shows/hides the model+grid selects based on whether the picked template is chz. */
@@ -136,21 +163,49 @@ function syncFormVisibility(): void {
   }
 }
 
-async function openDetail(id: string): Promise<void> {
+const LIVE_STATUS = new Set(["running", "stalled"]);
+
+/** True while `id`'s last-known status (per state.runs) is still live. Unknown ids (e.g. pruned from the list) are treated as finished — never poll forever on a run we can no longer see. */
+function isRunLive(id: string): boolean {
+  return LIVE_STATUS.has(state.runs.find((r) => r.id === id)?.status ?? "");
+}
+
+/**
+ * Opens (or repaints) the detail drawer for `id`.
+ *
+ * `refetch` distinguishes a user-initiated open (always fetch fresh) from a
+ * repaint-driven re-attach (paint() calls this on every 2s poll to keep the
+ * drawer present across a full innerHTML replace). On repaint, a finished
+ * run's detail can't change, so we reuse the cached detail and skip the
+ * network round-trip entirely; a live run still re-fetches so progress and
+ * eventual pass/fail keep updating.
+ */
+async function openDetail(id: string, refetch: boolean = true): Promise<void> {
   if (!host) return;
   const drawer = host.querySelector<HTMLElement>('[data-role="detail-drawer"]');
   if (!drawer) return;
+
+  if (!refetch && state.openDetailData && state.openDetailData.id === id) {
+    drawer.innerHTML = renderRunDetail(state.openDetailData, state.catalog);
+    return;
+  }
+
+  const gen = mountGen;
   try {
     const detail = await getJson<RunDetail>(`/api/runs/${encodeURIComponent(id)}`);
-    drawer.innerHTML = renderRunDetail(detail, state.catalog);
+    if (gen !== mountGen) return;
+    state.openDetailData = detail;
     state.openDetailId = id;
+    drawer.innerHTML = renderRunDetail(detail, state.catalog);
   } catch {
+    if (gen !== mountGen) return;
     drawer.innerHTML = `<p class="fr-empty">Could not load run detail.</p>`;
   }
 }
 
 function closeDetail(): void {
   state.openDetailId = null;
+  state.openDetailData = null;
   const drawer = host?.querySelector<HTMLElement>('[data-role="detail-drawer"]');
   if (drawer) drawer.innerHTML = "";
 }
@@ -249,8 +304,12 @@ function onChange(ev: Event): void {
 // --- lifecycle --------------------------------------------------------------
 
 export function mountFranklin(app: HTMLElement): void {
+  mountGen++; // invalidate any in-flight fetches from a previous mount
   host = app;
-  state = { runs: [], disk: 0, ci: EMPTY_CI, stale: [], catalog: [], catalogError: false, openDetailId: null };
+  state = {
+    runs: [], disk: 0, ci: EMPTY_CI, stale: [], catalog: [], catalogError: false,
+    openDetailId: null, openDetailData: null,
+  };
   app.innerHTML = `<p class="fr-empty">Loading Franklin…</p>`;
 
   clickHandler = (ev) => onClick(ev);
@@ -271,6 +330,7 @@ export function mountFranklin(app: HTMLElement): void {
 }
 
 export function unmountFranklin(): void {
+  mountGen++; // invalidate any fetches still in flight from this mount
   for (const t of timers) clearInterval(t);
   timers.length = 0;
   if (host && clickHandler) host.removeEventListener("click", clickHandler);

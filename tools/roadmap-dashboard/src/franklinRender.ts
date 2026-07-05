@@ -131,6 +131,11 @@ function activeSection(runs: RunSummary[], now: number): string {
 // CI strip
 // ---------------------------------------------------------------------------
 
+// Only http(s) URLs are safe to render as a clickable href — gh output is
+// trusted today, but a hostile/malformed url (e.g. "javascript:alert(1)")
+// must never survive into an anchor just because escAttr() escaped its quotes.
+const SAFE_URL = /^https?:\/\//i;
+
 function ciCheckDot(c: CiPayload["branches"][number]["checks"][number]): string {
   // Map gh status/conclusion to a verdict class for coloring.
   let cls = "info";
@@ -139,7 +144,9 @@ function ciCheckDot(c: CiPayload["branches"][number]["checks"][number]): string 
   else if (c.conclusion === "failure" || c.conclusion === "timed_out" || c.conclusion === "cancelled") cls = "fail";
   const label = c.conclusion ?? c.status;
   const inner = `<span class="fr-ci-check fr-ci-${cls}">${esc(c.name)}: ${esc(label)}</span>`;
-  return c.url ? `<a class="fr-ci-link" href="${escAttr(c.url)}" target="_blank" rel="noopener">${inner}</a>` : inner;
+  return c.url && SAFE_URL.test(c.url)
+    ? `<a class="fr-ci-link" href="${escAttr(c.url)}" target="_blank" rel="noopener">${inner}</a>`
+    : inner;
 }
 
 function ciStrip(ci: CiPayload): string {
