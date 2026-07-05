@@ -8,7 +8,7 @@ import { listRuns, readRun, compactFinished } from "./runs.ts";
 import { getCi } from "./ci.ts";
 import { templates, startRun, stopRun, staleBinaryInfo } from "./control.ts";
 
-interface Options { roadmapPath: string; rootDir: string; franklinRunsDir?: string; catalogPath?: string; }
+interface Options { roadmapPath: string; rootDir: string; repoRootDir?: string; franklinRunsDir?: string; catalogPath?: string; }
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -59,7 +59,10 @@ export function createServer(opts: Options): http.Server {
         return send(res, 200, MIME[".json"], JSON.stringify({ prompt: request.prompt, file }));
       }
 
-      const runsDir = opts.franklinRunsDir ?? join(opts.rootDir, "../../.franklin/runs");
+      // Control/stale operations act on the REPO root (binaries at build/tests, spawn
+      // cwd, .franklin/runs), not the dashboard dir that rootDir serves statics from.
+      const repoRoot = opts.repoRootDir ?? join(opts.rootDir, "../..");
+      const runsDir = opts.franklinRunsDir ?? join(repoRoot, ".franklin/runs");
 
       if (path === "/api/runs" && req.method === "GET") {
         const runs = await listRuns(runsDir);
@@ -93,7 +96,7 @@ export function createServer(opts: Options): http.Server {
       }
 
       if (path === "/api/control/templates" && req.method === "GET") {
-        const stale = await staleBinaryInfo(opts.rootDir);
+        const stale = await staleBinaryInfo(repoRoot);
         return send(res, 200, MIME[".json"], JSON.stringify({ templates: templates(), stale }));
       }
 
@@ -103,7 +106,7 @@ export function createServer(opts: Options): http.Server {
         try { body = JSON.parse(raw); }
         catch { return send(res, 400, MIME[".json"], JSON.stringify({ ok: false, error: "invalid JSON body" })); }
         const { templateId, params } = body as { templateId?: string; params?: { model?: string; grid?: string } };
-        const result = await startRun(opts.rootDir, templateId ?? "", params ?? {});
+        const result = await startRun(repoRoot, templateId ?? "", params ?? {});
         return send(res, result.ok ? 200 : 400, MIME[".json"], JSON.stringify(result));
       }
 
@@ -113,7 +116,7 @@ export function createServer(opts: Options): http.Server {
         try { body = JSON.parse(raw); }
         catch { return send(res, 400, MIME[".json"], JSON.stringify({ ok: false, error: "invalid JSON body" })); }
         const { id } = body as { id?: string };
-        const result = await stopRun(opts.rootDir, runsDir, id ?? "");
+        const result = await stopRun(repoRoot, runsDir, id ?? "");
         return send(res, result.ok ? 200 : 400, MIME[".json"], JSON.stringify(result));
       }
 

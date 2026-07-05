@@ -149,6 +149,34 @@ test("GET /api/control/templates returns {templates, stale}", async () => {
   assert.ok(Array.isArray(body.stale));
 });
 
+test("stale info resolves binaries against repoRootDir, not the dashboard rootDir", async () => {
+  // Regression: the server once passed its static-serving rootDir to staleBinaryInfo,
+  // so binaries were "missing" (mtime 0, always stale). Inject a fake repo root with
+  // a fresh binary and an older source file: the binary must be found (mtime > 0)
+  // and reported fresh.
+  const repo = await mkdtemp(join(tmpdir(), "rm-repo-"));
+  await mkdir(join(repo, "build/tests"), { recursive: true });
+  await mkdir(join(repo, "src"), { recursive: true });
+  await writeFile(join(repo, "src/old.cpp"), "// old");
+  await new Promise((res) => setTimeout(res, 20));
+  await writeFile(join(repo, "build/tests/k2000_tests"), "#!/bin/sh\n");
+  await writeFile(join(repo, "build/tests/k2000_device_characterization"), "#!/bin/sh\n");
+
+  const srv2 = createServer({ roadmapPath, rootDir, franklinRunsDir, repoRootDir: repo });
+  await new Promise<void>((res) => srv2.listen(0, res));
+  try {
+    const port2 = (srv2.address() as AddressInfo).port;
+    const r = await fetch(`http://127.0.0.1:${port2}/api/control/templates`);
+    const body = await r.json() as { stale: Array<{ binary: string; stale: boolean; binaryMtimeMs: number }> };
+    const suiteBin = body.stale.find((s) => s.binary.includes("k2000_tests"));
+    assert.ok(suiteBin, "suite binary entry present");
+    assert.ok(suiteBin!.binaryMtimeMs > 0, "binary found under repoRootDir (mtime > 0)");
+    assert.equal(suiteBin!.stale, false, "binary newer than sources -> not stale");
+  } finally {
+    srv2.close();
+  }
+});
+
 // --- /api/control/start & /api/control/stop -------------------------------------
 
 test("POST /api/control/start with an unknown template returns 400", async () => {
