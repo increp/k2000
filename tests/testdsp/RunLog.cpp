@@ -55,6 +55,8 @@ static juce::File defaultDir() {
 }
 
 int lastSuiteTestCount() {
+    // Honor the "zero disk side effects" contract: read nothing when logging is off.
+    if (const char* n = std::getenv("BERNIE_NO_RUNLOG"); n != nullptr && juce::String(n) == "1") return -1;
     auto dir = defaultDir();
     if (!dir.isDirectory()) return -1;
     juce::Array<juce::File> files;
