@@ -7,6 +7,7 @@ import {
   parseRun, listRuns, readRun, compactFinished,
   STALL_MS, COMPACT_MARKER, MAX_PROGRESS_KEPT,
 } from "./runs.ts";
+import { runnerLabel } from "../src/franklinTypes.ts";
 
 async function tmpDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "franklin-runs-"));
@@ -145,4 +146,62 @@ test("readRun rejects path-traversal ids", async () => {
   assert.equal(await readRun(dir, "..\\etc\\passwd"), null);
   assert.equal(await readRun(dir, "sub/dir.ndjson"), null);
   assert.equal(await readRun(dir, "nonexistent.ndjson"), null); // valid id, missing file -> null too
+});
+
+// --- Task 2: runner provenance + unknown-kind tolerance ---------------------
+
+test("parseRun: start event with runner copies it into summary and detail", () => {
+  const text = [
+    '{"ev":"start","ts":1783116948810,"kind":"suite","argv":["./build/tests/k2000_tests"],"pid":342689,"buildType":"Release","runner":"terminal"}',
+    SUITE_END_PASS,
+  ].join("\n") + "\n";
+  const nowMs = 1783116970000;
+  const { summary, detail } = parseRun("id.ndjson", text, nowMs, nowMs, text.length);
+
+  assert.equal(summary.runner, "terminal");
+  assert.equal(detail.runner, "terminal");
+});
+
+test("parseRun: start event without runner leaves summary.runner undefined", () => {
+  const text = [SUITE_START, SUITE_END_PASS].join("\n") + "\n"; // SUITE_START has no runner field
+  const nowMs = 1783116970000;
+  const { summary, detail } = parseRun("id.ndjson", text, nowMs, nowMs, text.length);
+
+  assert.equal(summary.runner, undefined);
+  assert.equal(detail.runner, undefined);
+});
+
+test("parseRun: unrecognized kind (capture) flows through with status logic intact", () => {
+  const text = [
+    '{"ev":"start","ts":1783116948810,"kind":"capture","argv":["./build/tests/k2000_capture_tool"],"pid":9001,"buildType":"Release","runner":"claude"}',
+    SUITE_END_PASS,
+  ].join("\n") + "\n";
+  const nowMs = 1783116970000;
+  const { summary } = parseRun("20260705-capture-9001.ndjson", text, nowMs, nowMs, text.length);
+
+  assert.equal(summary.kind, "capture");
+  assert.equal(summary.status, "pass"); // end event outcome still wins
+  assert.equal(summary.runner, "claude");
+});
+
+test("listRuns: includes a capture-kind run file alongside chz/suite", async () => {
+  const dir = await tmpDir();
+  const captureFile = JSON.stringify({ ev: "start", ts: 5000, kind: "capture", argv: [], pid: 3, buildType: "Release" }) + "\n" + SUITE_END_PASS + "\n";
+  await writeFile(join(dir, "c-capture.ndjson"), captureFile);
+
+  const runs = await listRuns(dir);
+
+  assert.equal(runs.length, 1);
+  assert.equal(runs[0].kind, "capture");
+  assert.equal(runs[0].status, "pass");
+});
+
+test("runnerLabel: maps known runner values and falls back for unknown/missing", () => {
+  assert.equal(runnerLabel("ci"), "CI");
+  assert.equal(runnerLabel("claude"), "Claude");
+  assert.equal(runnerLabel("dashboard"), "you (dashboard)");
+  assert.equal(runnerLabel("terminal"), "you (terminal)");
+  assert.equal(runnerLabel(undefined), "unknown");
+  assert.equal(runnerLabel(""), "unknown");
+  assert.equal(runnerLabel("some-future-runner"), "some-future-runner"); // verbatim passthrough
 });

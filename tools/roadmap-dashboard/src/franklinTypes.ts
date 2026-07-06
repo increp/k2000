@@ -1,8 +1,8 @@
 // Shared by server + frontend. Franklin runs are NDJSON files written by the
-// C++ side (chz / suite harnesses); the server scans/parses/compacts them,
-// the frontend renders RunSummary/RunDetail.
+// C++ side (chz / suite harnesses, plus any future run kind); the server
+// scans/parses/compacts them, the frontend renders RunSummary/RunDetail.
 
-export type RunKind = "chz" | "suite";
+export type RunKind = "chz" | "suite" | (string & {}); // unknown kinds flow through
 
 export type RunStatus = "running" | "stalled" | "pass" | "fail" | "error" | "stopped";
 
@@ -44,6 +44,7 @@ export interface RunSummary {
   tests?: number;
   failed?: number;
   pid?: number;
+  runner?: string;
 }
 
 export interface RunDetail extends RunSummary {
@@ -53,4 +54,17 @@ export interface RunDetail extends RunSummary {
   testsList: TestEvent[];
   checks: RunCheck[];
   progressTail: ProgressEvent[];
+}
+
+/** Maps a raw start-event runner value to the label shown in the UI. Pure. */
+export function runnerLabel(runner: string | undefined): string {
+  switch (runner) {
+    case "ci": return "CI";
+    case "claude": return "Claude";
+    case "dashboard": return "you (dashboard)";
+    case "terminal": return "you (terminal)";
+    case undefined: return "unknown";
+    case "": return "unknown";
+    default: return runner;
+  }
 }
