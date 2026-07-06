@@ -14,7 +14,7 @@
 //     applies it on the next tick once focus has left.
 //
 // Type-only imports for server modules (erased at bundle time — no node:* leaks).
-import { renderActive, renderCiStrip, renderForm, renderArchive, renderRunDetail } from "./franklinRender.ts";
+import { renderActive, renderCiStrip, renderForm, renderArchive, renderRunDetail, renderCatalogSection, catalogCards } from "./franklinRender.ts";
 import type { RunSummary, RunDetail } from "./franklinTypes.ts";
 import type { CiPayload } from "../server/ci.ts";
 import type { StaleInfo, Template } from "../server/control.ts";
@@ -22,6 +22,7 @@ import type { CatalogEntry } from "./franklinExplain.ts";
 
 const RUNS_POLL_MS = 2_000;
 const CI_POLL_MS = 10_000;
+const CATALOG_SEARCH_DEBOUNCE_MS = 150;
 
 interface FranklinState {
   runs: RunSummary[];
@@ -31,6 +32,12 @@ interface FranklinState {
   templates: Template[];
   catalog: CatalogEntry[];
   catalogError: boolean;
+  /** Live catalog-browser search query (persisted across polls so the input value survives). */
+  catalogQuery: string;
+  /** Per-test last-result (key -> ok) from the newest archived suite run, or null if none yet. */
+  catalogLatest: Map<string, boolean> | null;
+  /** Whether the catalog section has been painted once (it renders at mount, not on the runs poll). */
+  catalogMounted: boolean;
   openDetailId: string | null;
   /** Last-fetched detail for openDetailId, reused by repaint when the run is finished. */
   openDetailData: RunDetail | null;
@@ -41,6 +48,7 @@ const EMPTY_CI: CiPayload = { available: false, fetchedAt: 0, branches: [] };
 function emptyState(): FranklinState {
   return {
     runs: [], disk: 0, ci: EMPTY_CI, stale: [], templates: [], catalog: [], catalogError: false,
+    catalogQuery: "", catalogLatest: null, catalogMounted: false,
     openDetailId: null, openDetailData: null,
   };
 }
@@ -52,6 +60,12 @@ let clickHandler: ((ev: Event) => void) | null = null;
 let submitHandler: ((ev: Event) => void) | null = null;
 let changeHandler: ((ev: Event) => void) | null = null;
 let focusoutHandler: ((ev: Event) => void) | null = null;
+let inputHandler: ((ev: Event) => void) | null = null;
+
+// Debounce handle for the catalog search box: an input event re-renders ONLY the
+// nested results container after this idle window, never repainting the <input>
+// the user is typing into.
+let catalogSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Per-section HTML that paintSection deferred because the section held focus.
 // Flushed on the next tick after a focusout. Keyed by data-fr section name.
@@ -83,6 +97,7 @@ async function refreshRuns(): Promise<void> {
     state.runs = runs;
     state.disk = disk;
     paintRuns();
+    void refreshCatalogLatest(); // update the browser's "Last result" column if a new suite finished
   } catch { /* transient; next poll retries */ }
 }
 
@@ -128,6 +143,36 @@ async function refreshCatalog(): Promise<void> {
   }
 }
 
+const FINISHED_SUITE = (r: RunSummary): boolean =>
+  r.kind === "suite" && !LIVE_STATUS.has(r.status);
+
+/**
+ * Computes the catalog browser's "Last result" column: the newest *archived*
+ * suite run's per-test ok flags, keyed by the catalog key (`${name} / ${sub}`).
+ * Only refetches when the newest finished suite run's id changed since last time
+ * (finished runs are immutable), so this is a no-op on most 2s polls. When no
+ * finished suite run exists, latest stays null and every card reads
+ * "never recorded".
+ */
+let lastLatestSuiteId: string | null = null;
+async function refreshCatalogLatest(): Promise<void> {
+  const newest = state.runs
+    .filter(FINISHED_SUITE)
+    .sort((a, b) => b.startedAt - a.startedAt)[0];
+  if (!newest) { lastLatestSuiteId = null; return; }
+  if (newest.id === lastLatestSuiteId && state.catalogLatest) return; // unchanged -> keep cached map
+  const gen = mountGen;
+  try {
+    const detail = await getJson<RunDetail>(`/api/runs/${encodeURIComponent(newest.id)}`);
+    if (gen !== mountGen) return;
+    const map = new Map<string, boolean>();
+    for (const t of detail.testsList) map.set(`${t.name} / ${t.sub}`, t.ok);
+    state.catalogLatest = map;
+    lastLatestSuiteId = newest.id;
+    repaintCatalogResults(); // refresh the "Last result" column in place
+  } catch { /* transient; the cached map (or null) stands until the next poll */ }
+}
+
 // --- section painting -------------------------------------------------------
 
 /**
@@ -136,11 +181,12 @@ async function refreshCatalog(): Promise<void> {
  * deferred (stashed in `pending`) and applied by the focusout flush once the
  * user's focus leaves. This is what keeps an open <select> alive across polls.
  */
-function paintSection(name: string, html: string): void {
+function paintSection(name: string, html: string): boolean {
   const el = host?.querySelector<HTMLElement>(`[data-fr="${name}"]`);
-  if (!el) return;
-  if (el.contains(document.activeElement)) { pending.set(name, html); return; }
+  if (!el) return false;
+  if (el.contains(document.activeElement)) { pending.set(name, html); return false; }
   el.innerHTML = html;
+  return true;
 }
 
 /**
@@ -164,6 +210,10 @@ function flushPending(): void {
       // The fresh archive markup has an empty drawer slot; re-attach the open
       // drawer so clicking away from a focused archive element doesn't blank it.
       if (state.openDetailId) void openDetail(state.openDetailId, isRunLive(state.openDetailId));
+    } else if (name === "catalog") {
+      // A deferred first catalog paint finally lands here — only now is the
+      // results container in the DOM, so flip the sentinel (carried note #2).
+      if (paintSection("catalog", html)) state.catalogMounted = true;
     } else {
       paintSection(name, html);
     }
@@ -212,6 +262,39 @@ function paintCatalogBanner(): void {
   el.innerHTML = state.catalogError
     ? `<p class="fr-catalog-warn">catalog unreadable — test explanations disabled</p>`
     : "";
+}
+
+/**
+ * Paints the whole catalog section ONCE (the catalog is fetched once at mount).
+ * We route through paintSection so it inherits the focus-guard: if the user is
+ * mid-search when a rare full repaint lands, it defers rather than ripping the
+ * input out. `catalogMounted` guards against re-rendering the whole section
+ * (and thus resetting the <details> open state + search box) on later polls —
+ * only repaintCatalogResults touches the DOM after this.
+ */
+function paintCatalog(): void {
+  if (!host) return;
+  // Carried wiring note #2: flip the mounted sentinel only after a *non-deferred*
+  // paint. If the section held focus and the write was stashed, the focusout
+  // flush sets the sentinel instead (see flushPending) — so repaintCatalogResults
+  // never runs against a container that isn't in the DOM yet.
+  const painted = paintSection("catalog", renderCatalogSection(state.catalog, state.catalogQuery, state.catalogLatest));
+  if (painted) state.catalogMounted = true;
+}
+
+/**
+ * Re-renders ONLY the nested results container (`data-role="catalog-results"`) —
+ * never the <input> the user is typing into (carried wiring note #1). Used by
+ * the debounced search handler and by refreshCatalogLatest when the "Last result"
+ * column changes. No-op until the catalog section has been mounted.
+ */
+function repaintCatalogResults(): void {
+  if (!host || !state.catalogMounted) return;
+  const results = host.querySelector<HTMLElement>('[data-role="catalog-results"]');
+  if (!results) return;
+  // Write ONLY the card list into the existing results div; the sibling search
+  // <input> is never touched, so the caret/focus stay put mid-type.
+  results.innerHTML = catalogCards(state.catalog, state.catalogQuery, state.catalogLatest);
 }
 
 // --- form helpers -----------------------------------------------------------
@@ -396,6 +479,23 @@ function onChange(ev: Event): void {
   if (t.getAttribute("data-role") === "template") syncFormVisibility();
 }
 
+/**
+ * Catalog search: on each keystroke, stash the query and (debounced) re-render
+ * ONLY the results list. The <input> itself is left untouched so the caret and
+ * focus never jump mid-type (carried wiring note #1). We read the value eagerly
+ * (before the timer) so a fast unmount can't strand a stale closure.
+ */
+function onInput(ev: Event): void {
+  const t = ev.target as HTMLElement;
+  if (t.getAttribute("data-role") !== "catalog-search") return;
+  state.catalogQuery = (t as HTMLInputElement).value;
+  if (catalogSearchTimer) clearTimeout(catalogSearchTimer);
+  catalogSearchTimer = setTimeout(() => {
+    catalogSearchTimer = null;
+    repaintCatalogResults();
+  }, CATALOG_SEARCH_DEBOUNCE_MS);
+}
+
 // A section that skipped its repaint because it held focus (an open <select>,
 // a focused input) gets its stashed HTML applied once focus leaves. Deferred to
 // a microtask/next tick so we never rip the DOM out from under the very event
@@ -423,6 +523,8 @@ export function mountFranklin(app: HTMLElement): void {
   state = emptyState();
   pending.clear();
   lastFormPayload = null;
+  lastLatestSuiteId = null;
+  if (catalogSearchTimer) { clearTimeout(catalogSearchTimer); catalogSearchTimer = null; }
   // Build the persistent sections ONCE. Pollers only ever rewrite a section's
   // innerHTML from here on — the section elements themselves are never replaced,
   // so an open <select> inside one survives every poll.
@@ -433,15 +535,18 @@ export function mountFranklin(app: HTMLElement): void {
   submitHandler = (ev) => onSubmit(ev);
   changeHandler = (ev) => onChange(ev);
   focusoutHandler = () => onFocusOut();
+  inputHandler = (ev) => onInput(ev);
   app.addEventListener("click", clickHandler);
   app.addEventListener("submit", submitHandler);
   app.addEventListener("change", changeHandler);
   app.addEventListener("focusout", focusoutHandler);
+  app.addEventListener("input", inputHandler);
 
-  // One-shot: catalog + templates, then paint with runs/ci.
+  // One-shot: catalog + templates, then paint with runs/ci. The catalog section
+  // is painted once here (fetched once); later polls only touch its results list.
   void (async () => {
     await Promise.all([refreshCatalog(), refreshTemplates()]);
-    if (host) paintCatalogBanner(); // reflect catalog availability once known
+    if (host) { paintCatalogBanner(); paintCatalog(); } // reflect catalog availability + render browser once
     await Promise.all([refreshRuns(), refreshCi()]);
   })();
 
@@ -453,11 +558,14 @@ export function unmountFranklin(): void {
   mountGen++; // invalidate any fetches still in flight from this mount
   for (const t of timers) clearInterval(t);
   timers.length = 0;
+  if (catalogSearchTimer) { clearTimeout(catalogSearchTimer); catalogSearchTimer = null; }
+  lastLatestSuiteId = null;
   if (host && clickHandler) host.removeEventListener("click", clickHandler);
   if (host && submitHandler) host.removeEventListener("submit", submitHandler);
   if (host && changeHandler) host.removeEventListener("change", changeHandler);
   if (host && focusoutHandler) host.removeEventListener("focusout", focusoutHandler);
-  clickHandler = submitHandler = changeHandler = focusoutHandler = null;
+  if (host && inputHandler) host.removeEventListener("input", inputHandler);
+  clickHandler = submitHandler = changeHandler = focusoutHandler = inputHandler = null;
   pending.clear();
   host = null;
 }

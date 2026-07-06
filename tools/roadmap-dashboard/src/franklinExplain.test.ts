@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { catalogLookup, explainChzLabel } from "./franklinExplain.ts";
+import { catalogLookup, explainChzLabel, filterCatalog } from "./franklinExplain.ts";
 import type { CatalogEntry } from "./franklinExplain.ts";
 
 function entries(): CatalogEntry[] {
@@ -12,6 +12,8 @@ function entries(): CatalogEntry[] {
       why: "Canary for the harness itself.",
       deviationMeans: "The harness is broken.",
       links: [],
+      compares: "1+1 against the literal 2.",
+      succeedingMeans: "The build/link pipeline runs a test at all.",
     },
     {
       key: "ParamSnapshot / defaults match expected values",
@@ -20,6 +22,8 @@ function entries(): CatalogEntry[] {
       why: "Pins the factory default patch.",
       deviationMeans: "A default changed.",
       links: ["docs/decisions/ADR-0001.md"],
+      compares: "APVTS snapshot against pinned constants.",
+      succeedingMeans: "The factory default patch is unchanged.",
     },
   ];
 }
@@ -146,4 +150,50 @@ test("explainChzLabel: empty string falls back to the unrecognized shape", () =>
   const result = explainChzLabel("");
   assert.equal(result.title, "");
   assert.equal(result.body, "Unrecognized operating-point label.");
+});
+
+// --- filterCatalog -----------------------------------------------------------
+
+test("filterCatalog: empty query returns every entry (no filtering)", () => {
+  const all = entries();
+  assert.deepEqual(filterCatalog(all, ""), all);
+  assert.deepEqual(filterCatalog(all, "   "), all); // whitespace-only counts as empty
+});
+
+test("filterCatalog: matches a substring of the key", () => {
+  const hits = filterCatalog(entries(), "ParamSnapshot");
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].key, "ParamSnapshot / defaults match expected values");
+});
+
+test("filterCatalog: is case-insensitive", () => {
+  const hits = filterCatalog(entries(), "SMOKE");
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].key, "Smoke / test harness is wired");
+});
+
+test("filterCatalog: matches a substring in prose fields (what/why/deviationMeans/compares/succeedingMeans)", () => {
+  assert.equal(filterCatalog(entries(), "canary")[0]?.key, "Smoke / test harness is wired"); // why
+  assert.equal(filterCatalog(entries(), "factory default patch")[0]?.key, "ParamSnapshot / defaults match expected values"); // why + succeedingMeans
+  assert.equal(filterCatalog(entries(), "literal 2")[0]?.key, "Smoke / test harness is wired"); // compares
+  assert.equal(filterCatalog(entries(), "APVTS snapshot")[0]?.key, "ParamSnapshot / defaults match expected values"); // compares
+});
+
+test("filterCatalog: matches a substring of the file path", () => {
+  const hits = filterCatalog(entries(), "SmokeTests.cpp");
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].key, "Smoke / test harness is wired");
+});
+
+test("filterCatalog: no matches yields an empty array (never throws)", () => {
+  assert.deepEqual(filterCatalog(entries(), "zzz-nothing-matches"), []);
+});
+
+test("filterCatalog: tolerates v1 entries missing compares/succeedingMeans (no crash on undefined prose)", () => {
+  const v1: CatalogEntry[] = [
+    { key: "Old / thing", file: "tests/Old.cpp", what: "does a thing", why: "reasons", deviationMeans: "broke", links: [] },
+  ];
+  assert.deepEqual(filterCatalog(v1, "thing"), v1); // key hit
+  assert.deepEqual(filterCatalog(v1, "reasons"), v1); // why hit
+  assert.deepEqual(filterCatalog(v1, "nope"), []); // no undefined field throws
 });

@@ -6,6 +6,9 @@ import {
   renderForm,
   renderArchive,
   renderRunDetail,
+  renderInfoCard,
+  renderCatalogBrowser,
+  catalogCards,
   deviationRows,
   esc,
   humanizeMs,
@@ -423,6 +426,8 @@ function catalog(): CatalogEntry[] {
       why: "Pins the filter shape.",
       deviationMeans: "The filter shape drifted.",
       links: ["docs/filter-validation/acceptance-criterion.md"],
+      compares: "Measured dB curve against the golden reference curve.",
+      succeedingMeans: "The LP24 magnitude response still matches the reference.",
     },
   ];
 }
@@ -487,4 +492,187 @@ test("renderRunDetail: escapes hostile message text (no raw script tag)", () => 
   const html = renderRunDetail(d, catalog());
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /&lt;script&gt;/);
+});
+
+// ---- renderInfoCard --------------------------------------------------------
+
+function v2Entry(): CatalogEntry {
+  return catalog()[0];
+}
+
+function v1Entry(): CatalogEntry {
+  // A stale v1 catalog entry: no compares / no succeedingMeans.
+  return {
+    key: "Filter / LP24 magnitude",
+    file: "tests/FilterTests.cpp",
+    what: "Sweeps LP24 magnitude response.",
+    why: "Pins the filter shape.",
+    deviationMeans: "The filter shape drifted.",
+    links: [],
+  };
+}
+
+test("renderInfoCard: shows all six labels in order with a v2 entry + runnerText", () => {
+  const html = renderInfoCard(v2Entry(), "you (dashboard)", null);
+  for (const label of ["What", "Purpose", "Compares", "On success", "On failure"]) {
+    assert.ok(html.includes(label), `missing label: ${label}`);
+  }
+  // labels appear in the pinned order
+  const order = ["What", "Purpose", "Compares", "On success", "On failure"].map((l) => html.indexOf(l));
+  assert.deepEqual(order, [...order].sort((a, b) => a - b), "labels out of order");
+  // v2 field values are surfaced
+  assert.match(html, /Sweeps LP24 magnitude response/); // What
+  assert.match(html, /Pins the filter shape/); // Purpose
+  assert.match(html, /golden reference curve/); // Compares
+  assert.match(html, /still matches the reference/); // On success (succeedingMeans)
+  assert.match(html, /The filter shape drifted/); // On failure (deviationMeans)
+  // runnerText path: "Run by <text>", NOT a last-result line
+  assert.match(html, /Run by\s*<\/span>\s*you \(dashboard\)|Run by[\s\S]{0,40}you \(dashboard\)/);
+  assert.doesNotMatch(html, /Last result/);
+});
+
+test("renderInfoCard: v1 entry (missing compares/succeedingMeans) renders em-dash, never 'undefined'", () => {
+  const html = renderInfoCard(v1Entry(), "CI", null);
+  assert.doesNotMatch(html, /undefined/);
+  assert.match(html, /—/); // at least one em-dash for the two absent fields
+});
+
+test("renderInfoCard: with runnerText null, shows 'Last result: <lastResult>' instead of 'Run by'", () => {
+  const html = renderInfoCard(v2Entry(), null, "pass");
+  assert.match(html, /Last result[\s\S]{0,60}pass/);
+  assert.doesNotMatch(html, /Run by/);
+});
+
+test("renderInfoCard: null runnerText and null lastResult shows 'never recorded'", () => {
+  const html = renderInfoCard(v2Entry(), null, null);
+  assert.match(html, /never recorded/);
+  assert.doesNotMatch(html, /undefined/);
+});
+
+test("renderInfoCard: a null entry (catalog miss) renders a graceful placeholder, not a crash", () => {
+  const html = renderInfoCard(null, "you (dashboard)", null);
+  assert.ok(typeof html === "string");
+  assert.doesNotMatch(html, /undefined/);
+});
+
+test("renderInfoCard: escapes hostile prose (no raw script tag survives)", () => {
+  const hostile: CatalogEntry = {
+    ...v2Entry(),
+    what: "<script>alert(1)</script>",
+    compares: "<img onerror=x>",
+  };
+  const html = renderInfoCard(hostile, "you (dashboard)", null);
+  assert.doesNotMatch(html, /<script>alert/);
+  assert.match(html, /&lt;script&gt;/);
+});
+
+// ---- run detail embeds the info card with provenance -----------------------
+
+test("renderRunDetail: each test row embeds the info card carrying 'Run by you (dashboard)' for a dashboard run", () => {
+  const d = detail({
+    runner: "dashboard",
+    status: "pass",
+    testsList: [{ name: "Filter", sub: "LP24 magnitude", ok: true, passes: 5, failures: 0, messages: [] }],
+  });
+  const html = renderRunDetail(d, catalog());
+  assert.match(html, /Run by/);
+  assert.match(html, /you \(dashboard\)/); // runnerLabel("dashboard")
+  // the card's six-field prose is present (not the old three-line prose)
+  assert.match(html, /Compares/);
+  assert.match(html, /On success/);
+});
+
+test("renderRunDetail: header carries a provenance banner: run by + date + buildType + gitSha", () => {
+  const d = detail({ runner: "dashboard", buildType: "Release", gitSha: "abcdef1234567890" });
+  const html = renderRunDetail(d, catalog());
+  assert.match(html, /run by\s+you \(dashboard\)/i);
+  assert.match(html, /Release/); // buildType in banner
+  assert.match(html, /abcdef1/); // short gitSha in banner
+  assert.match(html, /·/); // the "·" separators from the spec
+});
+
+test("renderRunDetail: provenance banner omits gitSha cleanly when absent (no trailing '· ' dangling)", () => {
+  const d = detail({ runner: "terminal", buildType: "Debug", gitSha: undefined });
+  const html = renderRunDetail(d, catalog());
+  assert.match(html, /run by\s+you \(terminal\)/i);
+  assert.match(html, /Debug/);
+  assert.doesNotMatch(html, /undefined/);
+});
+
+test("renderRunDetail: unknown/absent runner surfaces as 'unknown' in the banner (never 'undefined')", () => {
+  const d = detail({ runner: undefined });
+  const html = renderRunDetail(d, catalog());
+  assert.match(html, /run by\s+unknown/i);
+  assert.doesNotMatch(html, /run by\s+undefined/i);
+});
+
+// ---- renderCatalogBrowser --------------------------------------------------
+
+function bigCatalog(): CatalogEntry[] {
+  return [
+    v2Entry(),
+    {
+      key: "Smoke / test harness is wired",
+      file: "tests/SmokeTests.cpp",
+      what: "Asserts 1+1==2.",
+      why: "Harness canary.",
+      deviationMeans: "Harness broke.",
+      links: [],
+      compares: "1+1 against 2.",
+      succeedingMeans: "The harness runs.",
+    },
+  ];
+}
+
+test("renderCatalogBrowser: renders a search input and one card per entry when the query is empty", () => {
+  const html = renderCatalogBrowser(bigCatalog(), "", null);
+  assert.match(html, /<input/); // the search box
+  assert.match(html, /Filter \/ LP24 magnitude/);
+  assert.match(html, /Smoke \/ test harness is wired/);
+});
+
+test("renderCatalogBrowser: honors the query and filters the cards it lists", () => {
+  const html = renderCatalogBrowser(bigCatalog(), "smoke", null);
+  assert.match(html, /Smoke \/ test harness is wired/);
+  assert.doesNotMatch(html, /Filter \/ LP24 magnitude/); // filtered out
+});
+
+test("renderCatalogBrowser: each card shows the six fields with 'Last result' (never 'Run by')", () => {
+  const html = renderCatalogBrowser([v2Entry()], "", null);
+  for (const label of ["What", "Purpose", "Compares", "On success", "On failure", "Last result"]) {
+    assert.ok(html.includes(label), `missing label: ${label}`);
+  }
+  assert.doesNotMatch(html, /Run by/); // browser cards never show 'Run by'
+});
+
+test("renderCatalogBrowser: 'latest' map supplies pass/fail per key; missing keys read 'never recorded'", () => {
+  const latest = new Map<string, boolean>([["Filter / LP24 magnitude", false]]); // last run failed
+  const html = renderCatalogBrowser(bigCatalog(), "", latest);
+  assert.match(html, /Last result[\s\S]{0,60}fail/); // Filter key had a run -> fail
+  assert.match(html, /never recorded/); // Smoke key absent from latest -> never recorded
+});
+
+test("renderCatalogBrowser: preserves the live query in the input's value (survives re-render while typing)", () => {
+  const html = renderCatalogBrowser(bigCatalog(), "smo", null);
+  assert.match(html, /value="smo"/);
+});
+
+test("renderCatalogBrowser: query is escaped into the input value (no attribute-breakout)", () => {
+  const html = renderCatalogBrowser(bigCatalog(), `"><script>alert(1)</script>`, null);
+  assert.doesNotMatch(html, /<script>alert/);
+  assert.doesNotMatch(html, /value=""><script/);
+});
+
+test("renderCatalogBrowser: empty result set shows an empty note, not a crash", () => {
+  const html = renderCatalogBrowser(bigCatalog(), "zzz-no-match", null);
+  assert.match(html, /No (tests|matches|results)/i);
+});
+
+test("catalogCards: is the results-only fragment — cards but NO search input (the re-render-in-place path)", () => {
+  const html = catalogCards(bigCatalog(), "smoke", null);
+  assert.doesNotMatch(html, /<input/); // franklin.ts writes this into the existing results div; the input stays put
+  assert.match(html, /Smoke \/ test harness is wired/);
+  assert.doesNotMatch(html, /Filter \/ LP24 magnitude/); // query honored
+  // and it's exactly what renderCatalogBrowser embeds in its results container
+  assert.ok(renderCatalogBrowser(bigCatalog(), "smoke", null).includes(html));
 });

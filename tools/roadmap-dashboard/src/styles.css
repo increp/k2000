@@ -167,3 +167,25 @@ body { margin: 0; background: var(--bg); color: var(--ink);
 .fr-meta-row { display: flex; gap: 10px; font-size: 12px; padding: 2px 0; }
 .fr-meta-k { color: var(--muted); min-width: 80px; }
 .fr-meta-v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+
+/* provenance banner (run header) */
+.fr-provenance { color: var(--muted); font-size: 12px; margin: 0 0 10px; padding: 4px 8px;
+  background: var(--panel-2); border-radius: 6px; border-left: 3px solid var(--accent); }
+
+/* six-field info card (per-test, in run detail + catalog browser) */
+.fr-info-card { margin: 6px 0 2px; border-left: 2px dashed var(--line); padding-left: 8px; }
+.fr-card-row { display: flex; gap: 8px; font-size: 12px; padding: 2px 0; align-items: baseline; }
+.fr-card-k { color: var(--muted); min-width: 84px; flex-shrink: 0; text-transform: uppercase;
+  font-size: 10px; letter-spacing: .4px; padding-top: 1px; }
+.fr-card-v { color: var(--ink); }
+
+/* catalog browser */
+.fr-catalog-details > summary { cursor: pointer; font-size: 13px; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--muted); font-weight: 600; }
+.fr-browser-search { width: 100%; margin: 10px 0; background: var(--panel-2); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.fr-browser-search:focus { outline: none; border-color: var(--accent); }
+.fr-browser-results { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.fr-browser-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.fr-browser-key { font-weight: 600; font-size: 12px; }
+.fr-browser-file { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted); }
