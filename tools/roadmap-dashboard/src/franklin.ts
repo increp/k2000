@@ -510,11 +510,15 @@ function onFocusOut(): void {
 const SECTION_SKELETON =
   `<div data-fr="catalog-banner"></div>` +
   `<div class="fr-root">` +
+  `<div class="fr-main">` +
   `<section data-fr="active"></section>` +
+  `<section data-fr="archive"></section>` +
+  `</div>` +
+  `<div class="fr-side">` +
   `<section data-fr="ci"></section>` +
   `<section data-fr="form"></section>` +
+  `</div>` +
   `<section data-fr="catalog"></section>` +
-  `<section data-fr="archive"></section>` +
   `</div>`;
 
 export function mountFranklin(app: HTMLElement): void {

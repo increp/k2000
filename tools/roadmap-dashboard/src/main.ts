@@ -87,6 +87,7 @@ function switchView(next: View): void {
   if (view === "franklin") unmountFranklin(); // tear down Franklin's timers/listeners
   view = next;
   setActiveTab(next);
+  app().classList.toggle("franklin-view", next === "franklin");
   if (next === "roadmap") {
     paint(); // repaint roadmap from the in-memory doc (byte-identical to first render)
   } else {
