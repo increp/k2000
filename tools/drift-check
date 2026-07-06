@@ -220,7 +220,8 @@ def chk_franklin_catalog(root, ctx):
     if not cat_p.exists():
         return "warn", "docs/franklin/test-catalog.json missing"
     try:
-        cat = {e["key"] for e in json.loads(cat_p.read_text(encoding="utf-8"))["entries"]}
+        entries_raw = json.loads(cat_p.read_text(encoding="utf-8"))["entries"]
+        cat = {e["key"] for e in entries_raw}
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         return "warn", f"test-catalog.json unreadable: {e}"
     runs_dir = root / ".franklin/runs"
@@ -239,10 +240,14 @@ def chk_franklin_catalog(root, ctx):
     missing, orphaned = sorted(seen - cat), sorted(cat - seen)
     def _fmt(items):
         return ", ".join(items[:3]) + ("…" if len(items) > 3 else "")
-    if missing or orphaned:
-        parts = []
-        if missing:  parts.append(f"{len(missing)} test(s) without catalog entry: {_fmt(missing)}")
-        if orphaned: parts.append(f"{len(orphaned)} catalog entr(ies) without test: {_fmt(orphaned)}")
+    parts = []
+    if missing:  parts.append(f"{len(missing)} test(s) without catalog entry: {_fmt(missing)}")
+    if orphaned: parts.append(f"{len(orphaned)} catalog entr(ies) without test: {_fmt(orphaned)}")
+    fields = ("what", "why", "compares", "succeedingMeans", "deviationMeans")
+    thin = sorted(e["key"] for e in entries_raw if any(not str(e.get(f, "")).strip() for f in fields))
+    if thin:
+        parts.append(f"{len(thin)} catalog entr(ies) with empty prose field(s): {_fmt(thin)}")
+    if parts:
         return "warn", "; ".join(parts)
     return "ok", f"catalog covers all {len(seen)} suite tests"
 
@@ -324,9 +329,13 @@ def fx_franklin_catalog(dir, passing):
     (runs / "20260703-000000-suite-1.ndjson").write_text(
         '{"ev":"test","name":"A","sub":"b","ok":true,"passes":1,"failures":0,"messages":[]}\n', encoding="utf-8")
     if passing:
-        entries = [{"key": "A / b", "file": "tests/x.cpp", "what": "w", "why": "y", "deviationMeans": "d", "links": []}]
+        entries = [{"key": "A / b", "file": "tests/x.cpp", "what": "w", "why": "y",
+                    "compares": "c", "succeedingMeans": "s", "deviationMeans": "d", "links": []}]
     else:
-        entries = [{"key": "Z / q", "file": "tests/z.cpp", "what": "w", "why": "y", "deviationMeans": "d", "links": []}]
+        entries = [{"key": "Z / q", "file": "tests/z.cpp", "what": "w", "why": "y",
+                    "compares": "c", "succeedingMeans": "s", "deviationMeans": "d", "links": []},
+                   {"key": "A / b", "file": "tests/x.cpp", "what": "w", "why": "y",
+                    "compares": "", "succeedingMeans": "s", "deviationMeans": "d", "links": []}]
     cat = dir / "docs/franklin"; cat.mkdir(parents=True)
     (cat / "test-catalog.json").write_text(json.dumps({"version": 1, "entries": entries}), encoding="utf-8")
 
