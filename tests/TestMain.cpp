@@ -3,12 +3,37 @@
 #include <cstdio>
 #include <cstdlib>
 
+namespace {
+// Streams a live progress event as each test result lands, so the Franklin
+// dashboard shows a moving counter/ETA for suite runs (not only chz runs), and the
+// steady file writes keep long suites (disparity/voiceperf) from tripping the
+// stall detector. The total is an estimate from the previous suite run's count —
+// JUCE cannot report the total until the run finishes — so it is -1 until a prior
+// run exists, in which case the card shows a live count without a percentage.
+struct ProgressRunner : juce::UnitTestRunner {
+    runlog::Writer& log;
+    int total;
+    ProgressRunner(runlog::Writer& l, int t) : log(l), total(t) {}
+    void resultsUpdated() override {
+        const int n = getNumResults();
+        juce::String label;
+        if (n > 0)
+            if (const auto* r = getResult(n - 1))
+                label = r->unitTestName + " / " + r->subcategoryName;
+        log.progress(n, total, label);
+    }
+};
+} // namespace
+
 int main(int argc, char** argv) {
+    // Estimate the total BEFORE our own runlog file exists, so the current (empty)
+    // suite file is never the newest one lastSuiteTestCount() examines.
+    const int estTotal = runlog::lastSuiteTestCount();
     runlog::Writer log("suite");
-    { juce::StringArray a; for (int i = 0; i < argc; ++i) a.add(argv[i]); log.start(a); }
+    { juce::StringArray a; for (int i = 0; i < argc; ++i) a.add(argv[i]); log.start(a, {}, {}, estTotal); }
     const auto t0 = juce::Time::currentTimeMillis();
 
-    juce::UnitTestRunner runner;
+    ProgressRunner runner(log, estTotal);
     runner.setAssertOnFailure(false);
     runner.runAllTests();
 

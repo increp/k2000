@@ -54,10 +54,34 @@ static juce::File defaultDir() {
     return juce::File::getCurrentWorkingDirectory().getChildFile(".franklin/runs");
 }
 
+int lastSuiteTestCount() {
+    auto dir = defaultDir();
+    if (!dir.isDirectory()) return -1;
+    juce::Array<juce::File> files;
+    dir.findChildFiles(files, juce::File::findFiles, false, "*-suite-*.ndjson");
+    juce::File newest;
+    juce::int64 newestMs = std::numeric_limits<juce::int64>::min();
+    for (const auto& f : files) {
+        const auto m = f.getLastModificationTime().toMilliseconds();
+        if (m > newestMs) { newestMs = m; newest = f; }
+    }
+    if (newest == juce::File()) return -1;
+    juce::StringArray lines;
+    lines.addLines(newest.loadFileAsString());
+    for (int i = lines.size() - 1; i >= 0; --i) {   // last non-empty line = the end event
+        if (lines[i].trim().isEmpty()) continue;
+        auto parsed = juce::JSON::parse(lines[i]);
+        if (parsed.isObject() && parsed.getProperty("ev", "").toString() == "end")
+            return (int) parsed.getProperty("tests", -1);
+        return -1;   // newest run has no end yet (running/crashed) — don't estimate from it
+    }
+    return -1;
+}
+
 Writer::Writer(const juce::String& kind) : Writer(kind, defaultDir(), 1000, 3600 * 1000) {}
 
 Writer::Writer(const juce::String& kind, const juce::File& dir, int64_t throttleMs, int64_t slowAfterMs)
-    : throttleMs_(throttleMs), slowAfterMs_(slowAfterMs), kind_(kind) {
+    : kind_(kind), throttleMs_(throttleMs), slowAfterMs_(slowAfterMs) {
     if (std::getenv("BERNIE_NO_RUNLOG") != nullptr && juce::String(std::getenv("BERNIE_NO_RUNLOG")) == "1") { enabled_ = false; return; }
     dir.createDirectory();
     t0Ms_ = juce::Time::currentTimeMillis();

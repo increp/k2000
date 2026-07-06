@@ -9,6 +9,14 @@ namespace runlog {
 
 juce::String jsonEscape(const juce::String& s);
 
+// Best-effort estimate of the suite's total test count, read from the newest
+// completed suite runlog's `end.tests`. Returns -1 when none exists (fresh clone)
+// or the newest run has not finished. Used to give suite runs a live %/ETA on the
+// dashboard (JUCE can't report the total until the run itself finishes). Call this
+// BEFORE constructing the run's own Writer, so the current (empty) file is not the
+// newest one examined.
+int lastSuiteTestCount();
+
 class Writer {
 public:
     explicit Writer(const juce::String& kind);

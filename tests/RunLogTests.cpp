@@ -72,6 +72,22 @@ public:
             expectEquals(runnerOf("CLAUDECODE", "1"),            juce::String("claude"));
             expectEquals(runnerOf(nullptr, nullptr),             juce::String("terminal"));
         }
+        {   // lastSuiteTestCount reads the newest completed suite runlog's end.tests (v1.1 suite ETA)
+            auto sdir = dir.getChildFile("suitecount");
+            sdir.createDirectory();
+            auto f1 = sdir.getChildFile("20260101-000000-suite-1.ndjson");
+            f1.replaceWithText("{\"ev\":\"start\",\"ts\":1,\"kind\":\"suite\"}\n"
+                               "{\"ev\":\"end\",\"ts\":2,\"outcome\":\"pass\",\"tests\":291,\"failed\":0}\n");
+            f1.setLastModificationTime(juce::Time(1'000'000'000'000LL)); // older
+            ::setenv("BERNIE_RUNLOG_DIR", sdir.getFullPathName().toRawUTF8(), 1);
+            expectEquals(runlog::lastSuiteTestCount(), 291);
+            // A running (end-less) newer run must not be estimated from -> -1.
+            auto f2 = sdir.getChildFile("20260101-000001-suite-2.ndjson");
+            f2.replaceWithText("{\"ev\":\"start\",\"ts\":3,\"kind\":\"suite\"}\n");
+            f2.setLastModificationTime(juce::Time(2'000'000'000'000LL)); // newer
+            expectEquals(runlog::lastSuiteTestCount(), -1);
+            ::unsetenv("BERNIE_RUNLOG_DIR");
+        }
 #endif
         dir.deleteRecursively();
     }
