@@ -237,7 +237,17 @@ def chk_franklin_catalog(root, ctx):
             name, sub = e.get("name"), e.get("sub")
             if name is None or sub is None: continue
             seen.add(f"{name} / {sub}")
-    missing, orphaned = sorted(seen - cat), sorted(cat - seen)
+    # VoicePerf and LargeSignal change their subcategory name based on their
+    # BERNIE_RUN_* env flag ("skipped …" when off, real measurement names when on),
+    # so their exact key legitimately varies by run config. Match those families at
+    # the test-name level so a heavy opt-in run's runlog doesn't spuriously mismatch
+    # the catalog (which documents the default run). The 289 other tests stay exact.
+    ENV_GATED = ("VoicePerf", "LargeSignal")
+    def fam(key):
+        name = key.split(" / ", 1)[0]
+        return name if name in ENV_GATED else key
+    seen_f, cat_f = {fam(k) for k in seen}, {fam(k) for k in cat}
+    missing, orphaned = sorted(seen_f - cat_f), sorted(cat_f - seen_f)
     def _fmt(items):
         return ", ".join(items[:3]) + ("…" if len(items) > 3 else "")
     parts = []
