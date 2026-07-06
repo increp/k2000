@@ -24,7 +24,8 @@ whether a run is captured.
 ## Event-file contract
 
 Every run writes one NDJSON file to `.franklin/runs/<stamp>-<kind>-<pid>.ndjson`
-(`kind` is `chz` or `suite`; the pid suffix disambiguates same-second starts), one
+(`kind` is `chz` or `suite` today — a future kind such as `capture` flows through
+generically; the pid suffix disambiguates same-second starts), one
 JSON object per line, append-only. The full event
 schema (`start` / `progress` / `test` / `end`, exact fields, and the write-throttle
 rule) is specified in
@@ -69,8 +70,10 @@ Each test in a run's detail view expands to a six-field card: **What** it does �
 its **Purpose** · what it **Compares** (the actual reference — a golden file, an
 analytic form, a fixed threshold, or cross-method agreement) · what **success**
 means in product terms · what **failure** means · and **who ran** it. The fields
-come from `docs/franklin/test-catalog.json` (v2), enforced complete by the
-`franklin-catalog` drift rule — no test can ship half-carded.
+come from `docs/franklin/test-catalog.json` (v2); the `franklin-catalog` drift rule
+WARNs (in the `session` and `ci` tiers) on any test whose card is missing a field
+or any card with no matching test — so a half-carded test is flagged loudly, though
+the warning does not hard-block a commit.
 
 ## Catalog browser
 
