@@ -1,6 +1,6 @@
 # Franklin — Charter
 
-**Version:** 5.17 (artifact; distinct from plugin SemVer — see `CLAUDE.md` process rails)
+**Version:** 5.21 (artifact; distinct from plugin SemVer — see `CLAUDE.md` process rails)
 **Date:** 2026-07-03
 
 > "Franklin is what keeps us honest and our synths musical."
@@ -16,6 +16,14 @@ the live dashboard that lets a human watch any of it run. Where Bernie and Ricky
 exist to be played, Franklin exists to be trusted — every claim this project makes
 about fidelity, regression safety, or hardware match traces back to a Franklin
 measurement.
+
+**Franklin is held to an instrument-grade bar — it is the trust anchor for every
+external comparison.** As Franklin grows to measure commercial VSTs and real
+hardware and to host ours-vs-theirs comparisons, its own correctness is load-bearing:
+a shallow or flaky harness poisons every downstream authenticity decision. Changes to
+Franklin are reviewed as instrument code, not UI code — forward-compatible schemas,
+full backfills over partial ones, a drift rule behind every catalog-like artifact,
+and a live smoke before merge.
 
 This page is a map of Franklin's remit, not a status board. Progress on any item
 below lives in the roadmap dashboard (`cd tools/roadmap-dashboard && npm run
