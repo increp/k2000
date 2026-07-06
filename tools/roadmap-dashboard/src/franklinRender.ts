@@ -5,9 +5,10 @@
 // Type-only imports for the server modules: erased at bundle time so no
 // node:* code leaks into the browser bundle (see task brief).
 import type { RunSummary, RunDetail, RunCheck, TestEvent } from "./franklinTypes.ts";
+import { runnerLabel } from "./franklinTypes.ts";
 import type { CiPayload } from "../server/ci.ts";
-import type { StaleInfo } from "../server/control.ts";
-import { catalogLookup, explainChzLabel } from "./franklinExplain.ts";
+import type { StaleInfo, Template } from "../server/control.ts";
+import { catalogLookup, explainChzLabel, filterCatalog } from "./franklinExplain.ts";
 import type { CatalogEntry } from "./franklinExplain.ts";
 
 /** HTML-escape any user-derived string. Same four substitutions as render.ts. */
@@ -116,7 +117,8 @@ function activeCard(r: RunSummary, now: number): string {
     </div>`;
 }
 
-function activeSection(runs: RunSummary[], now: number): string {
+/** Active-runs section (running/stalled cards). One of the five persistent sections. */
+export function renderActive(runs: RunSummary[], now: number): string {
   const active = runs.filter(isActive);
   const body = active.length > 0
     ? active.map((r) => activeCard(r, now)).join("")
@@ -149,7 +151,8 @@ function ciCheckDot(c: CiPayload["branches"][number]["checks"][number]): string 
     : inner;
 }
 
-function ciStrip(ci: CiPayload): string {
+/** CI strip section (per-branch check dots). One of the five persistent sections. */
+export function renderCiStrip(ci: CiPayload): string {
   if (!ci.available) {
     return `<section class="fr-section fr-ci">
         <h2>CI</h2>
@@ -175,32 +178,36 @@ function ciStrip(ci: CiPayload): string {
 // New-run form
 // ---------------------------------------------------------------------------
 
-// Template binaries are fixed (control.ts). We key the stale chip off the PATH
-// of the binary each template drives — never a positional index, since the four
-// templates share only two binaries.
+// The chz binary path (control.ts). A template drives chz iff its binary is this
+// one — the model/grid selects only apply to chz. We key the stale chip off the
+// PATH of the binary each template drives — never a positional index, since the
+// four templates share only two binaries.
 const CHZ_BIN = "build/tests/k2000_device_characterization";
-const SUITE_BIN = "build/tests/k2000_tests";
 
-const TEMPLATE_OPTIONS: { id: string; label: string; bin: string; isChz: boolean }[] = [
-  { id: "suite", label: "Full suite", bin: SUITE_BIN, isChz: false },
-  { id: "suite-disparity", label: "Suite (disparity sweep)", bin: SUITE_BIN, isChz: false },
-  { id: "suite-voiceperf", label: "Suite (voice perf)", bin: SUITE_BIN, isChz: false },
-  { id: "chz", label: "Device characterization", bin: CHZ_BIN, isChz: true },
-];
+function isChzTemplate(t: Template): boolean {
+  return t.bin === CHZ_BIN;
+}
 
 function staleFor(bin: string, stale: StaleInfo[]): boolean {
   return stale.some((s) => s.binary === bin && s.stale);
 }
 
-function newRunForm(stale: StaleInfo[]): string {
-  const options = TEMPLATE_OPTIONS.map((t) => {
+/**
+ * New-run form section (template picker + chz model/grid + stale chip).
+ * One of the five persistent sections. Takes the real Template[] the server
+ * ships alongside stale info; `data-chz`/`data-bin` on each option let the
+ * client toggle the chz-only fields and target the stale chip by binary path.
+ */
+export function renderForm(templates: Template[], stale: StaleInfo[]): string {
+  const options = templates.map((t) => {
+    const chz = isChzTemplate(t);
     const chip = staleFor(t.bin, stale) ? " ⚠ stale" : "";
-    return `<option value="${escAttr(t.id)}" data-chz="${t.isChz ? "1" : "0"}" data-bin="${escAttr(t.bin)}">${esc(t.label)}${chip}</option>`;
+    return `<option value="${escAttr(t.id)}" data-chz="${chz ? "1" : "0"}" data-bin="${escAttr(t.bin)}">${esc(t.label)}${chip}</option>`;
   }).join("");
 
   // Any stale binary at all -> a visible top-level chip (per-template chip is in
   // the option text; this one is the always-visible summary the tests key on).
-  const anyStale = TEMPLATE_OPTIONS.some((t) => staleFor(t.bin, stale));
+  const anyStale = templates.some((t) => staleFor(t.bin, stale));
   const staleChip = anyStale
     ? `<span class="fr-stale-chip" data-role="stale-chip">⚠ a selected binary may be stale — rebuild before trusting results</span>`
     : `<span class="fr-stale-chip fr-hidden" data-role="stale-chip"></span>`;
@@ -264,7 +271,12 @@ function archiveRow(r: RunSummary): string {
     </tr>`;
 }
 
-function archiveSection(runs: RunSummary[], diskBytes: number): string {
+/**
+ * Archive section (finished-run table + detail-drawer mount point).
+ * One of the five persistent sections. The drawer (`data-role="detail-drawer"`)
+ * is filled by franklin.ts's openDetail; renderArchive only lays out its slot.
+ */
+export function renderArchive(runs: RunSummary[], diskBytes: number): string {
   const finished = runs.filter((r) => !isActive(r));
   const rows = finished.length > 0
     ? finished.map(archiveRow).join("")
@@ -277,25 +289,6 @@ function archiveSection(runs: RunSummary[], diskBytes: number): string {
       </table>
       <div data-role="detail-drawer" class="fr-drawer"></div>
     </section>`;
-}
-
-// ---------------------------------------------------------------------------
-// renderRunsPage — top-level composition
-// ---------------------------------------------------------------------------
-
-export function renderRunsPage(
-  runs: RunSummary[],
-  ci: CiPayload,
-  diskBytes: number,
-  stale: StaleInfo[],
-  now: number = Date.now(),
-): string {
-  return `<div class="fr-root">
-    ${activeSection(runs, now)}
-    ${ciStrip(ci)}
-    ${newRunForm(stale)}
-    ${archiveSection(runs, diskBytes)}
-  </div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -412,17 +405,12 @@ function deviationsPanel(d: RunDetail): string {
   return `<div class="fr-deviations"><h3>Deviations</h3>${body}</div>`;
 }
 
-function testRow(t: TestEvent, catalog: CatalogEntry[]): string {
-  const entry = catalogLookup(catalog, t.name, t.sub);
-  const prose = entry
-    ? `<div class="fr-test-prose">
-         <div class="fr-prose-what">${esc(entry.what)}</div>
-         <div class="fr-prose-why">${esc(entry.why)}</div>
-         <div class="fr-prose-dev"><em>If this fails:</em> ${esc(entry.deviationMeans)}</div>
-         ${entry.file ? `<div class="fr-prose-file">${esc(entry.file)}</div>` : ""}
-       </div>`
-    : "";
-  // Only failing tests dump their messages, and they get the red highlight.
+function testRow(t: TestEvent, catalog: CatalogEntry[], runnerText: string): string {
+  // The expanded row is the six-field info card (What · Purpose · Compares ·
+  // On success · On failure · Run by <runner>). A catalog miss still renders a
+  // placeholder card so the "Run by" provenance is always present.
+  const card = renderInfoCard(catalogLookup(catalog, t.name, t.sub), runnerText, null);
+  // Only failing tests dump their raw messages, and they get the red highlight.
   const messages = (!t.ok && t.messages.length > 0)
     ? `<ul class="fr-msg-list">` +
       t.messages.map((m) => `<li class="deviation-fail fr-msg-fail">${esc(m)}</li>`).join("") +
@@ -433,7 +421,7 @@ function testRow(t: TestEvent, catalog: CatalogEntry[]): string {
       <summary><span class="status-badge">${t.ok ? "pass" : "fail"}</span> ${esc(t.name)} / ${esc(t.sub)}
         <span class="fr-test-counts">${t.passes}✓ ${t.failures}✗</span></summary>
       ${messages}
-      ${prose}
+      ${card}
     </details>`;
 }
 
@@ -441,9 +429,10 @@ function testsPanel(d: RunDetail, catalog: CatalogEntry[]): string {
   if (d.testsList.length === 0) {
     return `<div class="fr-tests"><h3>Tests</h3><p class="fr-empty">No test events recorded.</p></div>`;
   }
+  const runnerText = runnerLabel(d.runner);
   // Failing tests first for scannability.
   const ordered = [...d.testsList].sort((a, b) => Number(a.ok) - Number(b.ok));
-  const body = ordered.map((t) => testRow(t, catalog)).join("");
+  const body = ordered.map((t) => testRow(t, catalog, runnerText)).join("");
   return `<div class="fr-tests"><h3>Tests</h3>${body}</div>`;
 }
 
@@ -484,9 +473,126 @@ export function renderRunDetail(d: RunDetail, catalog: CatalogEntry[]): string {
         <span class="fr-spacer"></span>
         <button data-action="close-detail" title="Close">✕</button>
       </div>
+      ${provenanceBanner(d)}
       ${deviationsPanel(d)}
       ${testsPanel(d, catalog)}
       ${chzLabelPanel(d)}
       ${metadataPanel(d)}
     </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Info card — the six-field per-test explanation (spec §5)
+// ---------------------------------------------------------------------------
+
+/** Em-dash for any absent field — never the literal string "undefined" in the UI. */
+const DASH = "—";
+
+/** Renders one card row: a label + its value (already-escaped value passed in). */
+function cardRow(label: string, valueHtml: string): string {
+  return `<div class="fr-card-row"><span class="fr-card-k">${label}</span><span class="fr-card-v">${valueHtml}</span></div>`;
+}
+
+/** An entry field that may be absent on a stale v1 catalog -> escaped text or an em-dash. */
+function field(v: string | undefined): string {
+  return v && v.length > 0 ? esc(v) : DASH;
+}
+
+/**
+ * The six-field info card. Rows are fixed order: What · Purpose · Compares ·
+ * On success · On failure · then either "Run by <runnerText>" (when runnerText
+ * is given — the run-detail path) or "Last result: <lastResult ?? never recorded>"
+ * (the catalog-browser path, runnerText null). `entry` null (a catalog miss)
+ * renders a graceful placeholder card rather than crashing.
+ */
+export function renderInfoCard(entry: CatalogEntry | null, runnerText: string | null, lastResult: string | null): string {
+  const rows = entry
+    ? cardRow("What", field(entry.what)) +
+      cardRow("Purpose", field(entry.why)) +
+      cardRow("Compares", field(entry.compares)) +
+      cardRow("On success", field(entry.succeedingMeans)) +
+      cardRow("On failure", field(entry.deviationMeans))
+    : cardRow("What", `<span class="fr-empty">No catalog entry for this test.</span>`);
+
+  const provenanceRow = runnerText !== null
+    ? cardRow("Run by", esc(runnerText))
+    : cardRow("Last result", esc(lastResult ?? "never recorded"));
+
+  return `<div class="fr-info-card">${rows}${provenanceRow}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Catalog browser — searchable list of every test's info card (spec §5)
+// ---------------------------------------------------------------------------
+
+/**
+ * The searchable catalog browser: a persistent search <input> (its value seeded
+ * from `query` so a re-render mid-type keeps the text) followed by a nested
+ * results container holding one info card per matching entry. franklin.ts
+ * re-renders ONLY the results container on input (debounced) so the input the
+ * user is typing into is never repainted out from under them.
+ *
+ * Each card shows the six fields with "Run by" replaced by "Last result" — the
+ * latest archived suite run's pass/fail for that test's key (`latest`), else
+ * "never recorded".
+ */
+/**
+ * The inner HTML of the results container: one browser card per matching entry,
+ * or an empty note. Exported so franklin.ts can re-render ONLY this list on a
+ * search keystroke (writing it straight into the existing results div) without
+ * rebuilding — and thus without disturbing — the search <input>.
+ */
+export function catalogCards(entries: CatalogEntry[], query: string, latest: Map<string, boolean> | null): string {
+  const matches = filterCatalog(entries, query);
+  if (matches.length === 0) return `<p class="fr-empty">No tests match “${esc(query)}”.</p>`;
+  return matches.map((e) => {
+    const seen = latest?.get(e.key);
+    const lastResult = seen === undefined ? null : seen ? "pass" : "fail";
+    return `<div class="fr-browser-card" data-catalog-key="${escAttr(e.key)}">
+        <div class="fr-browser-key">${esc(e.key)}</div>
+        ${e.file ? `<div class="fr-browser-file">${esc(e.file)}</div>` : ""}
+        ${renderInfoCard(e, null, lastResult)}
+      </div>`;
+  }).join("");
+}
+
+export function renderCatalogBrowser(entries: CatalogEntry[], query: string, latest: Map<string, boolean> | null): string {
+  return `<input type="search" class="fr-browser-search" data-role="catalog-search"
+      placeholder="Search tests by name, file, or description…"
+      value="${escAttr(query)}" autocomplete="off" spellcheck="false" />
+    <div class="fr-browser-results" data-role="catalog-results">${catalogCards(entries, query, latest)}</div>`;
+}
+
+/**
+ * The catalog section body: a collapsed <details> "Catalog (N tests)" wrapping
+ * the browser. franklin.ts renders this once at mount (the catalog is fetched
+ * once) into the persistent [data-fr="catalog"] section, then re-renders only
+ * the nested results container on search input.
+ */
+export function renderCatalogSection(entries: CatalogEntry[], query: string, latest: Map<string, boolean> | null): string {
+  return `<section class="fr-section fr-catalog">
+      <details class="fr-catalog-details">
+        <summary>Catalog (${entries.length} tests)</summary>
+        ${renderCatalogBrowser(entries, query, latest)}
+      </details>
+    </section>`;
+}
+
+// ---------------------------------------------------------------------------
+// Provenance banner — who/when/how this run happened (spec §4)
+// ---------------------------------------------------------------------------
+
+/**
+ * "run by <runnerLabel> · <date> · <buildType> · <gitSha>" on the run header.
+ * gitSha is omitted (with its separator) when absent; buildType falls back to a
+ * dash so the banner never prints "undefined". `runner` maps through
+ * runnerLabel (undefined/empty -> "unknown").
+ */
+function provenanceBanner(d: RunDetail): string {
+  const who = runnerLabel(d.runner);
+  const when = new Date(d.startedAt).toISOString().replace("T", " ").slice(0, 16); // "YYYY-MM-DD HH:MM"
+  const build = d.buildType ? d.buildType : DASH;
+  const parts = [`run by ${who}`, when, build];
+  if (d.gitSha) parts.push(d.gitSha.slice(0, 12));
+  return `<div class="fr-provenance">${esc(parts.join(" · "))}</div>`;
 }

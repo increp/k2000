@@ -20,6 +20,7 @@ interface RawEvent {
   model?: string;
   grid?: string;
   gitSha?: string;
+  runner?: string;
   done?: number;
   total?: number;
   label?: string;
@@ -66,6 +67,7 @@ export function parseRun(id: string, text: string, mtimeMs: number, nowMs: numbe
   let model: string | undefined;
   let grid: string | undefined;
   let gitSha: string | undefined;
+  let runner: string | undefined;
 
   const progress: ProgressEvent[] = [];
   const testsList: TestEvent[] = [];
@@ -80,13 +82,14 @@ export function parseRun(id: string, text: string, mtimeMs: number, nowMs: numbe
     switch (e.ev) {
       case "start":
         if (typeof e.ts === "number") startedAt = e.ts;
-        if (e.kind === "chz" || e.kind === "suite") kind = e.kind;
+        if (typeof e.kind === "string") kind = e.kind;
         argv = e.argv;
         pid = e.pid;
         buildType = e.buildType;
         model = e.model;
         grid = e.grid;
         gitSha = e.gitSha;
+        if (typeof e.runner === "string") runner = e.runner;
         break;
       case "progress":
         if (typeof e.done === "number" && typeof e.total === "number" && typeof e.label === "string" && typeof e.ts === "number") {
@@ -125,7 +128,7 @@ export function parseRun(id: string, text: string, mtimeMs: number, nowMs: numbe
   const summary: RunSummary = {
     id, kind, startedAt, status, sizeBytes,
     done: lastProgress?.done, total: lastProgress?.total, label: lastProgress?.label,
-    durationS, model, grid, tests, failed, pid,
+    durationS, model, grid, tests, failed, pid, runner,
   };
 
   const detail: RunDetail = {

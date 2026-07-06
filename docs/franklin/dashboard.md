@@ -1,6 +1,6 @@
 # Franklin — Runs Dashboard Manual
 
-**Version:** 5.18 (artifact; distinct from plugin SemVer — see `CLAUDE.md` process rails)
+**Version:** 5.22 (artifact; distinct from plugin SemVer — see `CLAUDE.md` process rails)
 **Date:** 2026-07-03
 
 How to run and read the Franklin tab: the live view of Franklin's runs (device
@@ -24,7 +24,8 @@ whether a run is captured.
 ## Event-file contract
 
 Every run writes one NDJSON file to `.franklin/runs/<stamp>-<kind>-<pid>.ndjson`
-(`kind` is `chz` or `suite`; the pid suffix disambiguates same-second starts), one
+(`kind` is `chz` or `suite` today — a future kind such as `capture` flows through
+generically; the pid suffix disambiguates same-second starts), one
 JSON object per line, append-only. The full event
 schema (`start` / `progress` / `test` / `end`, exact fields, and the write-throttle
 rule) is specified in
@@ -41,8 +42,45 @@ The directory is gitignored: it survives `rm -rf build/` but is never committed.
 - `BERNIE_RUNLOG_DIR` — overrides the runlog directory (default: `./.franklin/runs`
   under the current working directory, which is the repo root by convention).
 
+- `BERNIE_RUNNER` — overrides the auto-detected run provenance (see below) with a
+  verbatim string. Rarely needed; the detection chain is right for normal use.
+
 A runlog write failure never affects the measurement itself — the writer disables
 itself silently on the first error and the run proceeds normally.
+
+## Run provenance (who ran it)
+
+Every run records **who started it** in its `start` event, shown as a banner on the
+run header and on each test's info card. Detection priority, highest first:
+
+1. `BERNIE_RUNNER` env set → its verbatim value.
+2. `GITHUB_ACTIONS` set → **CI**.
+3. `CLAUDECODE` set (Claude Code's shell) → **Claude**.
+4. otherwise → **you (terminal)**.
+
+Runs you start from the dashboard's **Start** button are stamped **you (dashboard)** —
+the dashboard injects `BERNIE_RUNNER=dashboard` into the child, so a run you launched
+by clicking is attributed to you, not to Claude, even when the dashboard was itself
+started from a Claude Code shell. Runs recorded before provenance existed show
+**unknown** (archives are never rewritten).
+
+## Test info cards
+
+Each test in a run's detail view expands to a six-field card: **What** it does ·
+its **Purpose** · what it **Compares** (the actual reference — a golden file, an
+analytic form, a fixed threshold, or cross-method agreement) · what **success**
+means in product terms · what **failure** means · and **who ran** it. The fields
+come from `docs/franklin/test-catalog.json` (v2); the `franklin-catalog` drift rule
+WARNs (in the `session` and `ci` tiers) on any test whose card is missing a field
+or any card with no matching test — so a half-carded test is flagged loudly, though
+the warning does not hard-block a commit.
+
+## Catalog browser
+
+The Franklin tab has a collapsible **Catalog** section: a search box over all test
+cards (matches keys, files, and every prose field). Each card here shows **Last
+result** (the newest archived suite run's pass/fail for that test) in place of the
+per-run "Run by".
 
 ## What "stalled" means
 

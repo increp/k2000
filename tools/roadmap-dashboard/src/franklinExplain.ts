@@ -13,12 +13,35 @@ export interface CatalogEntry {
   why: string;
   deviationMeans: string;
   links: string[];
+  /** v2 (Task 3): the concrete quantities the test compares. Absent on stale v1 catalogs. */
+  compares?: string;
+  /** v2 (Task 3): what a passing result actually proves. Absent on stale v1 catalogs. */
+  succeedingMeans?: string;
 }
 
 /** Looks up a catalog entry by `${name} / ${sub}` (exact key match). Null on miss. */
 export function catalogLookup(entries: CatalogEntry[], name: string, sub: string): CatalogEntry | null {
   const key = `${name} / ${sub}`;
   return entries.find((e) => e.key === key) ?? null;
+}
+
+/**
+ * Case-insensitive substring filter over key + file + all prose fields
+ * (what/why/deviationMeans/compares/succeedingMeans). An empty or whitespace-only
+ * query returns every entry (same array, unfiltered). v1 entries that lack the
+ * v2 prose fields are tolerated — a missing field simply contributes nothing to
+ * the haystack rather than throwing on `undefined`.
+ */
+export function filterCatalog(entries: CatalogEntry[], query: string): CatalogEntry[] {
+  const q = query.trim().toLowerCase();
+  if (q === "") return entries;
+  return entries.filter((e) => {
+    const hay = [e.key, e.file, e.what, e.why, e.deviationMeans, e.compares, e.succeedingMeans]
+      .filter((s): s is string => typeof s === "string")
+      .join("\n")
+      .toLowerCase();
+    return hay.includes(q);
+  });
 }
 
 // Real chz labels look like (see characterize_main.cpp:59, CharacterizationRunner.cpp:591+):

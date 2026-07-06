@@ -151,6 +151,35 @@ test("startRun: creates the sidecar .franklin/runs dir when it doesn't exist yet
   assert.ok(files.some((f) => f.endsWith("-suite.log")), `expected a sidecar log in ${files.join(", ")}`);
 });
 
+// --- startRun: env stamp (BERNIE_RUNNER=dashboard) ---
+
+test("startRun: injects BERNIE_RUNNER=dashboard into spawned process env", async () => {
+  const rootDir = await tmpDir();
+  await mkdir(join(rootDir, "build", "tests"), { recursive: true });
+  // Fake binary that writes the BERNIE_RUNNER env var to a probe file.
+  // cwd will be rootDir, so write to rootDir/runner-probe.txt.
+  const fakeBin = join(rootDir, "build", "tests", "k2000_tests");
+  await writeFile(
+    fakeBin,
+    "#!/bin/sh\n" +
+    "printenv BERNIE_RUNNER > \"${PWD}/runner-probe.txt\" 2>/dev/null || printenv BERNIE_RUNNER > /tmp/runner-probe-$$.txt\n" +
+    "exit 0\n"
+  );
+  await chmod(fakeBin, 0o755);
+
+  const result = await startRun(rootDir, "suite", {});
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  // Let the process finish and write the file.
+  const probePath = join(rootDir, "runner-probe.txt");
+  await new Promise((r) => setTimeout(r, 500));
+
+  // Verify the probe file was created and contains "dashboard".
+  const probeContent = await readFile(probePath, "utf8");
+  assert.equal(probeContent.trim(), "dashboard", "BERNIE_RUNNER env var must be set to 'dashboard' in child process");
+});
+
 // --- stopRun: pid-verified stop lifecycle ----------------------------------
 
 test("stopRun: terminates a real spawned process and appends a stopped end event", async () => {

@@ -28,8 +28,11 @@ Requires **Node 24+** (native TypeScript type-stripping + built-in test runner).
 Beside **Roadmap**, a **Franklin** tab shows Franklin's runs (device
 characterization + the test suite) live: running/stalled cards with progress,
 a CI strip, a new-run form (whitelisted templates only), and an archive with a
-deviations-first run-detail view. See `docs/franklin/dashboard.md` for the full
-operator's manual and `docs/franklin/charter.md` for what Franklin is.
+deviations-first run-detail view. Each test expands to a six-field info card
+(what/purpose/compares/on-success/on-failure/**who ran it** — you, Claude, or CI),
+and a searchable **Catalog** section browses all test cards. See
+`docs/franklin/dashboard.md` for the full operator's manual and
+`docs/franklin/charter.md` for what Franklin is.
 
 Runs record to `.franklin/runs/*.ndjson` the moment a Franklin producer starts —
 **even when this dashboard isn't running.** The dashboard only reads and displays

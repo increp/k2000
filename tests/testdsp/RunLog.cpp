@@ -37,16 +37,53 @@ juce::String jsonEscape(const juce::String& s) {
     return out;
 }
 
+static juce::String detectRunner() {
+    const char* br = std::getenv("BERNIE_RUNNER");
+    const char* ga = std::getenv("GITHUB_ACTIONS");
+    const char* cc = std::getenv("CLAUDECODE");
+
+    if (br != nullptr && br[0] != '\0') return juce::String(br);
+    if (ga != nullptr) return "ci";
+    if (cc != nullptr) return "claude";
+    return "terminal";
+}
+
 static juce::File defaultDir() {
     if (const char* d = std::getenv("BERNIE_RUNLOG_DIR"))
         return juce::File::getCurrentWorkingDirectory().getChildFile(juce::String(d));
     return juce::File::getCurrentWorkingDirectory().getChildFile(".franklin/runs");
 }
 
+int lastSuiteTestCount() {
+    // Honor the "zero disk side effects" contract: read nothing when logging is off.
+    if (const char* n = std::getenv("BERNIE_NO_RUNLOG"); n != nullptr && juce::String(n) == "1") return -1;
+    auto dir = defaultDir();
+    if (!dir.isDirectory()) return -1;
+    juce::Array<juce::File> files;
+    dir.findChildFiles(files, juce::File::findFiles, false, "*-suite-*.ndjson");
+    juce::File newest;
+    juce::int64 newestMs = std::numeric_limits<juce::int64>::min();
+    for (const auto& f : files) {
+        const auto m = f.getLastModificationTime().toMilliseconds();
+        if (m > newestMs) { newestMs = m; newest = f; }
+    }
+    if (newest == juce::File()) return -1;
+    juce::StringArray lines;
+    lines.addLines(newest.loadFileAsString());
+    for (int i = lines.size() - 1; i >= 0; --i) {   // last non-empty line = the end event
+        if (lines[i].trim().isEmpty()) continue;
+        auto parsed = juce::JSON::parse(lines[i]);
+        if (parsed.isObject() && parsed.getProperty("ev", "").toString() == "end")
+            return (int) parsed.getProperty("tests", -1);
+        return -1;   // newest run has no end yet (running/crashed) — don't estimate from it
+    }
+    return -1;
+}
+
 Writer::Writer(const juce::String& kind) : Writer(kind, defaultDir(), 1000, 3600 * 1000) {}
 
 Writer::Writer(const juce::String& kind, const juce::File& dir, int64_t throttleMs, int64_t slowAfterMs)
-    : throttleMs_(throttleMs), slowAfterMs_(slowAfterMs), kind_(kind) {
+    : kind_(kind), throttleMs_(throttleMs), slowAfterMs_(slowAfterMs) {
     if (std::getenv("BERNIE_NO_RUNLOG") != nullptr && juce::String(std::getenv("BERNIE_NO_RUNLOG")) == "1") { enabled_ = false; return; }
     dir.createDirectory();
     t0Ms_ = juce::Time::currentTimeMillis();
@@ -76,7 +113,7 @@ void Writer::start(const juce::StringArray& argv, const juce::String& model,
     j << "{\"ev\":\"start\",\"ts\":" << juce::Time::currentTimeMillis()
       << ",\"kind\":\"" << jsonEscape(kind_)
       << "\",\"argv\":[" << a << "],\"pid\":" << currentPid()
-      << ",\"buildType\":\"" << bt << "\"";
+      << ",\"buildType\":\"" << bt << "\",\"runner\":\"" << jsonEscape(detectRunner()) << "\"";
     if (const char* sha = std::getenv("BERNIE_GIT_SHA")) j << ",\"gitSha\":\"" << jsonEscape(sha) << "\"";
     if (model.isNotEmpty()) j << ",\"model\":\"" << jsonEscape(model) << "\"";
     if (grid.isNotEmpty())  j << ",\"grid\":\""  << jsonEscape(grid)  << "\"";
