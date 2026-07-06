@@ -267,7 +267,7 @@ test("GET /api/catalog with catalogPath unset falls back to the real docs/frankl
     const r = await fetch(`http://127.0.0.1:${port}/api/catalog`);
     assert.equal(r.status, 200);
     const body = await r.json() as { version: number; entries: unknown[] };
-    assert.equal(body.version, 1);
+    assert.equal(body.version, 2);
     assert.ok(body.entries.length > 0);
   } finally {
     catalogServer.close();
