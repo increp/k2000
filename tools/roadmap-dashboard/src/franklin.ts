@@ -2,11 +2,22 @@
 // state, polls on timers, delegates all UI events by data-action (main.ts idiom),
 // and hands the string HTML from franklinRender.ts to the DOM.
 //
+// Stable-DOM rendering (the dropdown fix): mount builds FIVE persistent
+// <section data-fr="..."> containers ONCE; each poller rewrites ONLY its own
+// section's innerHTML. A native <select> the user has opened lives inside the
+// form section, which — thanks to the guards below — is never touched while it
+// holds focus and never touched in steady state, so the browser never closes it.
+//   Guard (a): the form section re-renders only when JSON.stringify({templates,
+//     stale}) differs from the last render — steady-state = zero DOM writes.
+//   Guard (b): paintSection refuses to repaint any section that contains
+//     document.activeElement; it stashes the pending HTML and a focusout flush
+//     applies it on the next tick once focus has left.
+//
 // Type-only imports for server modules (erased at bundle time — no node:* leaks).
-import { renderRunsPage, renderRunDetail } from "./franklinRender.ts";
+import { renderActive, renderCiStrip, renderForm, renderArchive, renderRunDetail } from "./franklinRender.ts";
 import type { RunSummary, RunDetail } from "./franklinTypes.ts";
 import type { CiPayload } from "../server/ci.ts";
-import type { StaleInfo } from "../server/control.ts";
+import type { StaleInfo, Template } from "../server/control.ts";
 import type { CatalogEntry } from "./franklinExplain.ts";
 
 const RUNS_POLL_MS = 2_000;
@@ -17,6 +28,7 @@ interface FranklinState {
   disk: number;
   ci: CiPayload;
   stale: StaleInfo[];
+  templates: Template[];
   catalog: CatalogEntry[];
   catalogError: boolean;
   openDetailId: string | null;
@@ -26,15 +38,27 @@ interface FranklinState {
 
 const EMPTY_CI: CiPayload = { available: false, fetchedAt: 0, branches: [] };
 
+function emptyState(): FranklinState {
+  return {
+    runs: [], disk: 0, ci: EMPTY_CI, stale: [], templates: [], catalog: [], catalogError: false,
+    openDetailId: null, openDetailData: null,
+  };
+}
+
 let host: HTMLElement | null = null;
-let state: FranklinState = {
-  runs: [], disk: 0, ci: EMPTY_CI, stale: [], catalog: [], catalogError: false,
-  openDetailId: null, openDetailData: null,
-};
+let state: FranklinState = emptyState();
 const timers: ReturnType<typeof setInterval>[] = [];
 let clickHandler: ((ev: Event) => void) | null = null;
 let submitHandler: ((ev: Event) => void) | null = null;
 let changeHandler: ((ev: Event) => void) | null = null;
+let focusoutHandler: ((ev: Event) => void) | null = null;
+
+// Per-section HTML that paintSection deferred because the section held focus.
+// Flushed on the next tick after a focusout. Keyed by data-fr section name.
+const pending = new Map<string, string>();
+// Last {templates, stale} JSON the form section rendered — guard (a). null until
+// the first form paint, so the first data arrival always renders once.
+let lastFormPayload: string | null = null;
 
 // Bumped on every mount/unmount. Async refreshers capture the generation
 // before their first await and bail before touching state/DOM if it has
@@ -58,7 +82,7 @@ async function refreshRuns(): Promise<void> {
     if (gen !== mountGen) return; // a later mount/unmount has already superseded this fetch
     state.runs = runs;
     state.disk = disk;
-    paint();
+    paintRuns();
   } catch { /* transient; next poll retries */ }
 }
 
@@ -68,18 +92,19 @@ async function refreshCi(): Promise<void> {
     const ci = await getJson<CiPayload>("/api/ci");
     if (gen !== mountGen) return;
     state.ci = ci;
-    paint();
+    paintCi();
   } catch { /* keep last-known CI */ }
 }
 
 async function refreshTemplates(): Promise<void> {
   const gen = mountGen;
   try {
-    const { stale } = await getJson<{ stale: StaleInfo[] }>("/api/control/templates");
+    const { templates, stale } = await getJson<{ templates: Template[]; stale: StaleInfo[] }>("/api/control/templates");
     if (gen !== mountGen) return;
+    state.templates = templates;
     state.stale = stale;
-    paint();
-  } catch { /* keep last-known stale info */ }
+    paintForm();
+  } catch { /* keep last-known template/stale info */ }
 }
 
 async function refreshCatalog(): Promise<void> {
@@ -103,9 +128,95 @@ async function refreshCatalog(): Promise<void> {
   }
 }
 
-// --- render -----------------------------------------------------------------
+// --- section painting -------------------------------------------------------
 
-/** Reads the current new-run form selections so a poll repaint can restore them. */
+/**
+ * Writes `html` into the [data-fr="name"] section — UNLESS that section
+ * currently contains document.activeElement, in which case the repaint is
+ * deferred (stashed in `pending`) and applied by the focusout flush once the
+ * user's focus leaves. This is what keeps an open <select> alive across polls.
+ */
+function paintSection(name: string, html: string): void {
+  const el = host?.querySelector<HTMLElement>(`[data-fr="${name}"]`);
+  if (!el) return;
+  if (el.contains(document.activeElement)) { pending.set(name, html); return; }
+  el.innerHTML = html;
+}
+
+/**
+ * After focus leaves a deferred section, apply its stashed HTML on the next tick.
+ * The form section carries user selection + chz-only visibility that the fresh
+ * markup would reset, so we preserve them across the deferred write exactly as
+ * the immediate paintForm path does (capture -> write -> restore -> sync).
+ */
+function flushPending(): void {
+  if (pending.size === 0) return;
+  const drained = [...pending.entries()];
+  pending.clear();
+  for (const [name, html] of drained) {
+    if (name === "form") {
+      const form = captureForm();
+      paintSection("form", html);
+      restoreForm(form);
+      syncFormVisibility();
+    } else if (name === "archive") {
+      paintSection("archive", html);
+      // The fresh archive markup has an empty drawer slot; re-attach the open
+      // drawer so clicking away from a focused archive element doesn't blank it.
+      if (state.openDetailId) void openDetail(state.openDetailId, isRunLive(state.openDetailId));
+    } else {
+      paintSection(name, html);
+    }
+  }
+}
+
+/** Active + archive sections both derive from state.runs, so they repaint together. */
+function paintRuns(): void {
+  paintSection("active", renderActive(state.runs, Date.now()));
+  paintArchive();
+}
+
+function paintArchive(): void {
+  paintSection("archive", renderArchive(state.runs, state.disk));
+  // Re-attach the open detail drawer, if any. Finished runs are immutable —
+  // only re-fetch when the run is still running/stalled (this used to re-invoke
+  // a full detail fetch every 2s poll even for archived runs).
+  if (state.openDetailId) void openDetail(state.openDetailId, isRunLive(state.openDetailId));
+}
+
+function paintCi(): void {
+  paintSection("ci", renderCiStrip(state.ci));
+}
+
+/**
+ * Repaints the form section — but only when its input ({templates, stale})
+ * actually changed since the last render (guard (a)). In steady state this is a
+ * no-op, so a user paging through the template <select> is never disturbed.
+ * When it does repaint, we preserve the in-progress selection and re-sync the
+ * chz-only field visibility (the fresh markup starts at the default option).
+ */
+function paintForm(): void {
+  if (!host) return;
+  const payload = JSON.stringify({ templates: state.templates, stale: state.stale });
+  if (payload === lastFormPayload) return; // nothing changed -> leave the DOM (and any open select) alone
+  lastFormPayload = payload;
+  const form = captureForm();
+  paintSection("form", renderForm(state.templates, state.stale));
+  restoreForm(form);
+  syncFormVisibility();
+}
+
+function paintCatalogBanner(): void {
+  const el = host?.querySelector<HTMLElement>('[data-fr="catalog-banner"]');
+  if (!el) return;
+  el.innerHTML = state.catalogError
+    ? `<p class="fr-catalog-warn">catalog unreadable — test explanations disabled</p>`
+    : "";
+}
+
+// --- form helpers -----------------------------------------------------------
+
+/** Reads the current new-run form selections so a form repaint can restore them. */
 function captureForm(): { template?: string; model?: string; grid?: string } {
   if (!host) return {};
   return {
@@ -127,24 +238,6 @@ function restoreForm(f: { template?: string; model?: string; grid?: string }): v
   set("grid", f.grid);
 }
 
-function paint(): void {
-  if (!host) return;
-  // A 2s poll fully re-renders the page; capture the user's in-progress form
-  // selections first and restore them so a poll never clobbers a half-filled form.
-  const form = captureForm();
-  const banner = state.catalogError
-    ? `<p class="fr-catalog-warn">catalog unreadable — test explanations disabled</p>`
-    : "";
-  host.innerHTML = banner + renderRunsPage(state.runs, state.ci, state.disk, state.stale);
-  restoreForm(form);
-  // Reflect chz-only field visibility for the current template selection.
-  syncFormVisibility();
-  // Re-attach the open detail drawer, if any. Finished runs are immutable —
-  // only re-fetch when the run is still running/stalled (fix: this used to
-  // re-invoke a full detail fetch every 2s poll even for archived runs).
-  if (state.openDetailId) void openDetail(state.openDetailId, isRunLive(state.openDetailId));
-}
-
 /** Shows/hides the model+grid selects based on whether the picked template is chz. */
 function syncFormVisibility(): void {
   if (!host) return;
@@ -163,6 +256,8 @@ function syncFormVisibility(): void {
   }
 }
 
+// --- detail drawer ----------------------------------------------------------
+
 const LIVE_STATUS = new Set(["running", "stalled"]);
 
 /** True while `id`'s last-known status (per state.runs) is still live. Unknown ids (e.g. pruned from the list) are treated as finished — never poll forever on a run we can no longer see. */
@@ -174,11 +269,11 @@ function isRunLive(id: string): boolean {
  * Opens (or repaints) the detail drawer for `id`.
  *
  * `refetch` distinguishes a user-initiated open (always fetch fresh) from a
- * repaint-driven re-attach (paint() calls this on every 2s poll to keep the
- * drawer present across a full innerHTML replace). On repaint, a finished
- * run's detail can't change, so we reuse the cached detail and skip the
- * network round-trip entirely; a live run still re-fetches so progress and
- * eventual pass/fail keep updating.
+ * repaint-driven re-attach (paintArchive calls this on every 2s poll to keep
+ * the drawer present across the archive section's innerHTML replace). On
+ * repaint, a finished run's detail can't change, so we reuse the cached detail
+ * and skip the network round-trip entirely; a live run still re-fetches so
+ * progress and eventual pass/fail keep updating.
  */
 async function openDetail(id: string, refetch: boolean = true): Promise<void> {
   if (!host) return;
@@ -301,27 +396,52 @@ function onChange(ev: Event): void {
   if (t.getAttribute("data-role") === "template") syncFormVisibility();
 }
 
+// A section that skipped its repaint because it held focus (an open <select>,
+// a focused input) gets its stashed HTML applied once focus leaves. Deferred to
+// a microtask/next tick so we never rip the DOM out from under the very event
+// that is still propagating.
+function onFocusOut(): void {
+  queueMicrotask(flushPending);
+}
+
 // --- lifecycle --------------------------------------------------------------
+
+/** The five persistent section containers, built once at mount. `catalog` stays empty until Task 5. */
+const SECTION_SKELETON =
+  `<div data-fr="catalog-banner"></div>` +
+  `<div class="fr-root">` +
+  `<section data-fr="active"></section>` +
+  `<section data-fr="ci"></section>` +
+  `<section data-fr="form"></section>` +
+  `<section data-fr="catalog"></section>` +
+  `<section data-fr="archive"></section>` +
+  `</div>`;
 
 export function mountFranklin(app: HTMLElement): void {
   mountGen++; // invalidate any in-flight fetches from a previous mount
   host = app;
-  state = {
-    runs: [], disk: 0, ci: EMPTY_CI, stale: [], catalog: [], catalogError: false,
-    openDetailId: null, openDetailData: null,
-  };
-  app.innerHTML = `<p class="fr-empty">Loading Franklin…</p>`;
+  state = emptyState();
+  pending.clear();
+  lastFormPayload = null;
+  // Build the persistent sections ONCE. Pollers only ever rewrite a section's
+  // innerHTML from here on — the section elements themselves are never replaced,
+  // so an open <select> inside one survives every poll.
+  app.innerHTML = SECTION_SKELETON;
+  paintSection("active", `<p class="fr-empty">Loading Franklin…</p>`);
 
   clickHandler = (ev) => onClick(ev);
   submitHandler = (ev) => onSubmit(ev);
   changeHandler = (ev) => onChange(ev);
+  focusoutHandler = () => onFocusOut();
   app.addEventListener("click", clickHandler);
   app.addEventListener("submit", submitHandler);
   app.addEventListener("change", changeHandler);
+  app.addEventListener("focusout", focusoutHandler);
 
   // One-shot: catalog + templates, then paint with runs/ci.
   void (async () => {
     await Promise.all([refreshCatalog(), refreshTemplates()]);
+    if (host) paintCatalogBanner(); // reflect catalog availability once known
     await Promise.all([refreshRuns(), refreshCi()]);
   })();
 
@@ -336,6 +456,8 @@ export function unmountFranklin(): void {
   if (host && clickHandler) host.removeEventListener("click", clickHandler);
   if (host && submitHandler) host.removeEventListener("submit", submitHandler);
   if (host && changeHandler) host.removeEventListener("change", changeHandler);
-  clickHandler = submitHandler = changeHandler = null;
+  if (host && focusoutHandler) host.removeEventListener("focusout", focusoutHandler);
+  clickHandler = submitHandler = changeHandler = focusoutHandler = null;
+  pending.clear();
   host = null;
 }

@@ -6,7 +6,7 @@
 // node:* code leaks into the browser bundle (see task brief).
 import type { RunSummary, RunDetail, RunCheck, TestEvent } from "./franklinTypes.ts";
 import type { CiPayload } from "../server/ci.ts";
-import type { StaleInfo } from "../server/control.ts";
+import type { StaleInfo, Template } from "../server/control.ts";
 import { catalogLookup, explainChzLabel } from "./franklinExplain.ts";
 import type { CatalogEntry } from "./franklinExplain.ts";
 
@@ -116,7 +116,8 @@ function activeCard(r: RunSummary, now: number): string {
     </div>`;
 }
 
-function activeSection(runs: RunSummary[], now: number): string {
+/** Active-runs section (running/stalled cards). One of the five persistent sections. */
+export function renderActive(runs: RunSummary[], now: number): string {
   const active = runs.filter(isActive);
   const body = active.length > 0
     ? active.map((r) => activeCard(r, now)).join("")
@@ -149,7 +150,8 @@ function ciCheckDot(c: CiPayload["branches"][number]["checks"][number]): string 
     : inner;
 }
 
-function ciStrip(ci: CiPayload): string {
+/** CI strip section (per-branch check dots). One of the five persistent sections. */
+export function renderCiStrip(ci: CiPayload): string {
   if (!ci.available) {
     return `<section class="fr-section fr-ci">
         <h2>CI</h2>
@@ -175,32 +177,36 @@ function ciStrip(ci: CiPayload): string {
 // New-run form
 // ---------------------------------------------------------------------------
 
-// Template binaries are fixed (control.ts). We key the stale chip off the PATH
-// of the binary each template drives — never a positional index, since the four
-// templates share only two binaries.
+// The chz binary path (control.ts). A template drives chz iff its binary is this
+// one — the model/grid selects only apply to chz. We key the stale chip off the
+// PATH of the binary each template drives — never a positional index, since the
+// four templates share only two binaries.
 const CHZ_BIN = "build/tests/k2000_device_characterization";
-const SUITE_BIN = "build/tests/k2000_tests";
 
-const TEMPLATE_OPTIONS: { id: string; label: string; bin: string; isChz: boolean }[] = [
-  { id: "suite", label: "Full suite", bin: SUITE_BIN, isChz: false },
-  { id: "suite-disparity", label: "Suite (disparity sweep)", bin: SUITE_BIN, isChz: false },
-  { id: "suite-voiceperf", label: "Suite (voice perf)", bin: SUITE_BIN, isChz: false },
-  { id: "chz", label: "Device characterization", bin: CHZ_BIN, isChz: true },
-];
+function isChzTemplate(t: Template): boolean {
+  return t.bin === CHZ_BIN;
+}
 
 function staleFor(bin: string, stale: StaleInfo[]): boolean {
   return stale.some((s) => s.binary === bin && s.stale);
 }
 
-function newRunForm(stale: StaleInfo[]): string {
-  const options = TEMPLATE_OPTIONS.map((t) => {
+/**
+ * New-run form section (template picker + chz model/grid + stale chip).
+ * One of the five persistent sections. Takes the real Template[] the server
+ * ships alongside stale info; `data-chz`/`data-bin` on each option let the
+ * client toggle the chz-only fields and target the stale chip by binary path.
+ */
+export function renderForm(templates: Template[], stale: StaleInfo[]): string {
+  const options = templates.map((t) => {
+    const chz = isChzTemplate(t);
     const chip = staleFor(t.bin, stale) ? " ⚠ stale" : "";
-    return `<option value="${escAttr(t.id)}" data-chz="${t.isChz ? "1" : "0"}" data-bin="${escAttr(t.bin)}">${esc(t.label)}${chip}</option>`;
+    return `<option value="${escAttr(t.id)}" data-chz="${chz ? "1" : "0"}" data-bin="${escAttr(t.bin)}">${esc(t.label)}${chip}</option>`;
   }).join("");
 
   // Any stale binary at all -> a visible top-level chip (per-template chip is in
   // the option text; this one is the always-visible summary the tests key on).
-  const anyStale = TEMPLATE_OPTIONS.some((t) => staleFor(t.bin, stale));
+  const anyStale = templates.some((t) => staleFor(t.bin, stale));
   const staleChip = anyStale
     ? `<span class="fr-stale-chip" data-role="stale-chip">⚠ a selected binary may be stale — rebuild before trusting results</span>`
     : `<span class="fr-stale-chip fr-hidden" data-role="stale-chip"></span>`;
@@ -264,7 +270,12 @@ function archiveRow(r: RunSummary): string {
     </tr>`;
 }
 
-function archiveSection(runs: RunSummary[], diskBytes: number): string {
+/**
+ * Archive section (finished-run table + detail-drawer mount point).
+ * One of the five persistent sections. The drawer (`data-role="detail-drawer"`)
+ * is filled by franklin.ts's openDetail; renderArchive only lays out its slot.
+ */
+export function renderArchive(runs: RunSummary[], diskBytes: number): string {
   const finished = runs.filter((r) => !isActive(r));
   const rows = finished.length > 0
     ? finished.map(archiveRow).join("")
@@ -277,25 +288,6 @@ function archiveSection(runs: RunSummary[], diskBytes: number): string {
       </table>
       <div data-role="detail-drawer" class="fr-drawer"></div>
     </section>`;
-}
-
-// ---------------------------------------------------------------------------
-// renderRunsPage — top-level composition
-// ---------------------------------------------------------------------------
-
-export function renderRunsPage(
-  runs: RunSummary[],
-  ci: CiPayload,
-  diskBytes: number,
-  stale: StaleInfo[],
-  now: number = Date.now(),
-): string {
-  return `<div class="fr-root">
-    ${activeSection(runs, now)}
-    ${ciStrip(ci)}
-    ${newRunForm(stale)}
-    ${archiveSection(runs, diskBytes)}
-  </div>`;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,14 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderRunsPage, renderRunDetail, deviationRows, esc, humanizeMs } from "./franklinRender.ts";
+import {
+  renderActive,
+  renderCiStrip,
+  renderForm,
+  renderArchive,
+  renderRunDetail,
+  deviationRows,
+  esc,
+  humanizeMs,
+} from "./franklinRender.ts";
 import type { RunSummary, RunDetail } from "./franklinTypes.ts";
 import type { CiPayload } from "../server/ci.ts";
-import type { StaleInfo } from "../server/control.ts";
+import type { StaleInfo, Template } from "../server/control.ts";
 import type { CatalogEntry } from "./franklinExplain.ts";
 
 // ---- fixtures --------------------------------------------------------------
 
 const EMPTY_CI: CiPayload = { available: false, fetchedAt: 0, branches: [] };
+const NOW = 1_050_000;
+
+// The fixed template whitelist, mirroring server/control.ts's templates().
+// renderForm now takes the real Template[] the server already ships alongside
+// stale info (server.ts returns { templates: templates(), stale }).
+function templates(): Template[] {
+  return [
+    { id: "suite", label: "Full suite", bin: "build/tests/k2000_tests", args: [], env: {} },
+    { id: "suite-disparity", label: "Suite (disparity sweep)", bin: "build/tests/k2000_tests", args: [], env: {} },
+    { id: "suite-voiceperf", label: "Suite (voice perf)", bin: "build/tests/k2000_tests", args: [], env: {} },
+    { id: "chz", label: "Device characterization", bin: "build/tests/k2000_device_characterization", args: [], env: {} },
+  ];
+}
 
 // The re-run payload ships inside a data-rerun HTML attribute (quotes escaped
 // to &quot;). The browser un-escapes it to el.dataset.rerun before JSON.parse;
@@ -79,72 +101,183 @@ test("humanizeMs: hours", () => {
   assert.match(humanizeMs(3 * 3_600_000 + 60_000), /3\s*h/);
 });
 
-// ---- renderRunsPage: running chz card --------------------------------------
+// ---- renderActive: running chz card ----------------------------------------
 
-test("running chz card shows done/total, percent, and a live status", () => {
-  const html = renderRunsPage([runningChz()], EMPTY_CI, 1024, []);
+test("renderActive: running chz card shows done/total, percent, and a live status", () => {
+  const html = renderActive([runningChz()], NOW);
   assert.match(html, /20\s*\/\s*100/); // done/total
   assert.match(html, /20\s*%/); // percent (20/100)
   assert.match(html, /status-running/);
   assert.match(html, /data-action="stop"/); // running cards are stoppable
 });
 
-test("running chz card computes ETA from now, startedAt, done, total", () => {
+test("renderActive: running chz card computes ETA from now, startedAt, done, total", () => {
   // elapsed = now - startedAt = 100s over 20 done => 5s/item; 80 remain => 400s ETA => ~6-7 min
   const now = 1_000_000 + 100_000;
-  const html = renderRunsPage([runningChz()], EMPTY_CI, 0, [], now);
+  const html = renderActive([runningChz()], now);
   assert.match(html, /ETA/);
   assert.match(html, /6\s*m|7\s*m/);
 });
 
-test("running chz card surfaces the explained label title, not the raw label", () => {
-  const html = renderRunsPage([runningChz()], EMPTY_CI, 0, []);
+test("renderActive: running chz card surfaces the explained label title, not the raw label", () => {
+  const html = renderActive([runningChz()], NOW);
   assert.match(html, /Magnitude response/); // explainChzLabel B1 title
 });
 
-test("running chz card with done=0 does not divide-by-zero or print NaN/Infinity", () => {
-  const html = renderRunsPage([runningChz({ done: 0 })], EMPTY_CI, 0, [], 1_050_000);
+test("renderActive: running chz card with done=0 does not divide-by-zero or print NaN/Infinity", () => {
+  const html = renderActive([runningChz({ done: 0 })], NOW);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
 
-// ---- renderRunsPage: stalled ----------------------------------------------
-
-test("stalled run shows a stalled badge and remains stoppable", () => {
-  const html = renderRunsPage([runningChz({ status: "stalled" })], EMPTY_CI, 0, []);
+test("renderActive: stalled run shows a stalled badge and remains stoppable", () => {
+  const html = renderActive([runningChz({ status: "stalled" })], NOW);
   assert.match(html, /status-stalled/);
   assert.match(html, /stalled/i);
   assert.match(html, /data-action="stop"/);
 });
 
-// ---- renderRunsPage: archive table -----------------------------------------
+test("renderActive: shows an empty note and no cards when nothing is running", () => {
+  const html = renderActive([], NOW);
+  assert.match(html, /No active runs/i);
+  assert.doesNotMatch(html, /data-run-id=/);
+});
 
-test("finished suite run appears in the archive with a humanized duration and outcome", () => {
+test("renderActive: renders ONLY active runs, never finished ones", () => {
+  const finished: RunSummary = {
+    id: "done.ndjson", kind: "suite", startedAt: 1, status: "pass", sizeBytes: 1, durationS: 5,
+  };
+  const html = renderActive([runningChz(), finished], NOW);
+  assert.match(html, /20260703-160000-chz/); // the running one is present
+  assert.doesNotMatch(html, /done\.ndjson/); // finished ones are the archive's job
+  // no archive scaffolding leaks into the active section
+  assert.doesNotMatch(html, /fr-arch-table/);
+});
+
+// ---- renderCiStrip ---------------------------------------------------------
+
+test("renderCiStrip: renders each branch and check when available", () => {
+  const ci: CiPayload = {
+    available: true, fetchedAt: 0,
+    branches: [
+      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "http://ci/1" }] },
+    ],
+  };
+  const html = renderCiStrip(ci);
+  assert.match(html, /My PR/);
+  assert.match(html, /build/);
+});
+
+test("renderCiStrip: shows an unavailable note when gh is down (never crashes)", () => {
+  const html = renderCiStrip(EMPTY_CI);
+  assert.match(html, /CI/); // section still present
+});
+
+test("renderCiStrip: never renders a non-http(s) check url as a clickable href", () => {
+  const ci: CiPayload = {
+    available: true, fetchedAt: 0,
+    branches: [
+      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "javascript:alert(1)" }] },
+    ],
+  };
+  const html = renderCiStrip(ci);
+  assert.match(html, /build/); // check name still shown as plain text
+  assert.doesNotMatch(html, /href="javascript:/);
+});
+
+test("renderCiStrip: still renders a normal https check url as a clickable anchor", () => {
+  const ci: CiPayload = {
+    available: true, fetchedAt: 0,
+    branches: [
+      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "https://github.com/example/repo/actions/runs/1" }] },
+    ],
+  };
+  const html = renderCiStrip(ci);
+  assert.match(html, /href="https:\/\/github\.com\/example\/repo\/actions\/runs\/1"/);
+});
+
+// ---- renderForm ------------------------------------------------------------
+
+test("renderForm: exposes the template <select> and the chz model/grid selects", () => {
+  const html = renderForm(templates(), []);
+  assert.match(html, /data-role="template"/);
+  assert.match(html, /data-role="model"/);
+  assert.match(html, /data-role="grid"/);
+  assert.match(html, /<select/); // the native control the dropdown fix protects
+  assert.match(html, /Full suite/); // a template label from the passed Template[]
+  assert.match(html, /Device characterization/);
+});
+
+test("renderForm: marks the chz template option so the client can show model/grid", () => {
+  const html = renderForm(templates(), []);
+  // the chz option carries data-chz="1"; suite options carry data-chz="0"
+  assert.match(html, /data-chz="1"/);
+  assert.match(html, /data-chz="0"/);
+});
+
+test("renderForm: shows a stale-binary warning chip matched by binary PATH not index", () => {
+  const stale: StaleInfo[] = [
+    { binary: "build/tests/k2000_device_characterization", stale: true, binaryMtimeMs: 1, newestSourceMtimeMs: 2 },
+    { binary: "build/tests/k2000_tests", stale: false, binaryMtimeMs: 5, newestSourceMtimeMs: 2 },
+  ];
+  const html = renderForm(templates(), stale);
+  assert.match(html, /stale/i);
+});
+
+test("renderForm: no stale warning surfaces when every binary is fresh", () => {
+  const stale: StaleInfo[] = [
+    { binary: "build/tests/k2000_device_characterization", stale: false, binaryMtimeMs: 5, newestSourceMtimeMs: 2 },
+    { binary: "build/tests/k2000_tests", stale: false, binaryMtimeMs: 5, newestSourceMtimeMs: 2 },
+  ];
+  const html = renderForm(templates(), stale);
+  // the always-visible summary chip is present but hidden and empty
+  assert.match(html, /data-role="stale-chip"/);
+  assert.doesNotMatch(html, /may be stale/);
+});
+
+test("renderForm: is byte-for-byte deterministic for identical inputs (no timestamps/randomness)", () => {
+  const t = templates();
+  const s: StaleInfo[] = [{ binary: "build/tests/k2000_tests", stale: true, binaryMtimeMs: 1, newestSourceMtimeMs: 2 }];
+  // This is the property the dropdown fix leans on: a steady-state re-render
+  // produces identical HTML, so the section poller can skip touching the DOM.
+  assert.equal(renderForm(t, s), renderForm(t, s));
+});
+
+test("renderForm: contains the form but NONE of the archive's rows/table", () => {
+  const html = renderForm(templates(), []);
+  assert.match(html, /data-role="newrun-form"/);
+  assert.doesNotMatch(html, /fr-arch-table/);
+  assert.doesNotMatch(html, /data-action="rerun"/);
+});
+
+// ---- renderArchive ---------------------------------------------------------
+
+test("renderArchive: finished suite run appears with a humanized duration and outcome", () => {
   const done: RunSummary = {
     id: "20260703-150000-suite.ndjson", kind: "suite", startedAt: 1_000_000,
     status: "pass", sizeBytes: 48174, durationS: 16.6, tests: 291, failed: 0,
   };
-  const html = renderRunsPage([done], EMPTY_CI, 48174, []);
+  const html = renderArchive([done], 48174);
   assert.match(html, /status-pass/);
   assert.match(html, /16\.6\s*s/); // humanized duration from durationS (one decimal)
   assert.match(html, /pass/);
 });
 
-test("archive suite row offers a plain re-run carrying templateId suite", () => {
+test("renderArchive: suite row offers a plain re-run carrying templateId suite", () => {
   const done: RunSummary = {
     id: "s.ndjson", kind: "suite", startedAt: 1, status: "pass", sizeBytes: 1, durationS: 5,
   };
-  const html = renderRunsPage([done], EMPTY_CI, 1, []);
+  const html = renderArchive([done], 1);
   assert.match(html, /data-action="rerun"/);
   assert.match(html, /re-run \(plain\)/); // suite env flags not recoverable
   assert.equal(firstRerunPayload(html).templateId, "suite");
 });
 
-test("archive chz row re-run carries templateId chz plus model/grid params", () => {
+test("renderArchive: chz row re-run carries templateId chz plus model/grid params", () => {
   const done: RunSummary = {
     id: "c.ndjson", kind: "chz", startedAt: 1, status: "fail", sizeBytes: 1,
     durationS: 5, model: "huggett", grid: "full",
   };
-  const html = renderRunsPage([done], EMPTY_CI, 1, []);
+  const html = renderArchive([done], 1);
   assert.match(html, /data-action="rerun"/);
   const payload = firstRerunPayload(html);
   assert.equal(payload.templateId, "chz");
@@ -152,62 +285,39 @@ test("archive chz row re-run carries templateId chz plus model/grid params", () 
   assert.equal(payload.params.grid, "full");
 });
 
-test("disk footprint renders in MB with one decimal in the archive header", () => {
-  const html = renderRunsPage([], EMPTY_CI, 3_500_000, []);
+test("renderArchive: disk footprint renders in MB with one decimal in the header", () => {
+  const html = renderArchive([], 3_500_000);
   assert.match(html, /3\.3\s*MB|3\.5\s*MB/); // 3_500_000 bytes ~ 3.3 MiB or 3.5 MB
 });
 
-// ---- renderRunsPage: new-run form + stale ----------------------------------
-
-test("new-run form shows a stale-binary warning chip matched by binary PATH not index", () => {
-  const stale: StaleInfo[] = [
-    { binary: "build/tests/k2000_device_characterization", stale: true, binaryMtimeMs: 1, newestSourceMtimeMs: 2 },
-    { binary: "build/tests/k2000_tests", stale: false, binaryMtimeMs: 5, newestSourceMtimeMs: 2 },
-  ];
-  const html = renderRunsPage([], EMPTY_CI, 0, stale);
-  assert.match(html, /stale/i);
+test("renderArchive: carries the detail drawer mount point", () => {
+  const html = renderArchive([], 0);
+  assert.match(html, /data-role="detail-drawer"/);
 });
 
-// ---- renderRunsPage: CI strip ----------------------------------------------
+test("renderArchive: shows an empty note and no rows when there is no history", () => {
+  const html = renderArchive([], 0);
+  assert.match(html, /No archived runs/i);
+  assert.doesNotMatch(html, /data-action="rerun"/);
+});
 
-test("CI strip renders each branch and check when available", () => {
-  const ci: CiPayload = {
-    available: true, fetchedAt: 0,
-    branches: [
-      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "http://ci/1" }] },
-    ],
+test("renderArchive: renders ONLY finished runs, never active ones", () => {
+  const finished: RunSummary = {
+    id: "done.ndjson", kind: "suite", startedAt: 1, status: "pass", sizeBytes: 1, durationS: 5,
   };
-  const html = renderRunsPage([], ci, 0, []);
-  assert.match(html, /My PR/);
-  assert.match(html, /build/);
+  const html = renderArchive([runningChz(), finished], 0);
+  assert.match(html, /done\.ndjson/);
+  assert.doesNotMatch(html, /20260703-160000-chz/); // the running one belongs to renderActive
 });
 
-test("CI strip shows an unavailable note when gh is down (never crashes)", () => {
-  const html = renderRunsPage([], EMPTY_CI, 0, []);
-  assert.match(html, /CI/); // section still present
-});
-
-test("CI strip never renders a non-http(s) check url as a clickable href", () => {
-  const ci: CiPayload = {
-    available: true, fetchedAt: 0,
-    branches: [
-      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "javascript:alert(1)" }] },
-    ],
+test("renderArchive: contains rows but NONE of the new-run form", () => {
+  const done: RunSummary = {
+    id: "s.ndjson", kind: "suite", startedAt: 1, status: "pass", sizeBytes: 1, durationS: 5,
   };
-  const html = renderRunsPage([], ci, 0, []);
-  assert.match(html, /build/); // check name still shown as plain text
-  assert.doesNotMatch(html, /href="javascript:/);
-});
-
-test("CI strip still renders a normal https check url as a clickable anchor", () => {
-  const ci: CiPayload = {
-    available: true, fetchedAt: 0,
-    branches: [
-      { ref: "feat/x", title: "My PR", checks: [{ name: "build", status: "completed", conclusion: "success", url: "https://github.com/example/repo/actions/runs/1" }] },
-    ],
-  };
-  const html = renderRunsPage([], ci, 0, []);
-  assert.match(html, /href="https:\/\/github\.com\/example\/repo\/actions\/runs\/1"/);
+  const html = renderArchive([done], 1);
+  assert.match(html, /fr-arch-table/);
+  assert.doesNotMatch(html, /data-role="newrun-form"/);
+  assert.doesNotMatch(html, /data-role="template"/);
 });
 
 // ---- deviationRows ---------------------------------------------------------
