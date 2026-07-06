@@ -51,6 +51,28 @@ public:
             ::unsetenv("BERNIE_NO_RUNLOG");
 #endif
         }
+#ifndef _WIN32
+        {   // runner detection priority chain (Task 1, v1.1)
+            auto runnerOf = [&](const char* envName, const char* envVal) {
+                ::unsetenv("BERNIE_RUNNER"); ::unsetenv("GITHUB_ACTIONS"); ::unsetenv("CLAUDECODE");
+                if (envName != nullptr) ::setenv(envName, envVal, 1);
+                // Use a counter-based kind to avoid filename collision (timestamps are second-precision).
+                // The runner detection itself is agnostic to the kind field, so this doesn't affect the test.
+                static int counter = 0;
+                auto kind = juce::String("r") + juce::String(counter++);
+                runlog::Writer w(kind, dir, 0, 1 << 30);
+                w.start(juce::StringArray{"x"});
+                juce::StringArray lines; lines.addLines(w.file().loadFileAsString().trim());
+                auto parsed = juce::JSON::parse(lines[0]);
+                ::unsetenv("BERNIE_RUNNER"); ::unsetenv("GITHUB_ACTIONS"); ::unsetenv("CLAUDECODE");
+                return parsed.getProperty("runner", "").toString();
+            };
+            expectEquals(runnerOf("BERNIE_RUNNER", "dashboard"), juce::String("dashboard"));
+            expectEquals(runnerOf("GITHUB_ACTIONS", "true"),     juce::String("ci"));
+            expectEquals(runnerOf("CLAUDECODE", "1"),            juce::String("claude"));
+            expectEquals(runnerOf(nullptr, nullptr),             juce::String("terminal"));
+        }
+#endif
         dir.deleteRecursively();
     }
 };

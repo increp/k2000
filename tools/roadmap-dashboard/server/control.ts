@@ -81,7 +81,7 @@ export async function startRun(
   try {
     const child = spawn(t.bin, t.args, {
       cwd: rootDir,
-      env: { ...process.env, ...t.env, BERNIE_GIT_SHA: sha },
+      env: { ...process.env, ...t.env, BERNIE_GIT_SHA: sha, BERNIE_RUNNER: "dashboard" },
       detached: true,
       stdio: ["ignore", fd.fd, fd.fd],
     });

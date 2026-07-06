@@ -37,6 +37,17 @@ juce::String jsonEscape(const juce::String& s) {
     return out;
 }
 
+static juce::String detectRunner() {
+    const char* br = std::getenv("BERNIE_RUNNER");
+    const char* ga = std::getenv("GITHUB_ACTIONS");
+    const char* cc = std::getenv("CLAUDECODE");
+
+    if (br != nullptr && br[0] != '\0') return juce::String(br);
+    if (ga != nullptr) return "ci";
+    if (cc != nullptr) return "claude";
+    return "terminal";
+}
+
 static juce::File defaultDir() {
     if (const char* d = std::getenv("BERNIE_RUNLOG_DIR"))
         return juce::File::getCurrentWorkingDirectory().getChildFile(juce::String(d));
@@ -76,7 +87,7 @@ void Writer::start(const juce::StringArray& argv, const juce::String& model,
     j << "{\"ev\":\"start\",\"ts\":" << juce::Time::currentTimeMillis()
       << ",\"kind\":\"" << jsonEscape(kind_)
       << "\",\"argv\":[" << a << "],\"pid\":" << currentPid()
-      << ",\"buildType\":\"" << bt << "\"";
+      << ",\"buildType\":\"" << bt << "\",\"runner\":\"" << jsonEscape(detectRunner()) << "\"";
     if (const char* sha = std::getenv("BERNIE_GIT_SHA")) j << ",\"gitSha\":\"" << jsonEscape(sha) << "\"";
     if (model.isNotEmpty()) j << ",\"model\":\"" << jsonEscape(model) << "\"";
     if (grid.isNotEmpty())  j << ",\"grid\":\""  << jsonEscape(grid)  << "\"";
