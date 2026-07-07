@@ -226,17 +226,25 @@ def chk_franklin_catalog(root, ctx):
         return "warn", f"test-catalog.json unreadable: {e}"
     runs_dir = root / ".franklin/runs"
     suites = list(runs_dir.glob("*-suite-*.ndjson")) if runs_dir.exists() else []
-    if not suites:
-        return "skip", "no suite runlog in .franklin/runs — run the suite once"
-    latest = max(suites, key=lambda p: p.stat().st_mtime)
+    # A suite writes its per-test events only after the run finishes, so an
+    # in-progress run's runlog has none — comparing against it would spuriously
+    # orphan the whole catalog. Use the newest COMPLETED run (test events present).
+    def seen_keys(p):
+        s = set()
+        for line in p.read_text(encoding="utf-8").splitlines():
+            try: e = json.loads(line)
+            except json.JSONDecodeError: continue
+            if e.get("ev") == "test":
+                name, sub = e.get("name"), e.get("sub")
+                if name is not None and sub is not None:
+                    s.add(f"{name} / {sub}")
+        return s
     seen = set()
-    for line in latest.read_text(encoding="utf-8").splitlines():
-        try: e = json.loads(line)
-        except json.JSONDecodeError: continue
-        if e.get("ev") == "test":
-            name, sub = e.get("name"), e.get("sub")
-            if name is None or sub is None: continue
-            seen.add(f"{name} / {sub}")
+    for p in sorted(suites, key=lambda p: p.stat().st_mtime, reverse=True):
+        seen = seen_keys(p)
+        if seen: break
+    if not seen:
+        return "skip", "no completed suite runlog in .franklin/runs — run the suite once"
     # VoicePerf and LargeSignal change their subcategory name based on their
     # BERNIE_RUN_* env flag ("skipped …" when off, real measurement names when on),
     # so their exact key legitimately varies by run config. Match those families at
