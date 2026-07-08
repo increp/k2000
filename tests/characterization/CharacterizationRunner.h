@@ -24,6 +24,30 @@ Grid coarseGrid();
 // Heavy exhaustive grid: 5 host rates, OS {1,2,4,8} x {Live,Render}, dense cutoff/res/drive.
 Grid fullGrid();
 
+// Purpose-driven grids (Q28, docs/superpowers/specs/2026-07-07-purpose-grids-design.md).
+// fullGrid() crosses every axis with every other (~40 h/model) and is dead weight as a
+// routine instrument; each of these is dense only along the axes its purpose needs.
+// Axes are pinned exactly per the design spec §3 — do not silently drift them.
+
+// SP-D hardware-comparison map: the response map future Summit/Arturia captures are
+// compared against. os8/Live/96k, all 5 modes, 15 log cutoffs 50 Hz-16 kHz, 6 resonances,
+// drive=0 (drive lives in largeSignalGrid), 400 probes 20 Hz-24 kHz.
+Grid spdGrid();
+
+// OS/aliasing verification: aliasing falls as OS rises, at the points where aliasing lives.
+// os{1,2,4,8} x osMode{Live,Render}, 96k, modes{LP24,BP}, cutoffs{4k,8k,16k}, res{0.9,1.0},
+// drives{0,1}, 200 probes.
+Grid osAliasGrid();
+
+// Host-rate invariance spot-check. rates{44100,48000,88200,96000,192000}, os{1,8}/Live,
+// modes{LP24,HP}, cutoffs{250,1k,4k}, res{0,0.9}, drive=0, 200 probes.
+Grid hostRateGrid();
+
+// Drive/resonance law (Q27/SP-B axis) — the operating-point lattice SP-B's level battery
+// will reuse. os{1,8}/Live, 96k, LP24 only, cutoffs{250,1k,4k}, 6 resonances, 5 drives,
+// 200 probes.
+Grid largeSignalGrid();
+
 // Headline metric summary.  Keys are e.g. "moog/LP24/fc1000/corner_hz".
 // Summary key uniqueness: for grids with multiple os/res/host combos per (model,mode,cutoff),
 // the summary is keyed on the BASE operating point (osFactor=1, OsMode::Live, lowest resonance

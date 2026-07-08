@@ -61,6 +61,86 @@ Grid fullGrid() {
 }
 
 // ---------------------------------------------------------------------------
+// spdGrid — SP-D hardware-comparison map (Q28 §3): the response map future
+// Summit/Arturia captures are compared against. Runs at a single OS/rate
+// condition, dense across mode x cutoff x resonance; drive=0 (drive lives
+// in largeSignalGrid — folding 3 drives into the map triples its cost).
+// CALIB: 96 kHz / os8 Live is the *working* capture-reference assumption —
+// SP-D hasn't specced the rig yet. Re-pin these two axes when it does.
+// ---------------------------------------------------------------------------
+Grid spdGrid() {
+    Grid g;
+    g.hostRates  = { 96000.0 };
+    g.osFactors  = { 8 };
+    g.osModes    = { OsMode::Live };
+    g.modes      = { Mode::LP12, Mode::LP24, Mode::BP, Mode::HP, Mode::Notch };
+    // 15 log-spaced cutoff points 50 Hz .. 16 kHz
+    g.cutoffs    = CharacterizationRunner::logFreqs(50.0, 16000.0, 15);
+    g.resonances = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
+    g.drives     = { 0.0 };
+    g.probeFreqs = CharacterizationRunner::logFreqs(20.0, 24000.0, 400);
+    return g;
+}
+
+// ---------------------------------------------------------------------------
+// osAliasGrid — OS/aliasing verification (Q28 §3): aliasing falls as OS
+// rises, at the points where aliasing lives. Dense across osFactor/osMode
+// (both aliasing decision axes) x a narrow mode/cutoff/res/drive slice
+// chosen to be near self-oscillation and drive-engaged (where aliasing is
+// worst), not a broad sweep.
+// ---------------------------------------------------------------------------
+Grid osAliasGrid() {
+    Grid g;
+    g.hostRates  = { 96000.0 };
+    g.osFactors  = { 1, 2, 4, 8 };
+    g.osModes    = { OsMode::Live, OsMode::Render };
+    g.modes      = { Mode::LP24, Mode::BP };
+    g.cutoffs    = { 4000.0, 8000.0, 16000.0 };
+    g.resonances = { 0.9, 1.0 };
+    g.drives     = { 0.0, 1.0 };
+    g.probeFreqs = CharacterizationRunner::logFreqs(20.0, 24000.0, 200);
+    return g;
+}
+
+// ---------------------------------------------------------------------------
+// hostRateGrid — host-rate invariance spot-check (Q28 §3): does the filter's
+// response hold steady across the DAW host rates it will actually run at.
+// Dense across hostRate (the portability axis); os{1,8} brackets the OS
+// range without the full {1,2,4,8}; a narrow mode/cutoff/res slice.
+// ---------------------------------------------------------------------------
+Grid hostRateGrid() {
+    Grid g;
+    g.hostRates  = { 44100.0, 48000.0, 88200.0, 96000.0, 192000.0 };
+    g.osFactors  = { 1, 8 };
+    g.osModes    = { OsMode::Live };
+    g.modes      = { Mode::LP24, Mode::HP };
+    g.cutoffs    = { 250.0, 1000.0, 4000.0 };
+    g.resonances = { 0.0, 0.9 };
+    g.drives     = { 0.0 };
+    g.probeFreqs = CharacterizationRunner::logFreqs(20.0, 24000.0, 200);
+    return g;
+}
+
+// ---------------------------------------------------------------------------
+// largeSignalGrid — drive/resonance law (Q27/SP-B axis, Q28 §3): the
+// operating-point lattice SP-B's level battery will reuse. Dense across
+// resonance x drive (the law's own axes) at a single mode (LP24) and a
+// narrow cutoff spread; os{1,8} brackets OS influence on the law.
+// ---------------------------------------------------------------------------
+Grid largeSignalGrid() {
+    Grid g;
+    g.hostRates  = { 96000.0 };
+    g.osFactors  = { 1, 8 };
+    g.osModes    = { OsMode::Live };
+    g.modes      = { Mode::LP24 };
+    g.cutoffs    = { 250.0, 1000.0, 4000.0 };
+    g.resonances = { 0.0, 0.3, 0.6, 0.8, 0.9, 1.0 };
+    g.drives     = { 0.0, 0.25, 0.5, 0.75, 1.0 };
+    g.probeFreqs = CharacterizationRunner::logFreqs(20.0, 24000.0, 200);
+    return g;
+}
+
+// ---------------------------------------------------------------------------
 // interpMag — linear interpolation on the log-freq axis
 // ---------------------------------------------------------------------------
 double CharacterizationRunner::interpMag(const std::vector<double>& freqs,
