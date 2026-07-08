@@ -165,8 +165,9 @@
         {
           "id": "franklin-dashboard",
           "kind": "feature",
-          "status": "in-progress",
-          "title": "Franklin — live runs dashboard (runlog + archive + control)"
+          "status": "shipped",
+          "title": "Franklin — live runs dashboard (runlog + archive + control)",
+          "summary": "SHIPPED across 6 PRs (#14–#19). v1 (#14): NDJSON runlog producers (suite + chz, CharacterizationRunner untouched), full archive with finish-time compaction (never deletes), whitelisted run control (pid-verified stop), gh-polled CI strip, 291-entry test catalog + franklin-catalog drift rule. v1.1 (#15, from live field use): run provenance (BERNIE_RUNNER > CI > Claude > terminal), six-field test info cards + searchable catalog browser, catalog v2 (compares/succeedingMeans), the dropdown-repaint bug fixed structurally (five persistent sections), suite live-progress (was stuck at 0). Drift robustness (#16, #17): env-gated test-family tolerance, newest-COMPLETED-runlog selection. Purpose-driven grids (#18): resolves register Q28 — replaces the ~40h fullGrid with 4 purpose-sized grids (spd/osalias/rates/largesig) + deep (~1.7–2.0h total), from an empirical per-point cost model, live-smoked to completion. Docs pointer (#19): CLAUDE.md links the charter's instrument-grade review bar."
         },
         {
           "id": "v5-filter-sweep-standard",
@@ -423,9 +424,9 @@
         {
           "id": "cmajor-spike-windows-ci",
           "title": "Windows CI feasibility",
-          "status": "in-progress",
+          "status": "shipped",
           "kind": "task",
-          "summary": "Decided (ADR-0012): commit the generated C++ — no Cmajor toolchain in CI. Spike code (generated C++ + adapters + tests) lives in the test target Windows CI builds; PENDING confirmation green on the next CI run."
+          "summary": "Decided (ADR-0012): commit the generated C++ — no Cmajor toolchain in CI. Spike code (generated C++ + adapters + tests) lives in the test target. CONFIRMED: the Windows CI job has been green through dozens of PRs since (Moog, oversampling, anti-drift, Q27 fix, Franklin v1/v1.1, purpose grids) — the generated-C++-in-CI approach holds."
         },
         {
           "id": "cmajor-spike-adr",
