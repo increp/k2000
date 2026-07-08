@@ -94,6 +94,7 @@ add_executable(k2000_tests
     VoicePerfTests.cpp
     RenderFingerprintTests.cpp
     LargeSignalTests.cpp
+    GridShapeTests.cpp
     characterization/FilterUnderTest.cpp
     characterization/CharacterizationRunner.cpp
     testdsp/RunLog.cpp)

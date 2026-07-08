@@ -21,7 +21,7 @@ export interface StaleInfo {
 const CHZ_BIN = "build/tests/k2000_device_characterization";
 const SUITE_BIN = "build/tests/k2000_tests";
 const VALID_MODELS = new Set(["moog", "huggett", "all"]);
-const VALID_GRIDS = new Set(["quick", "full"]);
+const VALID_GRIDS = new Set(["quick", "full", "spd", "osalias", "rates", "largesig", "deep"]);
 const SOURCE_EXTS = new Set([".h", ".cpp", ".cmajor"]);
 const SIGKILL_ESCALATION_MS = 5000;
 
@@ -29,7 +29,7 @@ const SIGKILL_ESCALATION_MS = 5000;
 export function templates(params?: { model?: string; grid?: string }): Template[] {
   const model = params?.model ?? "all";
   const grid = params?.grid ?? "full";
-  const chzArgs = ["--model", model, ...(grid === "quick" ? ["--quick"] : [])];
+  const chzArgs = ["--model", model, "--grid", grid];
 
   return [
     { id: "suite", label: "Full suite", bin: SUITE_BIN, args: [], env: {} },

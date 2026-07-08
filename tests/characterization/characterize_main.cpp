@@ -13,30 +13,66 @@
 // no skill required.
 //
 // Usage:
-//   k2000_device_characterization [--model moog|huggett|all] [--quick]
+//   k2000_device_characterization [--model moog|huggett|all] [--grid <name>] [--quick]
 //
-//   --quick  selects chz::coarseGrid() (~72 B1 points, fast/CI smoke mode).
-//   default  selects chz::fullGrid()   (dense, slow; production characterization).
+//   --grid quick|full|spd|osalias|rates|largesig|deep  selects the grid (default full).
+//     quick     chz::coarseGrid()      (~72 B1 points, fast/CI smoke mode)
+//     full      chz::fullGrid()        (dense, slow; ~40 h/model production characterization)
+//     spd       chz::spdGrid()         SP-D hardware-comparison map (~75 min/model)
+//     osalias   chz::osAliasGrid()     OS/aliasing verification (~10 min/model)
+//     rates     chz::hostRateGrid()    host-rate portability spot-check (~8 min/model)
+//     largesig  chz::largeSignalGrid() drive/resonance law (~10 min/model)
+//     deep      all four purpose grids above, in sequence, per model (~1.7-2.0 h/model)
+//   --quick  is an alias for --grid quick (back-compat).
 //
 // Exit: 0 = all method-agreement deltas < 1.0 dB (PASS)
 //       1 = at least one delta >= 1.0 dB (FAIL)
+//       2 = unrecognised --grid name (usage error)
 
-static int runOne(const juce::String& model, bool quick, runlog::Writer& log,
-                   std::vector<runlog::Writer::Check>& checksOut) {
+namespace {
+
+// One purpose-grid id + its factory + its stdout/outdir label. "quick"/"full"
+// are handled separately (bare outDir, no sub-grid label) — this table only
+// covers the four purpose grids plus "deep" iterates it.
+struct NamedGrid {
+    const char* id;
+    chz::Grid (*factory)();
+};
+
+const NamedGrid kPurposeGrids[] = {
+    { "spd",      chz::spdGrid },
+    { "osalias",  chz::osAliasGrid },
+    { "rates",    chz::hostRateGrid },
+    { "largesig", chz::largeSignalGrid },
+};
+
+} // namespace
+
+// Runs one grid for one model. gridId is the sub-grid label used for the outDir
+// nesting and progress-label prefix: empty for quick/full (bare build/characterization/
+// <model>/, back-compat with the /characterize-filter skill + dashboard), non-empty
+// for a purpose grid (build/characterization/<model>/<gridId>/ so `deep`'s four
+// sub-grids of the same model don't wipe each other).
+static int runOne(const juce::String& model, const chz::Grid& grid, const juce::String& gridId,
+                   runlog::Writer& log, std::vector<runlog::Writer::Check>& checksOut) {
     auto fut = (model == "moog") ? chz::makeMoogFut() : chz::makeHuggettFut();
 
     // Build output directory relative to cwd (the repo root when invoked from
     // the project root, which is what the task spec and CI use).
-    auto outDir = juce::File::getCurrentWorkingDirectory()
-                      .getChildFile("build/characterization")
-                      .getChildFile(model);
+    auto modelDir = juce::File::getCurrentWorkingDirectory()
+                        .getChildFile("build/characterization")
+                        .getChildFile(model);
+    auto outDir = gridId.isEmpty() ? modelDir : modelDir.getChildFile(gridId);
+    // Only wipe the directory this run actually owns: the bare model dir for
+    // quick/full, or just the sub-grid dir for a purpose grid — so `deep`'s
+    // sibling sub-grids (already written earlier in this same invocation)
+    // survive the next sub-grid's run.
     outDir.deleteRecursively();
     outDir.createDirectory();
 
-    const chz::Grid grid = quick ? chz::coarseGrid() : chz::fullGrid();
-    const char* gridName = quick ? "coarse (quick/CI)" : "full (dense/production)";
-
-    std::printf("[%s] grid = %s\n", model.toRawUTF8(), gridName);
+    const juce::String labelPrefix = "[" + model + "]" + (gridId.isEmpty() ? "" : " [" + gridId + "]") + " ";
+    std::printf("%sgrid = %s\n", labelPrefix.toRawUTF8(),
+                (gridId.isEmpty() ? juce::String("(unnamed)") : gridId).toRawUTF8());
     std::fflush(stdout);
 
     // Live progress (engagement item 6): one overwriting status line on stderr —
@@ -50,13 +86,13 @@ static int runOne(const juce::String& model, bool quick, runlog::Writer& log,
                 const double elapsed = std::chrono::duration<double>(
                     std::chrono::steady_clock::now() - t0).count();
                 const double eta = done > 0 ? elapsed / done * (total - done) : 0.0;
-                std::fprintf(stderr, "\r[%s] %d/%d (%d%%)  %5.0fs elapsed  eta %5.0fs  %-60.60s",
-                             model.toRawUTF8(), done, total, (int) ((100LL * done) / total),
+                std::fprintf(stderr, "\r%s%d/%d (%d%%)  %5.0fs elapsed  eta %5.0fs  %-60.60s",
+                             labelPrefix.toRawUTF8(), done, total, (int) ((100LL * done) / total),
                              elapsed, eta, label.toRawUTF8());
                 if (done == total) std::fputc('\n', stderr);
                 std::fflush(stderr);
             }
-            log.progress(done, total, "[" + model + "] " + label);
+            log.progress(done, total, labelPrefix + label);
         };
 
     auto summary = chz::CharacterizationRunner::run(*fut, grid, outDir, progress);
@@ -100,28 +136,28 @@ static int runOne(const juce::String& model, bool quick, runlog::Writer& log,
     }
 
     const bool hasAlias = (worstAlias1 > std::numeric_limits<double>::lowest() + 1.0);
-    std::printf("[%s] worst method-agreement delta = %.3f dB  (%s)\n",
-                model.toRawUTF8(), worstDelta,
+    std::printf("%sworst method-agreement delta = %.3f dB  (%s)\n",
+                labelPrefix.toRawUTF8(), worstDelta,
                 worstDeltaKey.isEmpty() ? "n/a" : worstDeltaKey.toRawUTF8());
     if (hasAlias)
-        std::printf("[%s] alias_db@os1 (worst/highest) = %.1f dB  "
+        std::printf("%salias_db@os1 (worst/highest) = %.1f dB  "
                     "alias_db@os8 (best/lowest) = %.1f dB\n",
-                    model.toRawUTF8(), worstAlias1, bestAlias8);
+                    labelPrefix.toRawUTF8(), worstAlias1, bestAlias8);
     else
-        std::printf("[%s] alias_db: n/a\n", model.toRawUTF8());
+        std::printf("%salias_db: n/a\n", labelPrefix.toRawUTF8());
     if (worstThdDb > std::numeric_limits<double>::lowest() + 1.0)
-        std::printf("[%s] worst thd_db = %.1f dB\n", model.toRawUTF8(), worstThdDb);
-    std::printf("[%s] worst selfosc_cents_err = %.1f cents\n",
-                model.toRawUTF8(), worstCentsErr);
-    std::printf("[%s] artifacts -> %s\n",
-                model.toRawUTF8(), outDir.getFullPathName().toRawUTF8());
+        std::printf("%sworst thd_db = %.1f dB\n", labelPrefix.toRawUTF8(), worstThdDb);
+    std::printf("%sworst selfosc_cents_err = %.1f cents\n",
+                labelPrefix.toRawUTF8(), worstCentsErr);
+    std::printf("%sartifacts -> %s\n",
+                labelPrefix.toRawUTF8(), outDir.getFullPathName().toRawUTF8());
     std::fflush(stdout);
 
     // chz sink: every summary key becomes an info check EXCEPT method_delta_db,
     // which mirrors the binary's real gate (expected 1.0 dB, pass/fail verdict).
     for (const auto& kv : summary) {
         if (std::abs(kv.second - (-1.0)) < 1.0e-9) continue;
-        runlog::Writer::Check c; c.name = "[" + model + "] " + kv.first; c.measured = kv.second;
+        runlog::Writer::Check c; c.name = labelPrefix + kv.first; c.measured = kv.second;
         if (kv.first.endsWith("method_delta_db")) { c.expected = 1.0; c.verdict = kv.second < 1.0 ? "pass" : "fail"; }
         else c.verdict = "info";
         checksOut.push_back(c);
@@ -131,38 +167,84 @@ static int runOne(const juce::String& model, bool quick, runlog::Writer& log,
     return (worstDelta < 1.0) ? 0 : 1;
 }
 
+// Runs the "deep" sequence (all four purpose grids in order) for one model,
+// within the SAME runlog Writer/checks accumulator as any other grid choice.
+static int runDeepOne(const juce::String& model, runlog::Writer& log,
+                      std::vector<runlog::Writer::Check>& checksOut) {
+    int rc = 0;
+    const int numSubGrids = (int) (sizeof(kPurposeGrids) / sizeof(kPurposeGrids[0]));
+    for (int i = 0; i < numSubGrids; ++i) {
+        const auto& ng = kPurposeGrids[i];
+        std::fprintf(stderr, "\n[%s] deep: sub-grid %d/%d (%s)\n",
+                     model.toRawUTF8(), i + 1, numSubGrids, ng.id);
+        rc |= runOne(model, ng.factory(), ng.id, log, checksOut);
+    }
+    return rc;
+}
+
+static void printUsage() {
+    std::fprintf(stderr,
+        "usage: k2000_device_characterization [--model moog|huggett|all] "
+        "[--grid quick|full|spd|osalias|rates|largesig|deep] [--quick]\n");
+}
+
 int main(int argc, char** argv) {
     juce::String model = "all";
-    bool quick = false;
+    juce::String gridName = "full";
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg(argv[i]);
         if (arg == "--model" && i + 1 < argc) {
             model = juce::String(argv[++i]);
         } else if (arg == "--quick") {
-            quick = true;
+            gridName = "quick";
+        } else if (arg == "--grid" && i + 1 < argc) {
+            gridName = juce::String(argv[++i]);
         }
     }
 
-    const char* gridLabel = quick ? "coarseGrid" : "fullGrid";
+    static const char* kKnownGrids[] = { "quick", "full", "spd", "osalias", "rates", "largesig", "deep" };
+    bool known = false;
+    for (const char* g : kKnownGrids) if (gridName == g) { known = true; break; }
+    if (!known) {
+        std::fprintf(stderr, "error: unrecognised --grid '%s'\n", gridName.toRawUTF8());
+        printUsage();
+        return 2;
+    }
+
     std::printf("k2000_device_characterization  model=%s  grid=%s\n\n",
-                model.toRawUTF8(), gridLabel);
+                model.toRawUTF8(), gridName.toRawUTF8());
 
     runlog::Writer log("chz");
     {
         juce::StringArray a;
         for (int i = 0; i < argc; ++i) a.add(argv[i]);
-        log.start(a, model, quick ? "quick" : "full");
+        log.start(a, model, gridName);
     }
     const auto mainT0 = std::chrono::steady_clock::now();
 
     int rc = 0;
     std::vector<runlog::Writer::Check> allChecks;
-    if (model == "all") {
-        rc |= runOne("moog",    quick, log, allChecks);
-        rc |= runOne("huggett", quick, log, allChecks);
-    } else {
-        rc = runOne(model, quick, log, allChecks);
+    std::vector<juce::String> models;
+    if (model == "all") { models.push_back("moog"); models.push_back("huggett"); }
+    else                { models.push_back(model); }
+
+    for (const auto& m : models) {
+        if (gridName == "deep") {
+            rc |= runDeepOne(m, log, allChecks);
+        } else if (gridName == "quick") {
+            rc |= runOne(m, chz::coarseGrid(), "", log, allChecks);
+        } else if (gridName == "full") {
+            rc |= runOne(m, chz::fullGrid(), "", log, allChecks);
+        } else if (gridName == "spd") {
+            rc |= runOne(m, chz::spdGrid(), "spd", log, allChecks);
+        } else if (gridName == "osalias") {
+            rc |= runOne(m, chz::osAliasGrid(), "osalias", log, allChecks);
+        } else if (gridName == "rates") {
+            rc |= runOne(m, chz::hostRateGrid(), "rates", log, allChecks);
+        } else if (gridName == "largesig") {
+            rc |= runOne(m, chz::largeSignalGrid(), "largesig", log, allChecks);
+        }
     }
 
     const double elapsedSeconds = std::chrono::duration<double>(

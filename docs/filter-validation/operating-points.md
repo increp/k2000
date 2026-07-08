@@ -1,6 +1,6 @@
 # Operating Points and Grid Structure
 
-**Version:** 5.09
+**Version:** 5.26
 **Date:** 2026-06-30
 
 This page describes the parameter axes that define an operating point, the two
@@ -77,20 +77,29 @@ Operating-point count estimate for B1 (response.csv):
 - B3: 5 modes x 12 cutoffs x 4 osFactor = 240 points
 
 **Do not attempt to run fullGrid to completion during development.** Use
-`--quick` for verification and save fullGrid for scheduled production runs.
+`--quick` for verification; for routine deep characterization use `--grid deep`
+or an individual purpose grid (below) — `fullGrid` is now a legacy path, not the
+production default.
 
 ---
 
-## `--quick` flag
+## `--grid` flag
 
 ```
-k2000_device_characterization [--model moog|huggett|all] [--quick]
+k2000_device_characterization [--model moog|huggett|all] [--grid <name>]
 ```
 
-| Flag | Grid | Use |
+| `--grid` value | Grid | Use |
 |---|---|---|
-| `--quick` | `coarseGrid` | CI smoke / interactive development. Completes in a reasonable time |
-| _(absent)_ | `fullGrid` | Production characterization. May be very slow; acceptable for a deliberate run |
+| `quick` | `coarseGrid` | CI smoke / interactive development. Completes in a reasonable time |
+| `spd` / `osalias` / `rates` / `largesig` | one purpose grid | Routine deep characterization, sized to a single concern — see `running.md`'s grid table for what each measures and its cost |
+| `deep` | all four purpose grids in sequence | The routine "give me everything" run (~1.7–2.0 h/model), replacing `full` for normal use |
+| `full` | `fullGrid` | Legacy exhaustive grid (~40 h/model). Never a routine default |
+| _(absent)_ | `fullGrid` | Same as `full`, for back-compat with pre-`--grid` invocations |
+
+`--quick` remains a working alias for `--grid quick`. See `docs/filter-validation/running.md`
+and `docs/superpowers/specs/2026-07-07-purpose-grids-design.md` for the purpose grids'
+exact axes and the empirical cost model behind their runtime estimates.
 
 The `--model` flag selects which filter under test to run:
 - `moog` — Moog ladder filter (`makeMoogFut()`)

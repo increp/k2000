@@ -252,6 +252,13 @@ test("renderForm: contains the form but NONE of the archive's rows/table", () =>
   assert.doesNotMatch(html, /data-action="rerun"/);
 });
 
+test("renderForm: grid select contains all seven purpose-grid option values", () => {
+  const html = renderForm(templates(), []);
+  for (const value of ["quick", "deep", "spd", "osalias", "rates", "largesig", "full"]) {
+    assert.match(html, new RegExp(`<option value="${value}"`), `expected an option value="${value}"`);
+  }
+});
+
 // ---- renderArchive ---------------------------------------------------------
 
 test("renderArchive: finished suite run appears with a humanized duration and outcome", () => {

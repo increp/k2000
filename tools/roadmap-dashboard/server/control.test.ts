@@ -49,23 +49,29 @@ test("templates: returns the fixed whitelist with suite/suite-disparity/suite-vo
   assert.deepEqual(voiceperf.env, { BERNIE_RUN_VOICEPERF: "1" });
 });
 
-test("templates: chz args derive from model/grid params (quick appends --quick)", () => {
+test("templates: chz args derive from model/grid params (--grid <name> always passed)", () => {
   const ts = templates({ model: "moog", grid: "quick" });
   const chz = ts.find((t) => t.id === "chz")!;
   assert.equal(chz.bin, "build/tests/k2000_device_characterization");
-  assert.deepEqual(chz.args, ["--model", "moog", "--quick"]);
+  assert.deepEqual(chz.args, ["--model", "moog", "--grid", "quick"]);
 });
 
-test("templates: chz args omit --quick for grid=full", () => {
+test("templates: chz args pass --grid full for grid=full", () => {
   const ts = templates({ model: "huggett", grid: "full" });
   const chz = ts.find((t) => t.id === "chz")!;
-  assert.deepEqual(chz.args, ["--model", "huggett"]);
+  assert.deepEqual(chz.args, ["--model", "huggett", "--grid", "full"]);
 });
 
-test("templates: chz defaults args to --model all with no --quick when params omitted", () => {
+test("templates: chz args pass any of the seven purpose-grid names through to --grid", () => {
+  const ts = templates({ model: "all", grid: "rates" });
+  const chz = ts.find((t) => t.id === "chz")!;
+  assert.deepEqual(chz.args, ["--model", "all", "--grid", "rates"]);
+});
+
+test("templates: chz defaults args to --model all --grid full when params omitted", () => {
   const ts = templates();
   const chz = ts.find((t) => t.id === "chz")!;
-  assert.deepEqual(chz.args, ["--model", "all"]);
+  assert.deepEqual(chz.args, ["--model", "all", "--grid", "full"]);
 });
 
 // --- startRun: template/param validation (no real spawn expected) ---------
@@ -87,6 +93,24 @@ test("startRun: invalid grid for chz rejected", async () => {
   const rootDir = await tmpDir();
   const result = await startRun(rootDir, "chz", { model: "moog", grid: "not-a-grid" });
   assert.equal(result.ok, false);
+});
+
+test("startRun: 'bogus' grid for chz still rejected", async () => {
+  const rootDir = await tmpDir();
+  const result = await startRun(rootDir, "chz", { model: "moog", grid: "bogus" });
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.error, /grid/i);
+});
+
+test("startRun: each of the seven purpose-grid names is accepted as valid (not rejected by grid validation)", async () => {
+  for (const grid of ["quick", "full", "spd", "osalias", "rates", "largesig", "deep"]) {
+    const rootDir = await tmpDir();
+    const result = await startRun(rootDir, "chz", { model: "moog", grid });
+    // No binary exists under rootDir, so this fails at spawn (ENOENT) rather than
+    // template validation — the point is it must NOT be rejected as "invalid grid".
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.doesNotMatch(result.error, /invalid grid/i, `grid=${grid} must not be rejected as invalid`);
+  }
 });
 
 // --- startRun: real spawn against a fake fast-exiting binary ---------------

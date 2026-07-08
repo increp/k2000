@@ -1,7 +1,7 @@
 # Franklin — Runs Dashboard Manual
 
-**Version:** 5.22 (artifact; distinct from plugin SemVer — see `CLAUDE.md` process rails)
-**Date:** 2026-07-03
+**Version:** 5.24 (artifact; distinct from plugin SemVer — see `CLAUDE.md` process rails)
+**Date:** 2026-07-07
 
 How to run and read the Franklin tab: the live view of Franklin's runs (device
 characterization + the test suite), its archive, and its run control. Design
@@ -106,7 +106,8 @@ temp file, then rename); if it fails, the original file is left intact.
 - **Start** — the new-run form only offers **whitelisted templates**: the test
   suite (plain, or with `BERNIE_RUN_DISPARITY=1` / `BERNIE_RUN_VOICEPERF=1`), or
   chz characterization (model ∈ `moog` / `huggett` / `all`, grid ∈ `quick` /
-  `full`). Arbitrary commands are never accepted.
+  `deep` / `spd` / `osalias` / `rates` / `largesig` / `full`). Arbitrary commands
+  are never accepted.
 - **Stop** — the server verifies the recorded PID's `/proc/<pid>/cmdline` still
   contains the expected binary name before signaling anything (never signal a
   reused PID). It sends `SIGTERM`, waits 5 seconds, then escalates to `SIGKILL` if

@@ -227,8 +227,13 @@ export function renderForm(templates: Template[], stale: StaleInfo[]): string {
         </label>
         <label class="fr-chz-only" data-role="grid-wrap">Grid
           <select data-role="grid">
-            <option value="full">full</option>
-            <option value="quick">quick</option>
+            <option value="quick">quick (~4 min)</option>
+            <option value="deep">deep (~2 h)</option>
+            <option value="spd">spd (~75 min)</option>
+            <option value="osalias">osalias (~10 min)</option>
+            <option value="rates">rates (~8 min)</option>
+            <option value="largesig">largesig (~10 min)</option>
+            <option value="full">full (legacy, ~40 h)</option>
           </select>
         </label>
         <button type="submit" data-action="start">Start</button>
