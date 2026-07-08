@@ -1,6 +1,6 @@
 # Running the Filter-Validation Harness
 
-**Version:** 5.24
+**Version:** 5.25
 **Date:** 2026-07-07
 
 ---
@@ -68,6 +68,12 @@ the full axis-by-axis design and empirical cost model:
 | `largesig` | Large-signal/drive law (res×drive operating-point lattice) | 180 | ~10 min |
 | `deep` | All four purpose grids above, in sequence, per model | 942 | ~1.7–2.0 h |
 | `full` | Legacy exhaustive dense grid (36,000 raw crossings/model) — never a routine default | ~29,088 | ~40 h |
+
+"Points" = grid crossings (the axis product). The dashboard's live counter runs a
+little higher: the runner's progress total counts *measurement units*, which adds
+the per-(mode, cutoff) B2/B3 batteries on top of the B1 crossings — e.g. `rates`
+shows `/144` live for its 120 crossings, `spd` shows `/540` for 450. Same work,
+finer-grained accounting; the ETA is computed from the live total either way.
 
 Launch `deep` (or an individual purpose grid) for routine characterization —
 it replaces routine `full` use. The legacy `full` grid is retained for
