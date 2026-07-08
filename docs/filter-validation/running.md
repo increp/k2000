@@ -69,11 +69,13 @@ the full axis-by-axis design and empirical cost model:
 | `deep` | All four purpose grids above, in sequence, per model | 942 | ~1.7–2.0 h |
 | `full` | Legacy exhaustive dense grid (36,000 raw crossings/model) — never a routine default | ~29,088 | ~40 h |
 
-"Points" = grid crossings (the axis product). The dashboard's live counter runs a
-little higher: the runner's progress total counts *measurement units*, which adds
-the per-(mode, cutoff) B2/B3 batteries on top of the B1 crossings — e.g. `rates`
-shows `/144` live for its 120 crossings, `spd` shows `/540` for 450. Same work,
-finer-grained accounting; the ETA is computed from the live total either way.
+"Points" = grid crossings (the axis product). The dashboard's live counter differs
+two ways: it counts *measurement units* — per supported (mode, cutoff) pair, the
+B2+noise batteries and one B3 per OS factor are added on top of the B1 crossings —
+and it first drops modes the model doesn't support. So `rates` shows `/144` for
+both models, while `spd` shows `/540` for Moog (no Notch → 4 of 5 modes) and
+`/675` for Huggett. Same work, finer-grained accounting; the ETA always follows
+the live total.
 
 Launch `deep` (or an individual purpose grid) for routine characterization —
 it replaces routine `full` use. The legacy `full` grid is retained for
