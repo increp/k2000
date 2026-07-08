@@ -46,3 +46,5 @@ it lives in the register, the dashboard, and git.
   (repo, CMake targets, class prefixes) pending a possible later identifier pass.
 - Anchor references: Novation Summit + Kurzweil K2061/K2088 ONLY (K2000 dropped).
 - The measurement product is **Franklin** (SP-A/B/C/D + dashboards); .franklin/ is its state dir.
+  Franklin changes are held to an **instrument-grade bar** (reviewed as instrument
+  code, not UI code) — see `docs/franklin/charter.md`.
