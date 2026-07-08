@@ -1,7 +1,7 @@
 # Running the Filter-Validation Harness
 
-**Version:** 5.09
-**Date:** 2026-06-30
+**Version:** 5.24
+**Date:** 2026-07-07
 
 ---
 
@@ -51,17 +51,28 @@ This binary is for deep characterization work. It is **not run in CI** and shoul
 ### Syntax
 
 ```
-./build/tests/k2000_device_characterization --model <moog|huggett|all> [--quick]
+./build/tests/k2000_device_characterization --model <moog|huggett|all> --grid <name>
 ```
 
-### Grid sizes
+`--grid` accepts seven names (`--quick` still works as a back-compat alias for
+`--grid quick`). Each purpose grid is dense only along the axes its purpose
+needs — see `docs/superpowers/specs/2026-07-07-purpose-grids-design.md` §3 for
+the full axis-by-axis design and empirical cost model:
 
-| Flag | Grid | Host rates | OS modes | Approximate runtime |
-|---|---|---|---|---|
-| `--quick` | Bounded coarse grid | 96 kHz only | OS 1, 2, 4, 8 — Live mode | 10–25 min |
-| _(no flag)_ | Full dense grid | 5 host rates | Both OS modes, dense params | Many hours |
+| Grid | Purpose | Points | Est. duration |
+|---|---|---|---|
+| `quick` | CI/smoke gate — bounded coarse grid at the most common operating point | ~72 | ~4 min |
+| `spd` | SP-D hardware-comparison map (dense cutoff×res at capture-matched rate+OS) | 450 | ~75 min |
+| `osalias` | OS/aliasing verification (full OS axis, aliasing-stress points) | 192 | ~10 min |
+| `rates` | Host-rate portability spot-check | 120 | ~8 min |
+| `largesig` | Large-signal/drive law (res×drive operating-point lattice) | 180 | ~10 min |
+| `deep` | All four purpose grids above, in sequence, per model | 942 | ~1.7–2.0 h |
+| `full` | Legacy exhaustive dense grid (36,000 raw crossings/model) — never a routine default | ~29,088 | ~40 h |
 
-Launch the dense full grid deliberately. The `--quick` path covers the most common operating point and is the routine opt-in check; the full grid (~36 000 operating points) is for comprehensive characterization before a release or a filter-model change.
+Launch `deep` (or an individual purpose grid) for routine characterization —
+it replaces routine `full` use. The legacy `full` grid is retained for
+comprehensive characterization before a release or a filter-model change, but
+is never the default path of any workflow.
 
 ### Output
 
@@ -107,7 +118,7 @@ The CI job builds the full plugin and runs `k2000_tests` (which includes the `Ch
 ## Summary
 
 - **Routine** — build and run `k2000_tests`; the gate takes ~6 sec and gates CI.
-- **Deliberate deep dive** — run the characterization binary with `--quick` (10–25 min) or without (hours).
+- **Deliberate deep dive** — run the characterization binary with `--grid <name>` (`quick` ~4 min up through `deep` ~2 h and legacy `full` ~40 h — see the grid table above).
 - **After a deliberate DSP change** — update and commit the golden baseline before pushing.
 - **Trusted compile gate** — trigger MSVC CI manually on the feature branch before merging.
 

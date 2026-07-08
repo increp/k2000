@@ -98,6 +98,7 @@ Grid osAliasGrid() {
     g.cutoffs    = { 4000.0, 8000.0, 16000.0 };
     g.resonances = { 0.9, 1.0 };
     g.drives     = { 0.0, 1.0 };
+    // 20 Hz–24 kHz / 200 probes: inherited default; spec §3 pins only the count for this grid.
     g.probeFreqs = CharacterizationRunner::logFreqs(20.0, 24000.0, 200);
     return g;
 }

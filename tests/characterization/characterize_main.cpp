@@ -172,8 +172,13 @@ static int runOne(const juce::String& model, const chz::Grid& grid, const juce::
 static int runDeepOne(const juce::String& model, runlog::Writer& log,
                       std::vector<runlog::Writer::Check>& checksOut) {
     int rc = 0;
-    for (const auto& ng : kPurposeGrids)
+    const int numSubGrids = (int) (sizeof(kPurposeGrids) / sizeof(kPurposeGrids[0]));
+    for (int i = 0; i < numSubGrids; ++i) {
+        const auto& ng = kPurposeGrids[i];
+        std::fprintf(stderr, "\n[%s] deep: sub-grid %d/%d (%s)\n",
+                     model.toRawUTF8(), i + 1, numSubGrids, ng.id);
         rc |= runOne(model, ng.factory(), ng.id, log, checksOut);
+    }
     return rc;
 }
 
