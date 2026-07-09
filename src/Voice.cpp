@@ -21,9 +21,10 @@ void Voice::prepare(double sr, int maxBlock, int osFactor) {
     osL_.assign  ((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
     osR_.assign  ((size_t) maxBlock * VoiceOversampler::kMaxFactor, 0.0f);
 
-    osc_.prepare(sr);          // base rate (already band-limited)
+    osc1_.prepare(sr); osc2_.prepare(sr); osc3_.prepare(sr);  // base rate (already band-limited)
     amp_.prepare(sr);          // base rate
     scratch_.assign(maxBlock, 0.0f);
+    oscScratch_.assign(maxBlock, 0.0f);
     baseL_.assign(maxBlock, 0.0f);
     baseR_.assign(maxBlock, 0.0f);
     spine_.prepare(inner, maxBlock * osFactor_, layer_ ? layer_->spineModel() : nullptr,
@@ -39,7 +40,7 @@ void Voice::prepare(double sr, int maxBlock, int osFactor) {
 }
 
 void Voice::reset() {
-    osc_.reset();
+    osc1_.reset(); osc2_.reset(); osc3_.reset();
     amp_.reset();
     spine_.reset(layer_ ? layer_->spineModel() : nullptr,
                  layer_ ? layer_->hpStage()    : nullptr);
@@ -53,7 +54,7 @@ void Voice::reset() {
 void Voice::noteOn(int midiNote, float velocity) {
     note_ = midiNote;
     velocity_ = velocity;
-    osc_.reset();
+    osc1_.reset(); osc2_.reset(); osc3_.reset();
     amp_.reset();
     // bind() snaps the spine to the current layer's model with no fade; correct for note-start
     // (including stolen-voice reassignment where the layer changes between prepare and noteOn).
@@ -78,20 +79,35 @@ void Voice::render(float* outL, float* outR, int numSamples) {
     const auto& s   = layer_->snapshot();
     const auto& alg = layer_->activeAlgorithm();
 
-    const float tune = s.oscCoarse + s.oscFine * 0.01f;
-    const float hz = midiToHz(note_) * std::pow(2.0f, tune / 12.0f);
-    osc_.setBlend(s.oscWaveform == 3 ? 1.0f : 0.0f,   // sine
-                  s.oscWaveform == 2 ? 1.0f : 0.0f,   // triangle
-                  s.oscWaveform == 0 ? 1.0f : 0.0f,   // saw
-                  s.oscWaveform == 1 ? 1.0f : 0.0f);  // pulse (old "Square" = 50% duty pulse)
-    osc_.setPulseDuty(0.5f);
     amp_.setParameters(s.ampAttackS, s.ampDecayS, s.ampSustain, s.ampReleaseS);
 
     jassert(numSamples <= (int) scratch_.size());
 
-    // --- Base rate: oscillator --------------------------------------------------
-    osc_.setFrequency(hz);
-    osc_.processBlock(scratch_.data(), numSamples);
+    // --- Base rate: three VCOs, each independently tuned/blended, summed via
+    //     their Mixer level into one mono buffer -----------------------------
+    const float tune1 = s.osc1Coarse + s.osc1Fine * 0.01f;
+    const float hz1 = midiToHz(note_) * std::pow(2.0f, tune1 / 12.0f);
+    osc1_.setBlend(s.osc1BlendSine, s.osc1BlendTriangle, s.osc1BlendSaw, s.osc1BlendPulse);
+    osc1_.setPulseDuty(s.osc1PulseDuty);
+    osc1_.setFrequency(hz1);
+    osc1_.processBlock(scratch_.data(), numSamples);
+    for (int i = 0; i < numSamples; ++i) scratch_[i] *= s.mixerOsc1Level;
+
+    const float tune2 = s.osc2Coarse + s.osc2Fine * 0.01f;
+    const float hz2 = midiToHz(note_) * std::pow(2.0f, tune2 / 12.0f);
+    osc2_.setBlend(s.osc2BlendSine, s.osc2BlendTriangle, s.osc2BlendSaw, s.osc2BlendPulse);
+    osc2_.setPulseDuty(s.osc2PulseDuty);
+    osc2_.setFrequency(hz2);
+    osc2_.processBlock(oscScratch_.data(), numSamples);
+    for (int i = 0; i < numSamples; ++i) scratch_[i] += oscScratch_[i] * s.mixerOsc2Level;
+
+    const float tune3 = s.osc3Coarse + s.osc3Fine * 0.01f;
+    const float hz3 = midiToHz(note_) * std::pow(2.0f, tune3 / 12.0f);
+    osc3_.setBlend(s.osc3BlendSine, s.osc3BlendTriangle, s.osc3BlendSaw, s.osc3BlendPulse);
+    osc3_.setPulseDuty(s.osc3PulseDuty);
+    osc3_.setFrequency(hz3);
+    osc3_.processBlock(oscScratch_.data(), numSamples);
+    for (int i = 0; i < numSamples; ++i) scratch_[i] += oscScratch_[i] * s.mixerOsc3Level;
 
     // --- Upsample osc to oversampled domain ------------------------------------
     const int nOs = numSamples * osFactor_;
@@ -108,7 +124,7 @@ void Voice::render(float* outL, float* outR, int numSamples) {
     std::copy(osMono_.data(), osMono_.data() + nOs, osL_.data());
     std::copy(osMono_.data(), osMono_.data() + nOs, osR_.data());
     spine_.processStereo(layer_->hpStage(), s.hpCutoffHz > 0.0f,
-                         layer_->spineModel(), s.spineModelFadeMs, hz,
+                         layer_->spineModel(), s.spineModelFadeMs, hz1,
                          osL_.data(), osR_.data(), nOs);
 
     // --- Downsample back to base rate ------------------------------------------

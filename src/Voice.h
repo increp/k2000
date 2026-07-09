@@ -35,7 +35,7 @@ public:
 
 private:
     Layer* layer_ = nullptr;  // non-owning
-    Oscillator osc_;
+    Oscillator osc1_, osc2_, osc3_;
     Envelope amp_;
 
     // Per-block-TYPE voice-local state (indexed by BlockTypeId value).
@@ -45,6 +45,7 @@ private:
     float velocity_ = 0.0f;
     double sampleRate_ = 44100.0;
     std::vector<float> scratch_;
+    std::vector<float> oscScratch_;   // temp buffer for osc2_/osc3_ before summing into scratch_
     SpineFilterSlot spine_;
 
     std::unique_ptr<VoiceOversampler> os_;   // heap-allocated in prepare() (keeps Voice small on the stack)
