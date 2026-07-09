@@ -31,6 +31,11 @@ juce_add_plugin(k2000
 
 juce_generate_juce_header(k2000)
 
+# Embedded UI assets (fonts). File is named hyphen-less so the generated
+# BinaryData symbol is exactly BarlowCondensedMedium_ttf.
+juce_add_binary_data(k2000_assets SOURCES
+    assets/fonts/BarlowCondensedMedium.ttf)
+
 target_sources(k2000 PRIVATE
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
@@ -41,6 +46,7 @@ target_sources(k2000 PRIVATE
     src/params/Parameters.cpp
     src/gui/ParamBinder.cpp
     src/gui/SummitLookAndFeel.cpp
+    src/gui/VintageLookAndFeel.cpp
     src/gui/LabeledKnob.cpp
     src/gui/Section.cpp
     src/dsp/Oscillator.cpp
@@ -63,6 +69,7 @@ target_compile_definitions(k2000 PUBLIC
 
 target_link_libraries(k2000
     PRIVATE
+        k2000_assets
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC
