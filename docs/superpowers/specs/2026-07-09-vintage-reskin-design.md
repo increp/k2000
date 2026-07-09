@@ -1,8 +1,8 @@
 # Vintage Panel Reskin (GUI Stage 1 of 3) — Design
 
 **Version:** 5.31 (artifact) · **Date:** 2026-07-09 · **Status:** Approved in brainstorm; build follows
-**Reference image:** `assets/2026-07-09-bernie-vintage-reference.png` (user-provided mockup; the visual
-ground truth for all three GUI stages — commit pending re-share, the original temp file was OS-cleaned)
+**Reference image:** `assets/2026-07-09-bernie-vintage-reference.png` (user-provided mockup, 1448×1086;
+the visual ground truth for all three GUI stages)
 **Depends on:** `2026-07-09-three-vco-blend-design.md` (shipped — the DSP backend this GUI eventually fronts)
 
 ---
