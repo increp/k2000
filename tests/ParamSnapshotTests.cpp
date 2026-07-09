@@ -114,6 +114,32 @@ public:
             s = params::snapshot(apvts, 0);
             expect(s.moogMode == 0 && std::fpclassify(s.moogBassAmount) == FP_ZERO, "moog defaults wrong");
         }
+
+        beginTest("VCO1/2/3 + Mixer params exist, default to unison saw with only VCO1 audible");
+        {
+            const auto& id = params::layerIds(0);
+            expect(apvts.getParameter(id.osc1BlendSaw) != nullptr, "osc1.blend.saw missing");
+            expect(apvts.getParameter(id.osc2BlendSaw) != nullptr, "osc2.blend.saw missing");
+            expect(apvts.getParameter(id.osc3BlendSaw) != nullptr, "osc3.blend.saw missing");
+            expect(apvts.getParameter(id.osc1PulseDuty) != nullptr, "osc1.blend.pulseDuty missing");
+            expect(apvts.getParameter(id.mixerOsc1Level) != nullptr, "mixer.osc1.level missing");
+
+            s = params::snapshot(apvts, 0);
+            for (float coarse : { s.osc1Coarse, s.osc2Coarse, s.osc3Coarse })
+                expectWithinAbsoluteError(coarse, 0.0f, 1e-6f);
+            for (float fine : { s.osc1Fine, s.osc2Fine, s.osc3Fine })
+                expectWithinAbsoluteError(fine, 0.0f, 1e-6f);
+            for (float saw : { s.osc1BlendSaw, s.osc2BlendSaw, s.osc3BlendSaw })
+                expectWithinAbsoluteError(saw, 1.0f, 1e-6f);
+            for (float sine : { s.osc1BlendSine, s.osc2BlendSine, s.osc3BlendSine })
+                expectWithinAbsoluteError(sine, 0.0f, 1e-6f);
+            for (float duty : { s.osc1PulseDuty, s.osc2PulseDuty, s.osc3PulseDuty })
+                expectWithinAbsoluteError(duty, 0.5f, 1e-6f);
+
+            expectWithinAbsoluteError(s.mixerOsc1Level, 1.0f, 1e-6f);
+            expectWithinAbsoluteError(s.mixerOsc2Level, 0.0f, 1e-6f);
+            expectWithinAbsoluteError(s.mixerOsc3Level, 0.0f, 1e-6f);
+        }
     }
 };
 
