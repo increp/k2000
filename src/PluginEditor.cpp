@@ -51,11 +51,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     // Source / DSP section
     addAndMakeVisible(sourceSection_);
     auto addToSource = [this](juce::Component& c) { sourceSection_.addAndMakeVisible(c); };
-    oscWaveLbl_.setText("Wave", juce::dontSendNotification);
-    oscWaveLbl_.setJustificationType(juce::Justification::centred);
-    oscWave_.addItemList(juce::StringArray{ "Saw", "Square", "Triangle", "Sine" }, 1);
-    addToSource(oscWaveLbl_); addToSource(oscWave_);
-    addToSource(oscCoarse_); addToSource(oscFine_);
     algoLbl_.setText("Algo", juce::dontSendNotification);
     algoLbl_.setJustificationType(juce::Justification::centred);
     // Same UTF-8-correct names that build the algorithm choice param.
@@ -183,9 +178,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
 void K2000AudioProcessorEditor::bindLayer(int layer) {
     const auto& ids = params::layerIds(layer);
 
-    binder_.bind(oscWave_,             ids.oscWaveform);
-    binder_.bind(oscCoarse_.slider(),  ids.oscCoarse);
-    binder_.bind(oscFine_.slider(),    ids.oscFine);
     binder_.bind(algo_,                ids.algorithm);
     binder_.bind(shaperDrive_.slider(),ids.shaperDrive);
     binder_.bind(shaperMix_.slider(),  ids.shaperMix);
@@ -344,7 +336,7 @@ void K2000AudioProcessorEditor::resized() {
         // Source children: two stacked cell-rows inside contentBounds.
         auto sc = sourceSection_.contentBounds();
         auto top = sc.removeFromTop(sc.getHeight() / 2);
-        layoutCells(top, { { &oscWaveLbl_, &oscWave_ }, { nullptr, &oscCoarse_ }, { nullptr, &oscFine_ } });
+        (void) top;  // left blank -- the three-VCO Source-section rebuild (next plan) fills this
         layoutCells(sc,  { { &algoLbl_, &algo_ } });
 
         // Filter children: Layout B — HP pre-band + divider + two main rows.

@@ -55,8 +55,7 @@ public:
             //   - spineModel = 0 selects Huggett (index 0 in FilterModelLibrary)
             //   - algorithmId = 0 (default algorithm)
             auto buildSnapshot = []() {
-                ParamSnapshot s;
-                s.oscWaveform      = 0;        // saw — rich in harmonics, alias-prone
+                ParamSnapshot s;               // defaults to VCO1 100% saw — rich in harmonics, alias-prone
                 s.svfCutoffHz      = 8000.0f;  // open enough to pass the drive harmonics
                 s.svfResonance     = 0.95f;    // near-max resonance, self-osc territory
                 s.wsDrive          = 0.0f;     // no waveshaper (isolate spine path)

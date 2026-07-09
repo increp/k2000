@@ -22,8 +22,7 @@ namespace {
 struct Patch { const char* name; ParamSnapshot s; };
 
 ParamSnapshot base() {
-    ParamSnapshot s {};
-    s.oscWaveform = 0;                 // saw
+    ParamSnapshot s {};                // defaults to VCO1 100% saw
     s.ampAttackS = 0.001f; s.ampDecayS = 0.1f;
     s.ampSustain = 1.0f;   s.ampReleaseS = 0.1f;
     s.algorithmId = 1;                 // "thru" — isolate the spine unless a patch says otherwise

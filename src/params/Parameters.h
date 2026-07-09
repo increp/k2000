@@ -9,7 +9,7 @@ namespace params {
 // Per-layer parameter IDs. Built once into a static table (juce::Strings), so
 // snapshot()/routing() read via stable ids with no per-block string building.
 struct LayerIds {
-    juce::String algorithm, oscWaveform, oscCoarse, oscFine,
+    juce::String algorithm,
                  osc1Coarse, osc1Fine, osc1BlendSine, osc1BlendTriangle, osc1BlendSaw, osc1BlendPulse, osc1PulseDuty,
                  osc2Coarse, osc2Fine, osc2BlendSine, osc2BlendTriangle, osc2BlendSaw, osc2BlendPulse, osc2PulseDuty,
                  osc3Coarse, osc3Fine, osc3BlendSine, osc3BlendTriangle, osc3BlendSaw, osc3BlendPulse, osc3PulseDuty,

@@ -62,8 +62,7 @@ struct VoicePerfTests : public juce::UnitTest {
                     Layer layer;
                     layer.prepare(sr * os, N * os);
 
-                    ParamSnapshot s {};
-                    s.oscWaveform = 0;              // saw (worst-case harmonics)
+                    ParamSnapshot s {};              // defaults to VCO1 100% saw (worst-case harmonics)
                     s.svfCutoffHz = 1000.0f;
                     s.svfResonance = cfg.res;
                     s.spineDrive   = cfg.drive;
@@ -118,8 +117,8 @@ struct VoicePerfTests : public juce::UnitTest {
             const int nOs = N * os;
             Layer layer;
             layer.prepare(sr * os, nOs);
-            ParamSnapshot s {};
-            s.oscWaveform = 0; s.svfCutoffHz = 1000.0f; s.svfResonance = 0.2f;
+            ParamSnapshot s {};              // defaults to VCO1 100% saw
+            s.svfCutoffHz = 1000.0f; s.svfResonance = 0.2f;
             s.spineModel = 0; s.spineSlope = 1;
             s.ampSustain = 1.0f;
             layer.updateParameters(s);

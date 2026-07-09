@@ -9,7 +9,8 @@
 namespace {
 ParamSnapshot dspBase() {
     ParamSnapshot s;
-    s.oscWaveform = 3; s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
+    s.osc1BlendSine = 1.0f; s.osc1BlendSaw = 0.0f;
+    s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
     s.wsDrive = 0.0f; s.wsMix = 0.0f;
     s.ampAttackS = 0.0001f; s.ampDecayS = 0.05f; s.ampSustain = 1.0f; s.ampReleaseS = 0.05f;
     return s;

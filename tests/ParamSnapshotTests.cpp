@@ -39,12 +39,12 @@ public:
 
         beginTest("defaults match expected values");
         auto s = params::snapshot(apvts, 0);
-        expectWithinAbsoluteError(s.oscCoarse, 0.0f, 1e-6f);
+        expectWithinAbsoluteError(s.osc1Coarse, 0.0f, 1e-6f);
         expectWithinAbsoluteError(s.svfCutoffHz, 1000.0f, 1e-3f);
         expectWithinAbsoluteError(s.svfResonance, 0.2f, 1e-6f);
         expectWithinAbsoluteError(s.ampSustain, 0.8f, 1e-6f);
         expectWithinAbsoluteError(s.masterGainDb, -9.0f, 1e-3f);
-        expect(s.oscWaveform == 0);
+        expectWithinAbsoluteError(s.osc1BlendSaw, 1.0f, 1e-6f);
 
         beginTest("setting a parameter changes the snapshot");
         if (auto* p = apvts.getParameter(params::layerIds(0).filterCutoff))

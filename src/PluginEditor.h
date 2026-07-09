@@ -34,10 +34,9 @@ private:
 
     // --- Signal row ---
     Section sourceSection_{ "VAST Source / DSP", /*spine*/ false };
-    juce::ComboBox oscWave_, algo_;
-    juce::Label    oscWaveLbl_, algoLbl_;
-    LabeledKnob    oscCoarse_{ "Coarse" }, oscFine_{ "Fine" },
-                   shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };
+    juce::ComboBox algo_;
+    juce::Label    algoLbl_;
+    LabeledKnob    shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };
 
     Section mixerSection_{ "Mixer", /*spine*/ true, /*reserved*/ true };
 

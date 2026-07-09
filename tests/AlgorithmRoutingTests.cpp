@@ -21,8 +21,7 @@ public:
     }
 
     static ParamSnapshot base() {
-        ParamSnapshot s;
-        s.oscWaveform = 0;                 // saw — harmonically rich
+        ParamSnapshot s;                   // defaults to VCO1 100% saw — harmonically rich
         s.svfCutoffHz = 800.0f; s.svfResonance = 0.2f;
         s.wsDrive = 0.9f; s.wsMix = 1.0f;  // strong shaping so order matters
         s.ampAttackS = 0.0001f; s.ampDecayS = 0.05f;

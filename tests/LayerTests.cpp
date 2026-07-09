@@ -23,8 +23,7 @@ public:
             layer.prepare(sr, N);
 
             ParamSnapshot s {};
-            s.oscWaveform = 3;          // sine
-            s.oscCoarse = 0; s.oscFine = 0;
+            s.osc1BlendSine = 1.0f; s.osc1BlendSaw = 0.0f;   // sine (coarse/fine already default to 0)
             s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
             s.wsDrive = 0.0f; s.wsMix = 0.0f;
             s.ampAttackS = 0.001f; s.ampDecayS = 0.1f;
@@ -152,7 +151,7 @@ public:
             // Same Layer config save the cutoff; a high note through a low LP
             // cutoff should carry substantially less energy than through a high one.
             ParamSnapshot s {};
-            s.oscWaveform = 3;
+            s.osc1BlendSine = 1.0f; s.osc1BlendSaw = 0.0f;
             s.svfResonance = 0.0f;
             s.wsDrive = 0.0f; s.wsMix = 0.0f;
             s.ampAttackS = 0.001f; s.ampDecayS = 0.1f;

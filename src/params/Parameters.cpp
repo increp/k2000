@@ -19,9 +19,6 @@ LayerIds buildIds(int layer) {
     const juce::String p = pfx(layer);
     LayerIds id;
     id.algorithm       = p + "algorithm";
-    id.oscWaveform     = p + "osc.waveform";
-    id.oscCoarse       = p + "osc.coarse";
-    id.oscFine         = p + "osc.fine";
     id.osc1Coarse         = p + "osc1.coarse";
     id.osc1Fine           = p + "osc1.fine";
     id.osc1BlendSine      = p + "osc1.blend.sine";
@@ -119,16 +116,6 @@ APVTS::ParameterLayout createLayout() {
 
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.algorithm, 1},
             "Algorithm " + juce::String(i), algoNames(), 0));
-        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.oscWaveform, 1},
-            "Osc Waveform " + juce::String(i),
-            juce::StringArray{"Saw", "Square", "Triangle", "Sine"}, 0));
-        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.oscCoarse, 1},
-            "Osc Coarse " + juce::String(i),
-            juce::NormalisableRange<float>{-24.0f, 24.0f, 1.0f}, 0.0f));
-        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.oscFine, 1},
-            "Osc Fine " + juce::String(i),
-            juce::NormalisableRange<float>{-100.0f, 100.0f, 0.1f}, 0.0f));
-
         // VCO1/2/3: coarse/fine tuning + 4-way proportional waveform blend + pulse duty.
         // All three default identically for coarse/fine/blend (unison pitch, 100% saw) --
         // only the Mixer level differs (VCO1 audible, VCO2/3 silent) so the default patch
@@ -317,9 +304,6 @@ APVTS::ParameterLayout createLayout() {
 ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     const LayerIds& id = layerIds(layer);
     ParamSnapshot s;
-    s.oscWaveform  = (int) raw(apvts, id.oscWaveform);
-    s.oscCoarse    = raw(apvts, id.oscCoarse);
-    s.oscFine      = raw(apvts, id.oscFine);
     s.osc1Coarse        = raw(apvts, id.osc1Coarse);
     s.osc1Fine          = raw(apvts, id.osc1Fine);
     s.osc1BlendSine     = raw(apvts, id.osc1BlendSine);

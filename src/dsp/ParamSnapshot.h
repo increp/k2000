@@ -6,13 +6,6 @@
 // Adding new params here is a single-source-of-truth change: extend this
 // struct, the Parameters layout, and any consumer that needs the value.
 struct ParamSnapshot {
-    // Oscillator (retired -- kept until Task 4 of the three-VCO-blend plan
-    // removes it, since removing it here would break every test file that
-    // still constructs a ParamSnapshot directly)
-    int   oscWaveform   = 0;   // 0=saw 1=square 2=triangle 3=sine
-    float oscCoarse     = 0.0f; // semitones
-    float oscFine       = 0.0f; // cents
-
     // VCO1/2/3: coarse/fine tuning (semitones/cents) + proportional 4-way
     // waveform blend (each 0..1, combined as a weighted average -- see
     // Oscillator::processSample()) + pulse duty cycle (0.01..0.99).
