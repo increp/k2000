@@ -126,8 +126,10 @@ Rendering:
 ## 8. Verification
 
 Suite stays green with zero test changes expected (`cmake --build build --target k2000_tests
--j4 && ./build/tests/k2000_tests` — lifecycle tests instantiate the editor, so the new layout
-code runs under test and must not assert/crash at 1400×1050). Both `k2000_tests` and
+-j4 && ./build/tests/k2000_tests`). **Correction from plan-writing research:** the suite never
+compiles or instantiates the editor — `createEditor()` returns nullptr under `K2000_TESTING`
+and no GUI sources are in the test target — so the suite guards only against non-GUI fallout;
+compile-correctness of the GUI comes from building the plugin targets. Both `k2000_tests` and
 `k2000_Standalone` build clean. **Acceptance is visual:** the user eyeballs the running
 Standalone (this environment cannot screenshot — known XWayland/portal limitation) checking:
 whole panel reads as the reference's vintage hardware look; all existing controls present and
