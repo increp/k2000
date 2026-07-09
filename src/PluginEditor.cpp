@@ -61,7 +61,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     // Same UTF-8-correct names that build the algorithm choice param.
     algo_.addItemList(params::algoNames(), 1);
     addToSource(algoLbl_); addToSource(algo_);
-    addToSource(shaperDrive_); addToSource(shaperMix_);
 
     // Filter section
     addAndMakeVisible(filterSection_);
@@ -96,14 +95,9 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     moogWaveLbl_.setText("Wave", juce::dontSendNotification);
     moogWaveLbl_.setJustificationType(juce::Justification::centred);
     moogWave_.addItemList(juce::StringArray{ "Sine", "Triangle", "Saw" }, 1);
-    filterSection_.addAndMakeVisible(moogWaveLbl_);
-    filterSection_.addAndMakeVisible(moogWave_);
     moogOctaveLbl_.setText("Octave", juce::dontSendNotification);
     moogOctaveLbl_.setJustificationType(juce::Justification::centred);
     moogOctave_.addItemList(juce::StringArray{ "0", "-1 oct", "-2 oct" }, 1);
-    filterSection_.addAndMakeVisible(moogOctaveLbl_);
-    filterSection_.addAndMakeVisible(moogOctave_);
-    filterSection_.addAndMakeVisible(moogBass_);
 
     // Wire model-selection visibility switching
     spineModel_.onChange = [this] { updateModelVisibility(); resized(); };
@@ -280,10 +274,7 @@ void K2000AudioProcessorEditor::showOversamplingMenu() {
 void K2000AudioProcessorEditor::updateModelVisibility() {
     const bool moog = (spineModel_.getSelectedItemIndex() == 1);
     // Moog-only controls
-    juce::Component* moogControls[] = { &moogModeLbl_,  &moogMode_,
-                                        &moogWaveLbl_,  &moogWave_,
-                                        &moogOctaveLbl_, &moogOctave_,
-                                        &moogBass_ };
+    juce::Component* moogControls[] = { &moogModeLbl_, &moogMode_ };
     for (auto* c : moogControls)
         c->setVisible(moog);
     // Huggett-only controls
@@ -354,7 +345,7 @@ void K2000AudioProcessorEditor::resized() {
         auto sc = sourceSection_.contentBounds();
         auto top = sc.removeFromTop(sc.getHeight() / 2);
         layoutCells(top, { { &oscWaveLbl_, &oscWave_ }, { nullptr, &oscCoarse_ }, { nullptr, &oscFine_ } });
-        layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
+        layoutCells(sc,  { { &algoLbl_, &algo_ } });
 
         // Filter children: Layout B — HP pre-band + divider + two main rows.
         // Row 1 (HP band): HP label, HP cutoff, HP reso, HP slope.
@@ -396,10 +387,7 @@ void K2000AudioProcessorEditor::resized() {
             layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
                                 { nullptr,          &spineSeparation_ },
                                 { nullptr,          &spinePostDrive_ } });
-            layoutCells(fc,  { { &moogModeLbl_,    &moogMode_ },
-                                { &moogWaveLbl_,    &moogWave_ },
-                                { &moogOctaveLbl_,  &moogOctave_ },
-                                { nullptr,          &moogBass_ } });
+            layoutCells(fc,  { { &moogModeLbl_, &moogMode_ } });
             updateModelVisibility();
         }
     }
