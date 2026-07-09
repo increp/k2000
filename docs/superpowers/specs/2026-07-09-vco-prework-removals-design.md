@@ -1,4 +1,4 @@
-# VCO Section Pre-Work: Drive/Mix Knob Removal + Moog Bass Retirement — Design
+# VCO Section Pre-Work: Drive/Mix + Moog Bass Knob Removal — Design
 
 **Version:** 5.30 (artifact, revised from 5.28) · **Date:** 2026-07-09 · **Status:** Approved in brainstorm; scope narrowed during plan-writing (§2B), build follows
 
@@ -22,6 +22,7 @@ Two small, unrelated cleanups requested as prerequisites before the 3-VCO Blend 
 - Remove `moogWave_`, `moogOctave_`, `moogBass_` (and their labels `moogWaveLbl_`, `moogOctaveLbl_`) from `filterSection_`'s `addAndMakeVisible` calls in `PluginEditor.cpp`. `moogMode_`/`moogModeLbl_` stay — that's the main filter mode selector, unrelated to bass.
 - Trim the now-dead cells out of `updateModelVisibility()`'s `moogControls[]` array and the Moog row's `layoutCells(...)` call in `resized()` (both currently list Mode/Wave/Octave/Bass together) so Mode gets the full row width instead of leaving 3/4 of it blank when the Moog model is selected.
 - Leave `id.spineMoogBassAmount/Wave/Octave` params, `ParamSnapshot`'s `moogBassAmount/Wave/Octave` fields, `MoogLadder::setBass()`, the Cmajor DSP, and every `binder_.bind(...)` call for these controls completely untouched — same "stops being drawn/reachable, everything it controls keeps running at its current default" contract as (A).
+- `moogBass_`, `moogWave_`, `moogOctave_`, and their labels in `PluginEditor.h` stay too (dead-but-present, same rationale as (A)'s Drive/Mix knobs) — revisit alongside the full param+DSP+Cmajor retirement whenever that happens (see §1's scope-narrowing note), not as part of the Source section rebuild (this pass is Filter-section, not Source-section).
 - No replacement mechanism — the ladder's inherent bass loss at high resonance goes uncompensated until real-hardware fingerprinting (SP-D) settles what, if anything, authentic voicing calls for.
 - **Does not touch any test file or golden** — confirmed via grep, the only references outside GUI/param/DSP plumbing are in `MoogLadderTests.cpp`, `FilterUnderTestTests.cpp`, `ParamSnapshotTests.cpp`, `RunnerLevelTests.cpp`, `RenderFingerprintTests.cpp`, and `golden/fingerprints/baseline.csv` — all exercise the param/DSP layer, which this pass doesn't change. No golden regen needed.
 

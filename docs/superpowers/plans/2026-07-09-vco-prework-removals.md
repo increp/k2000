@@ -53,7 +53,7 @@ Replace with:
 
 - [ ] **Step 3: Edit 2 — give Algo the full row width instead of leaving Drive/Mix's blank cells**
 
-Still in `buildStaticControls()`... actually this next one is in `resized()`. Find:
+This edit is in `resized()`, not `buildStaticControls()`. Find:
 
 ```cpp
         layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
