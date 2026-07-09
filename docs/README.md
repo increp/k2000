@@ -8,11 +8,16 @@ Built with JUCE, in C++. Linux for local development; Windows builds produced by
 
 | Folder | What lives here |
 |---|---|
-| [`specs/`](specs/) | Design specifications for major pieces of work. The v1 and v2 designs are here. |
-| [`architecture/`](architecture/) | Deep dives into specific architectural pieces. The DSPBlock interface lives here. |
+| [`specs/`](specs/) | Design specifications for major pieces of work. The v1–v4 designs are here (superseded by `superpowers/specs/` going forward). |
+| [`architecture/`](architecture/) | Deep dives into specific architectural pieces. The DSPBlock interface and the [living decisions/questions register](architecture/engine-questions.md) live here. |
 | [`decisions/`](decisions/) | Architecture Decision Records (ADRs) — short documents capturing each non-obvious choice and *why* it was made. |
-| [`roadmap/`](roadmap/) | What's coming after v1, and roughly in what order. |
+| [`roadmap/`](roadmap/) | Vision-only phase plan. **Not status** — the live roadmap is `tools/roadmap-dashboard` (`npm run dashboard`). |
 | [`dsp/`](dsp/) | DSP math notes — derivations, references, tuning notes for filters/oscillators. Grows as DSP is implemented. |
+| [`franklin/`](franklin/) | **Franklin** — Bernie's measurement/validation product: its charter, the runs-dashboard operator's manual, and the test catalog. |
+| [`filter-validation/`](filter-validation/) | How to run and read the characterization harness — grids, gates, goldens. |
+| [`superpowers/`](superpowers/) | The current spec/plan convention (`superpowers/specs/`, `superpowers/plans/`) — brainstorm → spec → plan → build. |
+| [`reviews/`](reviews/) | Escalated/external analyst reviews (e.g. the multi-level PR #7 review chain). |
+| [`audit/`](audit/) | Dated, one-off codebase audits. |
 
 ## Conventions
 

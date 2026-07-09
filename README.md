@@ -8,6 +8,14 @@ Built with [JUCE](https://juce.com) 8.0.4, in C++. Linux for local development; 
 
 ## Status
 
+**Also shipped (process/tooling, not a plugin version):** the anti-drift harness
+(`tools/drift-check`), the Bernie rename (this synth was `k2000` in-plugin;
+now Bernie everywhere user-facing), and **Franklin** — Bernie's measurement/
+validation product — with a live runs dashboard (progress, provenance, per-test
+explanations) and purpose-driven characterization grids replacing a ~40 h
+exhaustive sweep. See [`docs/franklin/`](docs/franklin/) and the
+[engine register](docs/architecture/engine-questions.md).
+
 **v5.0 shipped as 5.1.0 (2026-06-19)** — the constant Summit spine's flagship filter went **nonlinear**: a true-to-life **Huggett** (Novation Summit lineage) with three asymmetric drive stages (pre-drive · self-limiting resonance saturator · post-drive), anti-aliased with ADAA, plus an always-available dedicated **HP pre-filter** before the main multimode filter. Confirmed in Ableton. See the [spec](docs/specs/2026-06-17-v5-huggett-nonlinear-hp-prefilter-design.md).
 
 **v5.0.0 (Plan 1)** — the spine became a **selectable, live-switchable `FilterModel` library** (Huggett default), per-Layer, full stereo. [ADR-0011](docs/decisions/0011-selectable-spine-filter-library.md).
