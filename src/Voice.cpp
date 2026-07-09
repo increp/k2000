@@ -80,7 +80,11 @@ void Voice::render(float* outL, float* outR, int numSamples) {
 
     const float tune = s.oscCoarse + s.oscFine * 0.01f;
     const float hz = midiToHz(note_) * std::pow(2.0f, tune / 12.0f);
-    osc_.setWaveform(static_cast<Oscillator::Waveform>(s.oscWaveform));
+    osc_.setBlend(s.oscWaveform == 3 ? 1.0f : 0.0f,   // sine
+                  s.oscWaveform == 2 ? 1.0f : 0.0f,   // triangle
+                  s.oscWaveform == 0 ? 1.0f : 0.0f,   // saw
+                  s.oscWaveform == 1 ? 1.0f : 0.0f);  // pulse (old "Square" = 50% duty pulse)
+    osc_.setPulseDuty(0.5f);
     amp_.setParameters(s.ampAttackS, s.ampDecayS, s.ampSustain, s.ampReleaseS);
 
     jassert(numSamples <= (int) scratch_.size());

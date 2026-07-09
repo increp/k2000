@@ -125,7 +125,7 @@ struct VoicePerfTests : public juce::UnitTest {
             layer.updateParameters(s);
 
             Oscillator osc; osc.prepare(sr); osc.setFrequency(110.0f);
-            osc.setWaveform(Oscillator::Waveform::Saw);
+            osc.setBlend(0.0f, 0.0f, 1.0f, 0.0f);  // Saw
             VoiceOversampler ovs; ovs.prepare(N); ovs.setFactor(os);
             auto wsState = layer.block(BlockTypeId::Waveshaper).makeVoiceState();
             SpineFilterSlot slot;

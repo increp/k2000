@@ -4,9 +4,10 @@
 namespace {
     constexpr double kTwoPi = 6.283185307179586;
 
-    // Standard polyBLEP correction. t is the phase in [0,1), dt is phaseInc.
-    // Returns the value to subtract at upward discontinuity, or to add at
-    // downward discontinuity (caller flips sign as needed).
+    // Standard polyBLEP correction for a discontinuity AT PHASE 0. t is the
+    // phase in [0,1), dt is phaseInc. To correct a discontinuity at some
+    // other phase X, call polyBLEP(fmod(t - X + 1.0, 1.0), dt) instead --
+    // this shifts phase so X maps to 0 from this function's point of view.
     inline double polyBLEP(double t, double dt) {
         if (t < dt) {
             t /= dt;
@@ -31,7 +32,11 @@ void Oscillator::reset() {
     leakyInt_ = 0.0;
 }
 
-void Oscillator::setWaveform(Waveform w) { waveform_ = w; }
+void Oscillator::setBlend(float sine, float tri, float saw, float pulse) {
+    blendSine_ = sine; blendTri_ = tri; blendSaw_ = saw; blendPulse_ = pulse;
+}
+
+void Oscillator::setPulseDuty(float duty) { pulseDuty_ = duty; }
 
 void Oscillator::setFrequency(float hz) {
     frequency_ = hz;
@@ -42,36 +47,39 @@ float Oscillator::processSample() {
     // Guard against degenerate / negative freq
     if (phaseInc_ <= 0.0) return 0.0f;
 
-    double v = 0.0;
     const double dt = phaseInc_;
     const double t  = phase_;
 
-    switch (waveform_) {
-        case Waveform::Sine:
-            v = std::sin(kTwoPi * t);
-            break;
+    const double total = double(blendSine_) + double(blendTri_) + double(blendSaw_) + double(blendPulse_);
+    double v = 0.0;
 
-        case Waveform::Saw:
-            v = 2.0 * t - 1.0;
-            v -= polyBLEP(t, dt);
-            break;
-
-        case Waveform::Square:
-            v = (t < 0.5) ? 1.0 : -1.0;
-            v += polyBLEP(t, dt);
-            v -= polyBLEP(std::fmod(t + 0.5, 1.0), dt);
-            break;
-
-        case Waveform::Triangle: {
-            // Integrate a polyBLEP-corrected square. Leaky integrator keeps
-            // DC out. Scale by 4*dt to get ~unit-amplitude triangle.
+    if (total > 0.0) {
+        if (blendSine_ != 0.0f) {
+            v += blendSine_ * std::sin(kTwoPi * t);
+        }
+        if (blendTri_ != 0.0f) {
+            // Integrate a polyBLEP-corrected FIXED 50%-duty square. This is
+            // independent of pulseDuty_ -- Triangle always derives from its
+            // own internal 50% square, never the Pulse component's duty.
             double sq = (t < 0.5) ? 1.0 : -1.0;
             sq += polyBLEP(t, dt);
             sq -= polyBLEP(std::fmod(t + 0.5, 1.0), dt);
             leakyInt_ = leakyInt_ * 0.999 + sq * 4.0 * dt;
-            v = leakyInt_;
-            break;
+            v += blendTri_ * leakyInt_;
         }
+        if (blendSaw_ != 0.0f) {
+            double saw = 2.0 * t - 1.0;
+            saw -= polyBLEP(t, dt);
+            v += blendSaw_ * saw;
+        }
+        if (blendPulse_ != 0.0f) {
+            const double duty = double(pulseDuty_);
+            double pulse = (t < duty) ? 1.0 : -1.0;
+            pulse += polyBLEP(t, dt);
+            pulse -= polyBLEP(std::fmod(t - duty + 1.0, 1.0), dt);
+            v += blendPulse_ * pulse;
+        }
+        v /= total;
     }
 
     phase_ += dt;
