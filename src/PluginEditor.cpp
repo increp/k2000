@@ -6,19 +6,45 @@ namespace {
 constexpr int kRailW   = 14;   // wood side rails
 constexpr int kHeaderH = 92;   // cream header plate
 constexpr int kFooterH = 78;   // cream footer plate (layer routing strip)
+// Logical canvas size: all layout/chrome constants are in this coordinate
+// space; the window transform-scales the canvas (aspect-locked resize).
+constexpr int kCanvasW = 1400;
+constexpr int kCanvasH = 1050;
 }
 
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
     setLookAndFeel(&lnf_);
+
+    // Fixed-size logical canvas; the window scales it (see resized()).
+    addAndMakeVisible(canvas_);
+    canvas_.onPaint = [this](juce::Graphics& g) { paintCanvas(g); };
+    canvas_.setBounds(0, 0, kCanvasW, kCanvasH);
+
     buildStaticControls();
 
     // master gain is not per-layer — bind once.
     binder_.bind(masterGain_, params::masterGain);
 
     bindLayer(0);
+    layoutCanvas();
     startTimerHz(24);
-    setSize(1400, 1050);
+
+    // Aspect-locked resizable window (user ruling 2026-07-10: the fixed size
+    // overflowed a DPI-scaled 4K screen). Open at a size that fits the display.
+    setResizable(true, true);
+    setResizeLimits(kCanvasW / 2, kCanvasH / 2, kCanvasW * 2, kCanvasH * 2);
+    if (auto* c = getConstrainer())
+        c->setFixedAspectRatio((double) kCanvasW / (double) kCanvasH);
+    float fit = 1.0f;
+    if (auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+        const auto area = display->userArea;
+        fit = juce::jmin(1.0f,
+                         (float) (area.getWidth()  - 80)  / (float) kCanvasW,
+                         (float) (area.getHeight() - 140) / (float) kCanvasH);
+        fit = juce::jmax(fit, 0.5f);
+    }
+    setSize(juce::roundToInt((float) kCanvasW * fit), juce::roundToInt((float) kCanvasH * fit));
 }
 
 K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
@@ -33,12 +59,12 @@ void K2000AudioProcessorEditor::buildStaticControls() {
                    juce::dontSendNotification);
     title_.setFont(VintageLookAndFeel::condensedFont(18.0f));
     title_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
-    addAndMakeVisible(title_);
+    canvas_.addAndMakeVisible(title_);
 
     editLayerLabel_.setText("Edit Layer", juce::dontSendNotification);
     editLayerLabel_.setJustificationType(juce::Justification::centredRight);
     editLayerLabel_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
-    addAndMakeVisible(editLayerLabel_);
+    canvas_.addAndMakeVisible(editLayerLabel_);
     for (int i = 0; i < params::kNumLayers; ++i)
         editLayerCombo_.addItem("Layer " + juce::String(i), i + 1);
     editLayerCombo_.setSelectedId(1, juce::dontSendNotification);
@@ -46,19 +72,19 @@ void K2000AudioProcessorEditor::buildStaticControls() {
         editLayer_ = editLayerCombo_.getSelectedId() - 1;
         bindLayer(editLayer_);
     };
-    addAndMakeVisible(editLayerCombo_);
+    canvas_.addAndMakeVisible(editLayerCombo_);
     masterGainLbl_.setText("OUTPUT", juce::dontSendNotification);
     masterGainLbl_.setJustificationType(juce::Justification::centred);
     masterGainLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
-    addAndMakeVisible(masterGainLbl_);
+    canvas_.addAndMakeVisible(masterGainLbl_);
     masterGain_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 56, 15);
-    addAndMakeVisible(masterGain_);
+    canvas_.addAndMakeVisible(masterGain_);
 
     menuButton_.onClick = [this] { showOversamplingMenu(); };
-    addAndMakeVisible(menuButton_);
+    canvas_.addAndMakeVisible(menuButton_);
 
     // VAST DSP panel (bottom row) — the algorithm selector's new home.
-    addAndMakeVisible(vastDspSection_);
+    canvas_.addAndMakeVisible(vastDspSection_);
     algoLbl_.setText("Algo", juce::dontSendNotification);
     algoLbl_.setJustificationType(juce::Justification::centred);
     // Same UTF-8-correct names that build the algorithm choice param.
@@ -67,7 +93,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     vastDspSection_.addAndMakeVisible(algo_);
 
     // Filter section
-    addAndMakeVisible(filterSection_);
+    canvas_.addAndMakeVisible(filterSection_);
     filterSection_.addAndMakeVisible(filterCutoff_);
     filterSection_.addAndMakeVisible(filterRes_);
     spineModelLbl_.setText("Filter", juce::dontSendNotification);
@@ -104,7 +130,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     moogOctave_.addItemList(juce::StringArray{ "0", "-1 oct", "-2 oct" }, 1);
 
     // Wire model-selection visibility switching
-    spineModel_.onChange = [this] { updateModelVisibility(); resized(); };
+    spineModel_.onChange = [this] { updateModelVisibility(); layoutCanvas(); };
     updateModelVisibility();
 
     // HP pre-filter band controls
@@ -123,7 +149,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(filterEnvSection_);
 
     // Amp env section
-    addAndMakeVisible(ampEnvSection_);
+    canvas_.addAndMakeVisible(ampEnvSection_);
     for (auto* k : { &ampA_, &ampD_, &ampS_, &ampR_ })
         ampEnvSection_.addAndMakeVisible(*k);
 
@@ -131,8 +157,8 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     for (auto* s : { &vco1Section_, &vco2Section_, &vco3Section_,
                      &mixerSection_, &outputSection_,
                      &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
-        addAndMakeVisible(*s);
-    addAndMakeVisible(ampSection_);
+        canvas_.addAndMakeVisible(*s);
+    canvas_.addAndMakeVisible(ampSection_);
 
     // Amp section: hearing-safety output limiter (protected control — not an APVTS param).
     safetyLbl_.setText("Safety", juce::dontSendNotification);
@@ -174,11 +200,11 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     enableLbl_.setText("Enable", juce::dontSendNotification);
     enableLbl_.setJustificationType(juce::Justification::centred);
     enableLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
-    addAndMakeVisible(enableLbl_);
-    addAndMakeVisible(enable_);
+    canvas_.addAndMakeVisible(enableLbl_);
+    canvas_.addAndMakeVisible(enable_);
     for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ }) {
         k->setCaptionColour(VintageLookAndFeel::creamText);
-        addAndMakeVisible(*k);
+        canvas_.addAndMakeVisible(*k);
     }
     channelLbl_.setText("Channel", juce::dontSendNotification);
     channelLbl_.setJustificationType(juce::Justification::centred);
@@ -186,8 +212,8 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     juce::StringArray chanItems{ "Omni" };
     for (int ch = 1; ch <= 16; ++ch) chanItems.add(juce::String(ch));
     channel_.addItemList(chanItems, 1);
-    addAndMakeVisible(channelLbl_);
-    addAndMakeVisible(channel_);
+    canvas_.addAndMakeVisible(channelLbl_);
+    canvas_.addAndMakeVisible(channel_);
 }
 
 // (Re)bind every per-layer control to the chosen layer's params. binder_'s
@@ -231,16 +257,22 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
 }
 
 void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
+    // Letterbox fill behind the transform-scaled canvas (normally invisible —
+    // the aspect lock keeps the canvas flush with the window).
+    g.fillAll(VintageLookAndFeel::windowBg);
+}
+
+void K2000AudioProcessorEditor::paintCanvas(juce::Graphics& g) {
     g.fillAll(VintageLookAndFeel::windowBg);
 
     // Wood side rails, full height.
-    VintageLookAndFeel::fillWood(g, { 0, 0, kRailW, getHeight() });
-    VintageLookAndFeel::fillWood(g, { getWidth() - kRailW, 0, kRailW, getHeight() });
+    VintageLookAndFeel::fillWood(g, { 0, 0, kRailW, kCanvasH });
+    VintageLookAndFeel::fillWood(g, { kCanvasW - kRailW, 0, kRailW, kCanvasH });
 
     // Cream header + footer plates between the rails.
-    const juce::Rectangle<int> header(kRailW, 0, getWidth() - 2 * kRailW, kHeaderH);
-    const juce::Rectangle<int> footer(kRailW, getHeight() - kFooterH,
-                                      getWidth() - 2 * kRailW, kFooterH);
+    const juce::Rectangle<int> header(kRailW, 0, kCanvasW - 2 * kRailW, kHeaderH);
+    const juce::Rectangle<int> footer(kRailW, kCanvasH - kFooterH,
+                                      kCanvasW - 2 * kRailW, kFooterH);
     VintageLookAndFeel::fillCream(g, header);
     VintageLookAndFeel::fillCream(g, footer);
     g.setColour(VintageLookAndFeel::panelEdge.withAlpha(0.6f));
@@ -265,7 +297,9 @@ void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
 
 juce::Rectangle<float> K2000AudioProcessorEditor::vuWellRect(int index) const {
     const float w = 168.0f, h = 56.0f, gap = 18.0f;
-    const float right = (float) getWidth() - kRailW - 340.0f;  // left of the layer/OS/output cluster
+    // Canvas-logical coords; 340 clears the layer/OS/output cluster laid out in
+    // layoutCanvas() (title=170, outZone=84, gaps 10+8, menu=34, combo=100, label=70).
+    const float right = (float) (kCanvasW - kRailW) - 340.0f;
     const float x = right - (float) (2 - index) * (w + gap);
     return { x, ((float) kHeaderH - h) * 0.5f, w, h };
 }
@@ -330,9 +364,19 @@ void K2000AudioProcessorEditor::updateModelVisibility() {
 }
 
 void K2000AudioProcessorEditor::resized() {
+    // Scale the fixed logical canvas to the window as one aspect-locked unit;
+    // the layout itself (layoutCanvas) never re-runs on resize.
+    const float s = juce::jmin((float) getWidth()  / (float) kCanvasW,
+                               (float) getHeight() / (float) kCanvasH);
+    const float dx = ((float) getWidth()  - (float) kCanvasW * s) * 0.5f;
+    const float dy = ((float) getHeight() - (float) kCanvasH * s) * 0.5f;
+    canvas_.setTransform(juce::AffineTransform::scale(s).translated(dx, dy));
+}
+
+void K2000AudioProcessorEditor::layoutCanvas() {
     // --- Header (cream plate): version | ... VU wells (paint-only) ... | layer | OS | OUTPUT ---
     {
-        auto bar = juce::Rectangle<int>(kRailW, 0, getWidth() - 2 * kRailW, kHeaderH).reduced(14, 10);
+        auto bar = juce::Rectangle<int>(kRailW, 0, kCanvasW - 2 * kRailW, kHeaderH).reduced(14, 10);
         title_.setBounds(bar.removeFromLeft(170));
         auto outZone = bar.removeFromRight(84);
         masterGainLbl_.setBounds(outZone.removeFromTop(14));
@@ -368,7 +412,7 @@ void K2000AudioProcessorEditor::resized() {
     };
 
     // --- Main content between header and footer, inside the rails ---
-    auto content = getLocalBounds()
+    auto content = juce::Rectangle<int>(0, 0, kCanvasW, kCanvasH)
                        .withTrimmedLeft(kRailW).withTrimmedRight(kRailW)
                        .withTrimmedTop(kHeaderH).withTrimmedBottom(kFooterH)
                        .reduced(10);
@@ -462,8 +506,8 @@ void K2000AudioProcessorEditor::resized() {
 
     // --- Footer (cream plate): LAYER ROUTING label (painted) | controls ---
     {
-        auto f = juce::Rectangle<int>(kRailW, getHeight() - kFooterH,
-                                      getWidth() - 2 * kRailW, kFooterH).reduced(14, 8);
+        auto f = juce::Rectangle<int>(kRailW, kCanvasH - kFooterH,
+                                      kCanvasW - 2 * kRailW, kFooterH).reduced(14, 8);
         f.removeFromLeft(150);   // painted "LAYER ROUTING" text zone
         auto en = f.removeFromLeft(60);
         enableLbl_.setBounds(en.removeFromTop(14));

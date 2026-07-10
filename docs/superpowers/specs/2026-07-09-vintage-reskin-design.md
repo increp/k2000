@@ -35,7 +35,7 @@ sources, Filter Env / Key Track / Env Amt / per-env Velocity params, branding (n
 |---|---|
 | Layout scope | **Adopt the reference geography** — sections move to match the mockup, not repaint-in-place |
 | Branding | **None for now** — blank reserved header zone; wordmark/logo added later |
-| Window size | **1400×1050 fixed** (from 1040×740); no resize/scaling |
+| Window size | ~~1400×1050 fixed~~ **AMENDED 2026-07-10** (user ruling at Ableton acceptance: fixed size overflowed a DPI-scaled 4K screen): the panel is a **1400×1050 logical canvas, transform-scaled** to an aspect-locked resizable window (limits 0.5×–2×); opens fitted to the display work area |
 | Rendering | **Hybrid**: procedural vector structure + startup-cached grain textures + one embedded OFL condensed font |
 | Spine accent | **Re-express as brass trim** — thin warm-brass label-strip underline on constant-Summit-spine sections replaces the blue-violet `spineEdge` border (amends the earlier visual-language decision; concept survives, vocabulary changes) |
 | Power button | Skipped (decorative in the mockup) |

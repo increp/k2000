@@ -19,6 +19,16 @@ private:
     K2000AudioProcessor& processorRef;
     VintageLookAndFeel   lnf_;
 
+    // The whole panel is laid out ONCE on this fixed-size logical canvas
+    // (kCanvasW x kCanvasH in PluginEditor.cpp) and transform-scaled to the
+    // window, so the editor resizes as one aspect-locked unit and every
+    // layout constant stays in logical pixels.
+    struct Canvas : juce::Component {
+        std::function<void(juce::Graphics&)> onPaint;
+        void paint(juce::Graphics& g) override { if (onPaint) onPaint(g); }
+    };
+    Canvas canvas_;
+
     // --- Header (cream chassis plate) ---
     juce::Label      title_;                  // version label (branding TBD later)
     juce::Label      editLayerLabel_;
@@ -95,6 +105,8 @@ private:
     void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
     void showOversamplingMenu();
     void timerCallback() override;
+    void layoutCanvas();             // lays out all children in canvas-logical coords
+    void paintCanvas(juce::Graphics&);  // chassis chrome, drawn in canvas-logical coords
     juce::Rectangle<float> vuWellRect(int index) const;  // header blank VU plates (Stage 3)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)
