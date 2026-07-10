@@ -50,6 +50,7 @@ Palette (sampled from the reference, named constants like today's):
 
 | constant | approx | role |
 |---|---|---|
+| `windowBg` | #18171A | area behind the module panels |
 | `creamPanel` | #D6D0C2 | header/footer/rail base plate |
 | `creamText` | #2A2620 | dark text on cream |
 | `charcoalPanel` | #222124 | module panel fill |
@@ -70,8 +71,10 @@ Rendering:
   cream plates, low-contrast striation for wood rails — then tiled/blitted in paint. Generator
   isolated in `VintageLookAndFeel` so photographic PNGs can replace it later without touching
   callers. No per-frame procedural drawing.
-- **Typography:** one OFL-licensed condensed sans (Barlow Condensed or Oswald) embedded via
-  BinaryData, used for all-caps panel/section labels; JUCE default remains for value text.
+- **Typography:** one OFL-licensed condensed sans (Barlow Condensed) embedded via BinaryData,
+  used for **all** label text — captions, titles, and numeric value readouts alike (user
+  ruling at final review, 2026-07-09: condensed everywhere; the mockup's own value boxes read
+  condensed, and legibility is re-checked in the live-tuning pass).
 - **Combos/toggles:** dark inset fields matching the value-box style; existing compact-combo
   fixes (arrow zone, font size) carried over.
 

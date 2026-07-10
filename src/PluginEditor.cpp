@@ -167,7 +167,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
 
     limitIndicator_.setText("LIMIT", juce::dontSendNotification);
     limitIndicator_.setJustificationType(juce::Justification::centred);
-    limitIndicator_.setColour(juce::Label::textColourId, juce::Colours::darkgrey);
+    limitIndicator_.setColour(juce::Label::textColourId, VintageLookAndFeel::dimText);
     ampSection_.addAndMakeVisible(limitIndicator_);
 
     // Footer routing strip — controls sit directly on the cream chassis plate.
@@ -273,7 +273,7 @@ juce::Rectangle<float> K2000AudioProcessorEditor::vuWellRect(int index) const {
 void K2000AudioProcessorEditor::timerCallback() {
     const bool active = processorRef.gainReductionDb() > 0.1f;
     limitIndicator_.setColour(juce::Label::textColourId,
-                              active ? juce::Colours::red : juce::Colours::darkgrey);
+                              active ? VintageLookAndFeel::ledRed : VintageLookAndFeel::dimText);
     // keep the toggle in sync if state changed via load
     if (safetyLimiter_.getToggleState() != processorRef.isLimiterEnabled())
         safetyLimiter_.setToggleState(processorRef.isLimiterEnabled(), juce::dontSendNotification);
