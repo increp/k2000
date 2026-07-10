@@ -27,7 +27,7 @@ cmake --build build --target k2000_tests -j4
 ./build/tests/k2000_tests
 ```
 
-Expected: `Summary: 292 tests, 0 failed`
+Expected: `Summary: 297 tests, 0 failed`
 
 ### Opt-in fingerprint (on demand — 10-25 min for `--quick`, many hours without)
 
