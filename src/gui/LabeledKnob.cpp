@@ -15,6 +15,10 @@ void LabeledKnob::setCaption(const juce::String& caption) {
     caption_.setText(caption, juce::dontSendNotification);
 }
 
+void LabeledKnob::setCaptionColour(juce::Colour c) {
+    caption_.setColour(juce::Label::textColourId, c);
+}
+
 void LabeledKnob::resized() {
     auto area = getLocalBounds();
     caption_.setBounds(area.removeFromBottom(captionH_));

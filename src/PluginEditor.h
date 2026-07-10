@@ -19,28 +19,33 @@ private:
     K2000AudioProcessor& processorRef;
     VintageLookAndFeel   lnf_;
 
-    // --- Top bar ---
-    juce::Label      title_;
+    // --- Header (cream chassis plate) ---
+    juce::Label      title_;                  // version label (branding TBD later)
     juce::Label      editLayerLabel_;
     juce::ComboBox   editLayerCombo_;
     int              editLayer_ = 0;
-    // Master gain lives in the thin top utility bar, where a rotary LabeledKnob's
-    // stacked value+caption collide; a horizontal slider with a side value reads
-    // cleanly at 40 px tall.
+    // Master gain is the header OUTPUT knob (reference mockup, top right).
     juce::Label      masterGainLbl_;
-    juce::Slider     masterGain_{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
-    // Oversampling hamburger button — plain TextButton, not APVTS-bound.
+    juce::Slider     masterGain_{ juce::Slider::RotaryHorizontalVerticalDrag,
+                                  juce::Slider::TextBoxBelow };
     juce::TextButton menuButton_{ juce::String::fromUTF8("\xE2\x8B\xAE") };
 
-    // --- Signal row ---
-    Section sourceSection_{ "VAST Source / DSP", /*spine*/ false };
+    // --- Main geography (reference mockup) ---
+    // Left column: three VCO panels, empty until GUI Stage 2 fills them.
+    Section vco1Section_{ "VCO 1", /*spine*/ false, /*reserved*/ true };
+    Section vco2Section_{ "VCO 2", /*spine*/ false, /*reserved*/ true };
+    Section vco3Section_{ "VCO 3", /*spine*/ false, /*reserved*/ true };
+
     juce::ComboBox algo_;
     juce::Label    algoLbl_;
-    LabeledKnob    shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };
+    LabeledKnob    shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };   // hidden, still bound
 
-    Section mixerSection_{ "Mixer", /*spine*/ true, /*reserved*/ true };
+    Section mixerSection_{ "Osc Blend", /*spine*/ true, /*reserved*/ true };
+    Section vastDspSection_{ "VAST DSP", /*spine*/ false };
+    Section outputSection_{ "Output", /*spine*/ true, /*reserved*/ true };
 
-    Section filterSection_{ "Filter", /*spine*/ true };
+    Section filterSection_{ "VCF", /*spine*/ true };
+    Section filterEnvSection_{ "Filter Env", /*spine*/ true, /*reserved*/ true };
     LabeledKnob    filterCutoff_{ "Cutoff" }, filterRes_{ "Reso" };
     juce::ComboBox spineModel_, spineSlope_;
     juce::Label    spineModelLbl_, spineSlopeLbl_;
@@ -58,7 +63,6 @@ private:
     juce::ComboBox moogMode_, moogWave_, moogOctave_;
     LabeledKnob    moogBass_{ "Bass" };
 
-    Section driveSection_{ "Drive", /*spine*/ true, /*reserved*/ true };
     Section ampSection_{ "Amp", /*spine*/ true, /*reserved*/ true };
     // Amp section: safety limiter controls (protected — NOT bound to APVTS)
     juce::Label        safetyLbl_;        // "Safety" caption
@@ -75,7 +79,6 @@ private:
     Section fxSection_{ "FX Chains", /*spine*/ false, /*reserved*/ true };
 
     // --- Routing strip ---
-    Section routingSection_{ "Layer Routing", /*spine*/ false };
     juce::ToggleButton enable_;
     juce::Label        enableLbl_;
     LabeledKnob        keyLo_{ "Key Lo" }, keyHi_{ "Key Hi" },
@@ -92,6 +95,7 @@ private:
     void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
     void showOversamplingMenu();
     void timerCallback() override;
+    juce::Rectangle<float> vuWellRect(int index) const;  // header blank VU plates (Stage 3)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(K2000AudioProcessorEditor)
 };
