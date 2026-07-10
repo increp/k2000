@@ -1,7 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
-#include "gui/SummitLookAndFeel.h"
+#include "gui/VintageLookAndFeel.h"
 #include "gui/LabeledKnob.h"
 #include "gui/Section.h"
 #include "gui/ParamBinder.h"
@@ -17,7 +17,7 @@ public:
 
 private:
     K2000AudioProcessor& processorRef;
-    SummitLookAndFeel    lnf_;
+    VintageLookAndFeel   lnf_;
 
     // --- Top bar ---
     juce::Label      title_;

@@ -1,5 +1,5 @@
 #include "Section.h"
-#include "SummitLookAndFeel.h"
+#include "VintageLookAndFeel.h"
 
 Section::Section(const juce::String& title, bool spine, bool reserved)
     : title_(title), spine_(spine), reserved_(reserved) {}
@@ -17,19 +17,36 @@ juce::Rectangle<int> Section::contentBounds() const {
 
 void Section::paint(juce::Graphics& g) {
     auto bounds = getLocalBounds().toFloat().reduced(1.0f);
-    const float alpha = reserved_ ? 0.40f : 1.0f;
+    const float alpha = reserved_ ? 0.45f : 1.0f;
 
-    g.setColour(SummitLookAndFeel::moduleBg.withMultipliedAlpha(alpha));
-    g.fillRoundedRectangle(bounds, 4.0f);
+    // Recessed charcoal panel: fill, dark edge, faint embossed top lip.
+    g.setColour(VintageLookAndFeel::charcoalPanel.withMultipliedAlpha(alpha));
+    g.fillRoundedRectangle(bounds, 5.0f);
+    g.setColour(VintageLookAndFeel::panelEdge.withMultipliedAlpha(alpha));
+    g.drawRoundedRectangle(bounds, 5.0f, 1.5f);
+    g.setColour(juce::Colours::white.withAlpha(0.04f * alpha));
+    g.drawLine(bounds.getX() + 6.0f, bounds.getY() + 2.0f,
+               bounds.getRight() - 6.0f, bounds.getY() + 2.0f, 1.0f);
 
-    const auto edge = (spine_ ? SummitLookAndFeel::spineEdge
-                              : SummitLookAndFeel::moduleEdge).withMultipliedAlpha(alpha);
-    g.setColour(edge);
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+    // Corner screws (small — panel-level, not chassis-level).
+    if (getWidth() > 70 && getHeight() > 40) {
+        const float r = 3.5f, inset = 8.0f;
+        VintageLookAndFeel::drawScrew(g, bounds.getX() + inset,     bounds.getY() + inset,      r);
+        VintageLookAndFeel::drawScrew(g, bounds.getRight() - inset, bounds.getY() + inset,      r);
+        VintageLookAndFeel::drawScrew(g, bounds.getX() + inset,     bounds.getBottom() - inset, r);
+        VintageLookAndFeel::drawScrew(g, bounds.getRight() - inset, bounds.getBottom() - inset, r);
+    }
 
-    g.setColour((reserved_ ? SummitLookAndFeel::textDim
-                           : SummitLookAndFeel::textBright).withMultipliedAlpha(alpha));
-    g.setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    auto titleStrip = getLocalBounds().reduced(6).removeFromTop(titleH_);
+    // Title strip; spine sections get the brass underline (the re-expressed
+    // constant-Summit-spine accent -- see the reskin spec, Sec 2).
+    g.setColour((reserved_ ? VintageLookAndFeel::dimText
+                           : VintageLookAndFeel::capText).withMultipliedAlpha(alpha));
+    g.setFont(VintageLookAndFeel::condensedFont(13.0f));
+    auto titleStrip = getLocalBounds().reduced(16, 6).removeFromTop(titleH_);
     g.drawText(title_.toUpperCase(), titleStrip, juce::Justification::topLeft);
+    if (spine_) {
+        g.setColour(VintageLookAndFeel::brassTrim.withMultipliedAlpha(alpha));
+        const int w = juce::jmin(titleStrip.getWidth(), 8 * title_.length());
+        g.fillRect(titleStrip.getX(), titleStrip.getY() + titleH_ - 3, w, 2);
+    }
 }

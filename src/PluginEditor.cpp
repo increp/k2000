@@ -214,7 +214,7 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
 }
 
 void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
-    g.fillAll(SummitLookAndFeel::panelBg);
+    g.fillAll(VintageLookAndFeel::windowBg);
 }
 
 void K2000AudioProcessorEditor::timerCallback() {
