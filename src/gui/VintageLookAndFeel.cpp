@@ -90,7 +90,10 @@ VintageLookAndFeel::VintageLookAndFeel() {
 }
 
 juce::Font VintageLookAndFeel::getLabelFont(juce::Label& label) {
-    return condensedFont(label.getFont().getHeight());
+    // Floor small label text (value readouts, cell captions) at 16 logical px —
+    // the canvas often renders below 1:1 on DPI-scaled screens, so tiny label
+    // fonts drop under legibility (user acceptance feedback, 2026-07-10).
+    return condensedFont(juce::jmax(16.0f, label.getFont().getHeight()));
 }
 
 void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
@@ -142,7 +145,7 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
 static constexpr int kComboArrowZone = 18;
 
 juce::Font VintageLookAndFeel::getComboBoxFont(juce::ComboBox& box) {
-    return condensedFont(juce::jmin(13.0f, (float) box.getHeight() * 0.75f));
+    return condensedFont(juce::jmin(15.0f, (float) box.getHeight() * 0.78f));
 }
 
 void VintageLookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label) {

@@ -17,7 +17,7 @@ juce::Rectangle<int> Section::contentBounds() const {
 
 void Section::paint(juce::Graphics& g) {
     auto bounds = getLocalBounds().toFloat().reduced(1.0f);
-    const float alpha = reserved_ ? 0.45f : 1.0f;
+    const float alpha = reserved_ ? 0.80f : 1.0f;   // reserved reads as a panel, not a hole
 
     // Recessed charcoal panel: fill, dark edge, faint embossed top lip.
     g.setColour(VintageLookAndFeel::charcoalPanel.withMultipliedAlpha(alpha));
@@ -41,7 +41,7 @@ void Section::paint(juce::Graphics& g) {
     // constant-Summit-spine accent -- see the reskin spec, Sec 2).
     g.setColour((reserved_ ? VintageLookAndFeel::dimText
                            : VintageLookAndFeel::capText).withMultipliedAlpha(alpha));
-    g.setFont(VintageLookAndFeel::condensedFont(13.0f));
+    g.setFont(VintageLookAndFeel::condensedFont(17.0f));
     auto titleStrip = getLocalBounds().reduced(16, 6).removeFromTop(titleH_);
     g.drawText(title_.toUpperCase(), titleStrip, juce::Justification::topLeft);
     if (spine_) {

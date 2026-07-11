@@ -3,9 +3,9 @@
 #include "util/Utf8.h"
 
 namespace {
-constexpr int kRailW   = 14;   // wood side rails
+constexpr int kRailW   = 26;   // wood side rails
 constexpr int kHeaderH = 92;   // cream header plate
-constexpr int kFooterH = 78;   // cream footer plate (layer routing strip)
+constexpr int kFooterH = 118;  // cream footer plate (layer routing strip)
 // Logical canvas size: all layout/chrome constants are in this coordinate
 // space; the window transform-scales the canvas (aspect-locked resize).
 constexpr int kCanvasW = 1400;
@@ -57,7 +57,7 @@ K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
 void K2000AudioProcessorEditor::buildStaticControls() {
     title_.setText(juce::String("Bernie  v") + JucePlugin_VersionString,
                    juce::dontSendNotification);
-    title_.setFont(VintageLookAndFeel::condensedFont(18.0f));
+    title_.setFont(VintageLookAndFeel::condensedFont(20.0f));
     title_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
     canvas_.addAndMakeVisible(title_);
 
@@ -77,7 +77,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     masterGainLbl_.setJustificationType(juce::Justification::centred);
     masterGainLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
     canvas_.addAndMakeVisible(masterGainLbl_);
-    masterGain_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 56, 15);
+    masterGain_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 16);
     canvas_.addAndMakeVisible(masterGain_);
 
     menuButton_.onClick = [this] { showOversamplingMenu(); };
@@ -291,7 +291,7 @@ void K2000AudioProcessorEditor::paintCanvas(juce::Graphics& g) {
 
     // Footer strip label.
     g.setColour(VintageLookAndFeel::creamText);
-    g.setFont(VintageLookAndFeel::condensedFont(15.0f));
+    g.setFont(VintageLookAndFeel::condensedFont(17.0f));
     g.drawText("LAYER ROUTING", footer.reduced(20, 0), juce::Justification::centredLeft);
 }
 
@@ -378,7 +378,7 @@ void K2000AudioProcessorEditor::layoutCanvas() {
     {
         auto bar = juce::Rectangle<int>(kRailW, 0, kCanvasW - 2 * kRailW, kHeaderH).reduced(14, 10);
         title_.setBounds(bar.removeFromLeft(170));
-        auto outZone = bar.removeFromRight(84);
+        auto outZone = bar.removeFromRight(104);
         masterGainLbl_.setBounds(outZone.removeFromTop(14));
         masterGain_.setBounds(outZone);
         bar.removeFromRight(10);
@@ -397,9 +397,9 @@ void K2000AudioProcessorEditor::layoutCanvas() {
         const int w = r.getWidth() / n;
         int x = r.getX();
         for (auto& [lbl, ctl] : cells) {
-            if (lbl) lbl->setBounds(x, r.getY(), w, 16);
-            const int topY  = r.getY() + (lbl ? 16 : 0);
-            const int cellH = r.getHeight() - (lbl ? 16 : 0);
+            if (lbl) lbl->setBounds(x, r.getY(), w, 20);
+            const int topY  = r.getY() + (lbl ? 20 : 0);
+            const int cellH = r.getHeight() - (lbl ? 20 : 0);
             if (dynamic_cast<juce::ComboBox*>(ctl) != nullptr)
                 // A combo must NOT fill the cell: JUCE sets the popup's item
                 // height from the box height, so a tall box yields a
@@ -455,7 +455,7 @@ void K2000AudioProcessorEditor::layoutCanvas() {
         auto hpRow = fc.removeFromTop(rowH);
         fc.removeFromTop(divGap);
         const int lblW = 58;
-        hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 16);
+        hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 20);
         hpRow.removeFromLeft(lblW);
         layoutCells(hpRow, { { nullptr,      &hpCutoff_ },
                               { nullptr,      &hpReso_   },
@@ -510,15 +510,15 @@ void K2000AudioProcessorEditor::layoutCanvas() {
                                       kCanvasW - 2 * kRailW, kFooterH).reduced(14, 8);
         f.removeFromLeft(150);   // painted "LAYER ROUTING" text zone
         auto en = f.removeFromLeft(60);
-        enableLbl_.setBounds(en.removeFromTop(14));
+        enableLbl_.setBounds(en.removeFromTop(18));
         enable_.setBounds(en.getCentreX() - 12, en.getY() + 2, 24, 24);
         f.removeFromLeft(8);
         for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ }) {
-            k->setBounds(f.removeFromLeft(88));
+            k->setBounds(f.removeFromLeft(100));
             f.removeFromLeft(6);
         }
         auto ch = f.removeFromRight(110);
-        channelLbl_.setBounds(ch.removeFromTop(14));
+        channelLbl_.setBounds(ch.removeFromTop(18));
         channel_.setBounds(ch.removeFromTop(26));
     }
 }

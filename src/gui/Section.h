@@ -19,7 +19,7 @@ public:
 
     // spine is structural (constructor-only); reserved may be toggled at runtime.
 private:
-    static constexpr int titleH_ = 18;
+    static constexpr int titleH_ = 24;
     juce::String title_;
     bool spine_;
     bool reserved_;
