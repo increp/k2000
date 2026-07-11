@@ -3,7 +3,7 @@
 #include "util/Utf8.h"
 
 namespace {
-constexpr int kRailW   = 26;   // wood side rails
+constexpr int kRailW   = 30;   // wood side rails
 constexpr int kHeaderH = 92;   // cream header plate
 constexpr int kFooterH = 118;  // cream footer plate (layer routing strip)
 // Logical canvas size: all layout/chrome constants are in this coordinate
@@ -78,6 +78,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     masterGainLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
     canvas_.addAndMakeVisible(masterGainLbl_);
     masterGain_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 16);
+    masterGain_.setColour(juce::Slider::rotarySliderOutlineColourId, VintageLookAndFeel::creamText);
     canvas_.addAndMakeVisible(masterGain_);
 
     menuButton_.onClick = [this] { showOversamplingMenu(); };
@@ -204,6 +205,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     canvas_.addAndMakeVisible(enable_);
     for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ }) {
         k->setCaptionColour(VintageLookAndFeel::creamText);
+        k->slider().setColour(juce::Slider::rotarySliderOutlineColourId, VintageLookAndFeel::creamText);
         canvas_.addAndMakeVisible(*k);
     }
     channelLbl_.setText("Channel", juce::dontSendNotification);

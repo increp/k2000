@@ -45,6 +45,9 @@ public:
 
     // --- chassis primitives ---
     static void fillCream(juce::Graphics&, juce::Rectangle<int> area);
+    // Textured module-panel fill (subtle leather-grain speckle on charcoal).
+    static void fillModulePanel(juce::Graphics&, juce::Rectangle<float> area,
+                                float corner, float alpha);
     static void fillWood(juce::Graphics&, juce::Rectangle<int> area);
     static void drawScrew(juce::Graphics&, float cx, float cy, float radius);
     static void drawRecessedWell(juce::Graphics&, juce::Rectangle<float> area,
@@ -53,5 +56,6 @@ public:
 private:
     static juce::Typeface::Ptr condensedTypeface();
     static const juce::Image& creamTexture();   // built once, tiled thereafter
+    static const juce::Image& panelTexture();
     static const juce::Image& woodTexture();
 };

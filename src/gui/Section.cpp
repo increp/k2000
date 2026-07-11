@@ -20,8 +20,7 @@ void Section::paint(juce::Graphics& g) {
     const float alpha = reserved_ ? 0.80f : 1.0f;   // reserved reads as a panel, not a hole
 
     // Recessed charcoal panel: fill, dark edge, faint embossed top lip.
-    g.setColour(VintageLookAndFeel::charcoalPanel.withMultipliedAlpha(alpha));
-    g.fillRoundedRectangle(bounds, 5.0f);
+    VintageLookAndFeel::fillModulePanel(g, bounds, 5.0f, alpha);
     g.setColour(VintageLookAndFeel::panelEdge.withMultipliedAlpha(alpha));
     g.drawRoundedRectangle(bounds, 5.0f, 1.5f);
     g.setColour(juce::Colours::white.withAlpha(0.04f * alpha));

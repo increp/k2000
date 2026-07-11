@@ -4,12 +4,12 @@
 #include <vector>
 
 const juce::Colour VintageLookAndFeel::windowBg      = juce::Colour::fromRGB(24, 23, 26);
-const juce::Colour VintageLookAndFeel::creamPanel    = juce::Colour::fromRGB(214, 208, 194);
-const juce::Colour VintageLookAndFeel::creamText     = juce::Colour::fromRGB(42, 38, 32);
+const juce::Colour VintageLookAndFeel::creamPanel    = juce::Colour::fromRGB(196, 198, 201);  // brushed aluminum
+const juce::Colour VintageLookAndFeel::creamText     = juce::Colour::fromRGB(34, 36, 40);
 const juce::Colour VintageLookAndFeel::charcoalPanel = juce::Colour::fromRGB(34, 33, 36);
 const juce::Colour VintageLookAndFeel::charcoalWell  = juce::Colour::fromRGB(26, 25, 28);
 const juce::Colour VintageLookAndFeel::panelEdge     = juce::Colour::fromRGB(20, 19, 22);
-const juce::Colour VintageLookAndFeel::woodRail      = juce::Colour::fromRGB(107, 74, 50);
+const juce::Colour VintageLookAndFeel::woodRail      = juce::Colour::fromRGB(122, 60, 40);  // rich redwood
 const juce::Colour VintageLookAndFeel::capText       = juce::Colour::fromRGB(226, 224, 218);
 const juce::Colour VintageLookAndFeel::dimText       = juce::Colour::fromRGB(141, 138, 130);
 const juce::Colour VintageLookAndFeel::brassTrim     = juce::Colour::fromRGB(183, 155, 94);
@@ -36,12 +36,17 @@ juce::Image makeWoodGrain(juce::Colour base, int w, int h, juce::int64 seed) {
     std::vector<float> colTone((size_t) w, 0.0f);
     float t = 0.0f;
     for (int x = 0; x < w; ++x) {
-        t = 0.85f * t + 0.15f * (rng.nextFloat() - 0.5f);
-        colTone[(size_t) x] = t * 0.5f + 0.08f * std::sin((float) x * 0.9f);
+        t = 0.80f * t + 0.20f * (rng.nextFloat() - 0.5f);
+        // strong ropy grain: fast streaks + slow dark figure bands
+        colTone[(size_t) x] = t * 0.9f
+                            + 0.14f * std::sin((float) x * 0.9f)
+                            + 0.10f * std::sin((float) x * 0.23f + 1.7f);
     }
     for (int y = 0; y < h; ++y)
         for (int x = 0; x < w; ++x) {
-            const float d = colTone[(size_t) x] + (rng.nextFloat() - 0.5f) * 0.06f;
+            // slight along-grain wobble so streaks aren't ruler-straight
+            const float wob = 0.05f * std::sin((float) y * 0.045f + (float) x * 0.6f);
+            const float d = colTone[(size_t) x] + wob + (rng.nextFloat() - 0.5f) * 0.05f;
             img.setPixelAt(x, y, d >= 0.0f ? base.brighter(d) : base.darker(-d));
         }
     return img;
@@ -58,8 +63,32 @@ juce::Font VintageLookAndFeel::condensedFont(float height) {
     return juce::Font(juce::FontOptions(condensedTypeface()).withHeight(height));
 }
 
+namespace {
+// Horizontal brushed-metal: smooth per-row tone wander (the brushing streaks)
+// plus faint per-pixel grit. Rows, not columns -- plates are brushed lengthwise.
+juce::Image makeBrushedMetal(juce::Colour base, int w, int h, juce::int64 seed) {
+    juce::Image img(juce::Image::RGB, w, h, false);
+    juce::Random rng(seed);
+    float t = 0.0f;
+    for (int y = 0; y < h; ++y) {
+        t = 0.72f * t + 0.28f * (rng.nextFloat() - 0.5f);
+        const float rowTone = t * 0.16f;
+        for (int x = 0; x < w; ++x) {
+            const float d = rowTone + (rng.nextFloat() - 0.5f) * 0.035f;
+            img.setPixelAt(x, y, d >= 0.0f ? base.brighter(d) : base.darker(-d));
+        }
+    }
+    return img;
+}
+} // namespace
+
 const juce::Image& VintageLookAndFeel::creamTexture() {
-    static juce::Image img = makeSpeckle(creamPanel, 256, 0.045f, 0x5EED01);
+    static juce::Image img = makeBrushedMetal(creamPanel, 512, 128, 0x5EED01);
+    return img;
+}
+
+const juce::Image& VintageLookAndFeel::panelTexture() {
+    static juce::Image img = makeSpeckle(charcoalPanel, 128, 0.055f, 0x5EED03);
     return img;
 }
 
@@ -72,6 +101,7 @@ VintageLookAndFeel::VintageLookAndFeel() {
     setColour(juce::ResizableWindow::backgroundColourId,       windowBg);
     setColour(juce::Label::textColourId,                       capText);
     setColour(juce::Slider::textBoxTextColourId,               capText);
+    setColour(juce::Slider::rotarySliderOutlineColourId,       dimText);
     setColour(juce::Slider::textBoxBackgroundColourId,         charcoalWell);
     setColour(juce::Slider::textBoxOutlineColourId,            panelEdge);
     setColour(juce::ComboBox::backgroundColourId,              charcoalWell);
@@ -98,7 +128,7 @@ juce::Font VintageLookAndFeel::getLabelFont(juce::Label& label) {
 
 void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                                           float sliderPos, float startAngle, float endAngle,
-                                          juce::Slider&) {
+                                          juce::Slider& slider) {
     const auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(4.0f);
     const float radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
     if (radius < 4.0f)
@@ -108,7 +138,8 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
     const float bodyR = radius * 0.72f;
 
     // Tick ring along the sweep, outside the body (major tick every 5th).
-    g.setColour(dimText.withAlpha(0.8f));
+    // Colour is per-slider so knobs on aluminum plates can use dark ticks.
+    g.setColour(slider.findColour(juce::Slider::rotarySliderOutlineColourId).withAlpha(0.8f));
     for (int i = 0; i <= 10; ++i) {
         const float a = startAngle + (endAngle - startAngle) * (float) i / 10.0f;
         const juce::Point<float> outer(centre.x + std::sin(a) * radius,
@@ -182,6 +213,15 @@ void VintageLookAndFeel::fillCream(juce::Graphics& g, juce::Rectangle<int> area)
     g.fillRect(area);
 }
 
+void VintageLookAndFeel::fillModulePanel(juce::Graphics& g, juce::Rectangle<float> area,
+                                         float corner, float alpha) {
+    g.saveState();
+    g.setTiledImageFill(panelTexture(), 0, 0, 1.0f);
+    g.setOpacity(alpha);
+    g.fillRoundedRectangle(area, corner);
+    g.restoreState();
+}
+
 void VintageLookAndFeel::fillWood(juce::Graphics& g, juce::Rectangle<int> area) {
     g.setTiledImageFill(woodTexture(), 0, 0, 1.0f);
     g.fillRect(area);
@@ -190,12 +230,19 @@ void VintageLookAndFeel::fillWood(juce::Graphics& g, juce::Rectangle<int> area) 
 }
 
 void VintageLookAndFeel::drawScrew(juce::Graphics& g, float cx, float cy, float r) {
-    juce::ColourGradient grad(juce::Colour(0xFF9A9890), cx - r * 0.5f, cy - r * 0.5f,
-                              juce::Colour(0xFF3E3C38), cx + r, cy + r, true);
+    // countersink: dark recess ring around the head
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.fillEllipse(cx - r * 1.35f, cy - r * 1.35f, r * 2.7f, r * 2.7f);
+    // head: hard metal gradient, light source top-left
+    juce::ColourGradient grad(juce::Colour(0xFFC9C7BF), cx - r * 0.7f, cy - r * 0.7f,
+                              juce::Colour(0xFF2E2C29), cx + r * 0.8f, cy + r * 0.9f, true);
     g.setGradientFill(grad);
     g.fillEllipse(cx - r, cy - r, r * 2.0f, r * 2.0f);
-    g.setColour(juce::Colour(0xFF23211E));
+    g.setColour(juce::Colour(0xFF17161A));
     g.drawEllipse(cx - r, cy - r, r * 2.0f, r * 2.0f, 1.0f);
+    // specular glint
+    g.setColour(juce::Colours::white.withAlpha(0.55f));
+    g.fillEllipse(cx - r * 0.55f, cy - r * 0.6f, r * 0.45f, r * 0.35f);
     // Slot, rotated pseudo-randomly by position so screws don't all align.
     const float rot = std::fmod(cx * 12.9898f + cy * 78.233f, juce::MathConstants<float>::pi);
     g.saveState();

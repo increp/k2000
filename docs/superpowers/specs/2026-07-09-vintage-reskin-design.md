@@ -51,12 +51,12 @@ Palette (sampled from the reference, named constants like today's):
 | constant | approx | role |
 |---|---|---|
 | `windowBg` | #18171A | area behind the module panels |
-| `creamPanel` | #D6D0C2 | header/footer/rail base plate |
+| `creamPanel` | #C4C6C9 | face plates — **amended 2026-07-11 to brushed aluminum** (user mood board: physical materials — brushed metal, patina, real screws) |
 | `creamText` | #2A2620 | dark text on cream |
 | `charcoalPanel` | #222124 | module panel fill |
 | `charcoalWell` | #1A191C | recessed wells (value boxes, scope frames) |
 | `panelEdge` | #141316 | module borders / engraved lines |
-| `woodRail` | #6B4A32 | side-rail base |
+| `woodRail` | #7A3C28 | side rails — **amended 2026-07-11 to rich textured redwood** (same mood-board ruling) |
 | `capText` | #E2E0DA | caps labels on charcoal |
 | `dimText` | #8D8A82 | reserved/dimmed |
 | `brassTrim` | #B79B5E | spine-section label underline (the re-expressed accent) |
