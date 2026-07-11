@@ -53,6 +53,26 @@ juce::Image makeWoodGrain(juce::Colour base, int w, int h, juce::int64 seed) {
 }
 } // namespace
 
+namespace {
+juce::Image loadAsset(const char* data, int size) {
+    return juce::ImageFileFormat::loadFrom(data, (size_t) size);
+}
+// Draw a crop of `src` covering `dest` at matching aspect, band chosen by `seed`
+// so different plates/panels/rails sample different regions of the photograph.
+void drawPhotoCrop(juce::Graphics& g, const juce::Image& src,
+                   juce::Rectangle<float> dest, juce::uint32 seed) {
+    const float destAR = dest.getWidth() / juce::jmax(1.0f, dest.getHeight());
+    float sw = (float) src.getWidth(), sh = (float) src.getHeight();
+    float cw = sw, ch = sh;
+    if (cw / ch > destAR) cw = ch * destAR; else ch = cw / destAR;
+    const float maxX = sw - cw, maxY = sh - ch;
+    const float fx = (float) ((seed * 2654435761u) % 1000u) / 1000.0f;
+    const float fy = (float) ((seed * 40503u + 12345u) % 1000u) / 1000.0f;
+    g.drawImage(src, dest.getX(), dest.getY(), (int) dest.getWidth(), (int) dest.getHeight(),
+                (int) (fx * maxX), (int) (fy * maxY), (int) cw, (int) ch);
+}
+} // namespace
+
 juce::Typeface::Ptr VintageLookAndFeel::condensedTypeface() {
     static juce::Typeface::Ptr t = juce::Typeface::createSystemTypefaceFor(
         BinaryData::BarlowCondensedMedium_ttf, (size_t) BinaryData::BarlowCondensedMedium_ttfSize);
@@ -119,12 +139,18 @@ juce::Image makeBrushedMetal(juce::Colour base, int w, int h, juce::int64 seed) 
 } // namespace
 
 const juce::Image& VintageLookAndFeel::creamTexture() {
-    static juce::Image img = makeBrushedMetal(creamPanel, 512, 128, 0x5EED01);
+    static juce::Image img = [] {
+        auto photo = loadAsset(BinaryData::PlateAluminum_jpg, BinaryData::PlateAluminum_jpgSize);
+        return photo.isValid() ? photo : makeBrushedMetal(creamPanel, 512, 128, 0x5EED01);
+    }();
     return img;
 }
 
 const juce::Image& VintageLookAndFeel::panelTexture() {
-    static juce::Image img = makeSpeckle(charcoalPanel, 128, 0.055f, 0x5EED03);
+    static juce::Image img = [] {
+        auto photo = loadAsset(BinaryData::PanelBlack_jpg, BinaryData::PanelBlack_jpgSize);
+        return photo.isValid() ? photo : makeSpeckle(charcoalPanel, 128, 0.055f, 0x5EED03);
+    }();
     return img;
 }
 
@@ -133,21 +159,8 @@ const juce::Image& VintageLookAndFeel::woodTexture() {
     // toward the palette's deep redwood. Rails are vertical, so if the photo's
     // grain runs horizontally we rotate it 90 degrees at load (checked visually).
     static juce::Image img = [] {
-        juce::Image src = juce::ImageFileFormat::loadFrom(
-            BinaryData::RosewoodVeneer_jpg, (size_t) BinaryData::RosewoodVeneer_jpgSize);
-        if (src.isNull())
-            return makeWoodGrain(woodRail, 64, 512, 0x5EED02);   // fallback: procedural
-        // darken + warm-tint toward the mood board's deep redwood
-        juce::Image out(juce::Image::RGB, src.getWidth(), src.getHeight(), false);
-        for (int y = 0; y < src.getHeight(); ++y)
-            for (int x = 0; x < src.getWidth(); ++x) {
-                auto c = src.getPixelAt(x, y);
-                out.setPixelAt(x, y, juce::Colour::fromFloatRGBA(
-                    c.getFloatRed()   * 0.62f,
-                    c.getFloatGreen() * 0.42f,
-                    c.getFloatBlue()  * 0.34f, 1.0f));
-            }
-        return out;
+        auto photo = loadAsset(BinaryData::RailRedwood_jpg, BinaryData::RailRedwood_jpgSize);
+        return photo.isValid() ? photo : makeWoodGrain(woodRail, 64, 512, 0x5EED02);
     }();
     return img;
 }
@@ -204,26 +217,36 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
         g.drawLine({ inner, outer }, (i % 5 == 0) ? 1.6f : 1.0f);
     }
 
-    // Metallic rim.
-    juce::ColourGradient rim(juce::Colour(0xFF8E8B84), centre.x - bodyR, centre.y - bodyR,
-                             juce::Colour(0xFF2B2A27), centre.x + bodyR, centre.y + bodyR, false);
-    g.setGradientFill(rim);
-    g.fillEllipse(centre.x - bodyR, centre.y - bodyR, bodyR * 2.0f, bodyR * 2.0f);
-
-    // Dark body with a top-left sheen.
-    const float innerR = bodyR - 2.5f;
-    juce::ColourGradient sheen(juce::Colour(0xFF3A3936), centre.x - innerR * 0.6f, centre.y - innerR * 0.8f,
-                               juce::Colour(0xFF141312), centre.x + innerR * 0.5f, centre.y + innerR, false);
-    g.setGradientFill(sheen);
-    g.fillEllipse(centre.x - innerR, centre.y - innerR, innerR * 2.0f, innerR * 2.0f);
-
-    // Pointer.
-    const juce::Point<float> tip(centre.x + std::sin(angle) * innerR * 0.92f,
-                                 centre.y - std::cos(angle) * innerR * 0.92f);
-    const juce::Point<float> tail(centre.x + std::sin(angle) * innerR * 0.35f,
-                                  centre.y - std::cos(angle) * innerR * 0.35f);
-    g.setColour(capText);
-    g.drawLine({ tail, tip }, juce::jmax(2.0f, innerR * 0.10f));
+    static juce::Image sprite = loadAsset(BinaryData::KnobBlack_png, BinaryData::KnobBlack_pngSize);
+    if (sprite.isValid()) {
+        // photographic knob body (static -- lighting stays put), live pointer on top
+        g.setColour(juce::Colours::black.withAlpha(0.30f));
+        g.fillEllipse(centre.x - bodyR, centre.y - bodyR * 0.92f + 2.0f, bodyR * 2.0f, bodyR * 2.0f);
+        g.drawImage(sprite, juce::Rectangle<float>(centre.x - bodyR, centre.y - bodyR,
+                                                   bodyR * 2.0f, bodyR * 2.0f),
+                    juce::RectanglePlacement::centred);
+        // pointer runs from hub to the metal cap's edge (cap ~= 0.72 of the sprite)
+        const float capR = bodyR * 0.72f;
+        const juce::Point<float> tip(centre.x + std::sin(angle) * capR * 0.96f,
+                                     centre.y - std::cos(angle) * capR * 0.96f);
+        const juce::Point<float> tail(centre.x + std::sin(angle) * capR * 0.10f,
+                                      centre.y - std::cos(angle) * capR * 0.10f);
+        g.setColour(juce::Colour(0xFFE8E3D2).withAlpha(0.92f));
+        g.drawLine({ tail, tip }, juce::jmax(2.0f, capR * 0.13f));
+    } else {
+        // fallback: drawn body
+        juce::ColourGradient rim(juce::Colour(0xFF8E8B84), centre.x - bodyR, centre.y - bodyR,
+                                 juce::Colour(0xFF2B2A27), centre.x + bodyR, centre.y + bodyR, false);
+        g.setGradientFill(rim);
+        g.fillEllipse(centre.x - bodyR, centre.y - bodyR, bodyR * 2.0f, bodyR * 2.0f);
+        const float innerR = bodyR - 2.5f;
+        const juce::Point<float> tip(centre.x + std::sin(angle) * innerR * 0.92f,
+                                     centre.y - std::cos(angle) * innerR * 0.92f);
+        const juce::Point<float> tail(centre.x + std::sin(angle) * innerR * 0.35f,
+                                      centre.y - std::cos(angle) * innerR * 0.35f);
+        g.setColour(capText);
+        g.drawLine({ tail, tip }, juce::jmax(2.0f, innerR * 0.10f));
+    }
 }
 
 // --- compact combo (carried over from SummitLookAndFeel, new palette) ---
@@ -259,66 +282,53 @@ void VintageLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, 
 // --- chassis primitives ---
 
 void VintageLookAndFeel::fillCream(juce::Graphics& g, juce::Rectangle<int> area) {
-    g.setTiledImageFill(creamTexture(), 0, 0, 1.0f);
-    g.fillRect(area);
-    juce::ColourGradient shade(juce::Colours::white.withAlpha(0.05f), 0.0f, (float) area.getY(),
-                               juce::Colours::black.withAlpha(0.06f),  0.0f, (float) area.getBottom(),
-                               false);
-    g.setGradientFill(shade);
-    g.fillRect(area);
+    drawPhotoCrop(g, creamTexture(), area.toFloat(),
+                  (juce::uint32) (area.getY() * 7 + area.getX()));
 }
 
 void VintageLookAndFeel::fillModulePanel(juce::Graphics& g, juce::Rectangle<float> area,
                                          float corner, float alpha) {
     g.saveState();
-    g.setTiledImageFill(panelTexture(), 0, 0, 1.0f);
+    juce::Path clip;
+    clip.addRoundedRectangle(area, corner);
+    g.reduceClipRegion(clip);
     g.setOpacity(alpha);
-    g.fillRoundedRectangle(area, corner);
+    drawPhotoCrop(g, panelTexture(), area,
+                  (juce::uint32) ((int) area.getX() * 31 + (int) area.getY() * 17));
     g.restoreState();
 }
 
 void VintageLookAndFeel::fillWood(juce::Graphics& g, juce::Rectangle<int> area) {
-    g.setTiledImageFill(woodTexture(), 0, 0, 1.0f);
-    g.fillRect(area);
-    g.setColour(juce::Colours::black.withAlpha(0.35f));
-    g.drawRect(area, 1);
+    drawPhotoCrop(g, woodTexture(), area.toFloat(),
+                  (juce::uint32) (area.getX() * 13 + 5));
+    // inner shading so the rail reads as a raised cheek, not wallpaper
+    juce::ColourGradient edge(juce::Colours::black.withAlpha(0.35f), (float) area.getX(), 0.0f,
+                              juce::Colours::transparentBlack, (float) area.getX() + 6.0f, 0.0f, false);
+    g.setGradientFill(edge);
+    g.fillRect(area.removeFromLeft(6));
 }
 
 void VintageLookAndFeel::drawScrew(juce::Graphics& g, float cx, float cy, float r) {
-    // drop shadow, light source top-left
-    g.setColour(juce::Colours::black.withAlpha(0.30f));
-    g.fillEllipse(cx - r * 1.2f + 1.0f, cy - r * 1.2f + 1.5f, r * 2.4f, r * 2.4f);
-    // countersink recess
-    juce::ColourGradient sink(juce::Colours::black.withAlpha(0.45f), cx - r, cy - r,
-                              juce::Colours::white.withAlpha(0.10f), cx + r, cy + r, true);
-    g.setGradientFill(sink);
-    g.fillEllipse(cx - r * 1.3f, cy - r * 1.3f, r * 2.6f, r * 2.6f);
-    // chamfered head: bright-to-dark metal, then an inner face slightly flatter
+    static juce::Image sprite = loadAsset(BinaryData::ScrewHead_png, BinaryData::ScrewHead_pngSize);
+    // soft drop shadow + countersink shade under the head
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.fillEllipse(cx - r * 1.25f + 0.8f, cy - r * 1.25f + 1.2f, r * 2.5f, r * 2.5f);
+    if (sprite.isValid()) {
+        // slot-angle jitter only (small, so the baked top-left light stays honest)
+        const float rot = std::fmod(cx * 12.9898f + cy * 78.233f, 0.6f) - 0.3f;
+        const float box = r * 2.15f;
+        g.saveState();
+        g.addTransform(juce::AffineTransform::rotation(rot, cx, cy));
+        g.drawImage(sprite, juce::Rectangle<float>(cx - box * 0.5f, cy - box * 0.5f, box, box),
+                    juce::RectanglePlacement::centred);
+        g.restoreState();
+        return;
+    }
+    // fallback: simple drawn head
     juce::ColourGradient rim(juce::Colour(0xFFDDDBD3), cx - r * 0.8f, cy - r * 0.8f,
                              juce::Colour(0xFF232220), cx + r * 0.7f, cy + r * 0.8f, false);
     g.setGradientFill(rim);
     g.fillEllipse(cx - r, cy - r, r * 2.0f, r * 2.0f);
-    juce::ColourGradient face(juce::Colour(0xFF8F8D86), cx - r * 0.5f, cy - r * 0.5f,
-                              juce::Colour(0xFF3F3D3A), cx + r * 0.5f, cy + r * 0.6f, false);
-    g.setGradientFill(face);
-    g.fillEllipse(cx - r * 0.78f, cy - r * 0.78f, r * 1.56f, r * 1.56f);
-    // anisotropic arc glint on the chamfer, top-left
-    juce::Path glint;
-    glint.addCentredArc(cx, cy, r * 0.88f, r * 0.88f, 0.0f, -2.4f, -0.9f, true);
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
-    g.strokePath(glint, juce::PathStrokeType(juce::jmax(0.8f, r * 0.16f)));
-    // Phillips cross, rotation pseudo-random by position; each slot dark with a
-    // bright lower edge (light falls INTO the slot from above)
-    const float rot = std::fmod(cx * 12.9898f + cy * 78.233f, juce::MathConstants<float>::pi);
-    g.saveState();
-    g.addTransform(juce::AffineTransform::rotation(rot, cx, cy));
-    const float sl = r * 0.62f, swd = juce::jmax(0.9f, r * 0.22f);
-    g.setColour(juce::Colour(0xFF141312));
-    g.fillRect(juce::Rectangle<float>(cx - sl, cy - swd * 0.5f, sl * 2.0f, swd));
-    g.fillRect(juce::Rectangle<float>(cx - swd * 0.5f, cy - sl, swd, sl * 2.0f));
-    g.setColour(juce::Colours::white.withAlpha(0.22f));
-    g.fillRect(juce::Rectangle<float>(cx - sl, cy + swd * 0.5f, sl * 2.0f, 0.8f));
-    g.restoreState();
 }
 
 void VintageLookAndFeel::drawRecessedWell(juce::Graphics& g, juce::Rectangle<float> r, float corner) {

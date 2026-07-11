@@ -38,10 +38,14 @@ void Section::paint(juce::Graphics& g) {
 
     // Title strip; spine sections get the brass underline (the re-expressed
     // constant-Summit-spine accent -- see the reskin spec, Sec 2).
-    g.setColour((reserved_ ? VintageLookAndFeel::dimText
-                           : VintageLookAndFeel::capText).withMultipliedAlpha(alpha));
+    // Titles sit on a busy photographic leather texture now -- a 1px dark
+    // shadow keeps them legible, and reserved titles use bright ink (dimText
+    // simply vanished into the crinkle).
     g.setFont(VintageLookAndFeel::condensedFont(17.0f));
     auto titleStrip = getLocalBounds().reduced(16, 6).removeFromTop(titleH_);
+    g.setColour(juce::Colours::black.withAlpha(0.65f * alpha));
+    g.drawText(title_.toUpperCase(), titleStrip.translated(1, 1), juce::Justification::topLeft);
+    g.setColour(VintageLookAndFeel::capText.withMultipliedAlpha(reserved_ ? 0.78f : 1.0f));
     g.drawText(title_.toUpperCase(), titleStrip, juce::Justification::topLeft);
     if (spine_) {
         g.setColour(VintageLookAndFeel::brassTrim.withMultipliedAlpha(alpha));

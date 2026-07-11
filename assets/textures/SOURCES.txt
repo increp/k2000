@@ -1,1 +1,3 @@
-RosewoodVeneer.jpg: "Rosewood Veneer1" by Rob Tuytel, polyhaven.com/a/rosewood_veneer1 - CC0
+PlateAluminum.jpg / RailRedwood.jpg / PanelBlack.jpg / ScrewHead.png / KnobBlack.png:
+  user-generated renders (2026-07-11, "Bernie Synth/GUI" batch); KnobBlack pointer
+  digitally healed out (rotational inpainting) so the pointer can be drawn live.

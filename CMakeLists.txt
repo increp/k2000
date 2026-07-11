@@ -35,7 +35,11 @@ juce_generate_juce_header(k2000)
 # BinaryData symbol is exactly BarlowCondensedMedium_ttf.
 juce_add_binary_data(k2000_assets SOURCES
     assets/fonts/BarlowCondensedMedium.ttf
-    assets/textures/RosewoodVeneer.jpg)
+    assets/textures/PlateAluminum.jpg
+    assets/textures/RailRedwood.jpg
+    assets/textures/PanelBlack.jpg
+    assets/textures/ScrewHead.png
+    assets/textures/KnobBlack.png)
 
 target_sources(k2000 PRIVATE
     src/PluginProcessor.cpp
