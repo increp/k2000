@@ -24,8 +24,9 @@ int main(int argc, char** argv) {
         editor->setSize(juce::String(argv[2]).getIntValue(),
                         juce::String(argv[3]).getIntValue());
 
-    auto img = editor->createComponentSnapshot(editor->getLocalBounds(),
-                                               true, /*scale*/ 1.0f);
+    const float scale = argc > 4 ? juce::String(argv[4]).getFloatValue() : 1.0f;
+    auto img = editor->createComponentSnapshot(editor->getLocalBounds(), true,
+                                               scale > 0.0f ? scale : 1.0f);
     out.deleteFile();
     juce::FileOutputStream os(out);
     if (!os.openedOk()) { std::cerr << "cannot write " << out.getFullPathName() << "\n"; return 1; }

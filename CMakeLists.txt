@@ -34,7 +34,8 @@ juce_generate_juce_header(k2000)
 # Embedded UI assets (fonts). File is named hyphen-less so the generated
 # BinaryData symbol is exactly BarlowCondensedMedium_ttf.
 juce_add_binary_data(k2000_assets SOURCES
-    assets/fonts/BarlowCondensedMedium.ttf)
+    assets/fonts/BarlowCondensedMedium.ttf
+    assets/textures/RosewoodVeneer.jpg)
 
 target_sources(k2000 PRIVATE
     src/PluginProcessor.cpp

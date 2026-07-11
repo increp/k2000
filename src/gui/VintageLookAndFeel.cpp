@@ -69,14 +69,50 @@ namespace {
 juce::Image makeBrushedMetal(juce::Colour base, int w, int h, juce::int64 seed) {
     juce::Image img(juce::Image::RGB, w, h, false);
     juce::Random rng(seed);
+
+    // low-frequency patina blotches: coarse value grid, bilinearly upsampled
+    constexpr int bw = 16, bh = 4;
+    float blotch[bh + 1][bw + 1];
+    for (int by = 0; by <= bh; ++by)
+        for (int bx = 0; bx <= bw; ++bx)
+            blotch[by][bx] = (rng.nextFloat() - 0.5f) * 0.055f;
+
     float t = 0.0f;
     for (int y = 0; y < h; ++y) {
-        t = 0.72f * t + 0.28f * (rng.nextFloat() - 0.5f);
-        const float rowTone = t * 0.16f;
+        // long-correlated row tone = the lengthwise brushing
+        t = 0.86f * t + 0.14f * (rng.nextFloat() - 0.5f);
+        const float rowTone = t * 0.20f;
+        const float fy = (float) y / (float) h * bh;
+        const int   iy = juce::jmin((int) fy, bh - 1);
+        const float ry = fy - (float) iy;
         for (int x = 0; x < w; ++x) {
-            const float d = rowTone + (rng.nextFloat() - 0.5f) * 0.035f;
+            const float fx = (float) x / (float) w * bw;
+            const int   ix = juce::jmin((int) fx, bw - 1);
+            const float rx = fx - (float) ix;
+            const float pat = juce::jmap(ry,
+                juce::jmap(rx, blotch[iy][ix],     blotch[iy][ix + 1]),
+                juce::jmap(rx, blotch[iy + 1][ix], blotch[iy + 1][ix + 1]));
+            const float d = rowTone + pat + (rng.nextFloat() - 0.5f) * 0.045f;
             img.setPixelAt(x, y, d >= 0.0f ? base.brighter(d) : base.darker(-d));
         }
+    }
+
+    // sparse horizontal micro-scratches (bright and dark hairlines)
+    for (int i = 0; i < 26; ++i) {
+        const int y = rng.nextInt(h);
+        const int x0 = rng.nextInt(w);
+        const int len = 12 + rng.nextInt(90);
+        const float d = (rng.nextBool() ? 1.0f : -1.0f) * (0.06f + rng.nextFloat() * 0.10f);
+        for (int x = x0; x < juce::jmin(w, x0 + len); ++x) {
+            auto c = img.getPixelAt(x, y);
+            img.setPixelAt(x, y, d >= 0.0f ? c.brighter(d) : c.darker(-d));
+        }
+    }
+    // micro-dings: tiny dark pits with a bright lower lip
+    for (int i = 0; i < 18; ++i) {
+        const int x = rng.nextInt(w), y = rng.nextInt(h - 2);
+        img.setPixelAt(x, y,     img.getPixelAt(x, y).darker(0.35f));
+        img.setPixelAt(x, y + 1, img.getPixelAt(x, y + 1).brighter(0.25f));
     }
     return img;
 }
@@ -93,7 +129,26 @@ const juce::Image& VintageLookAndFeel::panelTexture() {
 }
 
 const juce::Image& VintageLookAndFeel::woodTexture() {
-    static juce::Image img = makeWoodGrain(woodRail, 64, 512, 0x5EED02);
+    // Photographic rosewood (CC0, assets/textures/RosewoodVeneer.jpg), darkened
+    // toward the palette's deep redwood. Rails are vertical, so if the photo's
+    // grain runs horizontally we rotate it 90 degrees at load (checked visually).
+    static juce::Image img = [] {
+        juce::Image src = juce::ImageFileFormat::loadFrom(
+            BinaryData::RosewoodVeneer_jpg, (size_t) BinaryData::RosewoodVeneer_jpgSize);
+        if (src.isNull())
+            return makeWoodGrain(woodRail, 64, 512, 0x5EED02);   // fallback: procedural
+        // darken + warm-tint toward the mood board's deep redwood
+        juce::Image out(juce::Image::RGB, src.getWidth(), src.getHeight(), false);
+        for (int y = 0; y < src.getHeight(); ++y)
+            for (int x = 0; x < src.getWidth(); ++x) {
+                auto c = src.getPixelAt(x, y);
+                out.setPixelAt(x, y, juce::Colour::fromFloatRGBA(
+                    c.getFloatRed()   * 0.62f,
+                    c.getFloatGreen() * 0.42f,
+                    c.getFloatBlue()  * 0.34f, 1.0f));
+            }
+        return out;
+    }();
     return img;
 }
 
@@ -230,24 +285,39 @@ void VintageLookAndFeel::fillWood(juce::Graphics& g, juce::Rectangle<int> area) 
 }
 
 void VintageLookAndFeel::drawScrew(juce::Graphics& g, float cx, float cy, float r) {
-    // countersink: dark recess ring around the head
-    g.setColour(juce::Colours::black.withAlpha(0.35f));
-    g.fillEllipse(cx - r * 1.35f, cy - r * 1.35f, r * 2.7f, r * 2.7f);
-    // head: hard metal gradient, light source top-left
-    juce::ColourGradient grad(juce::Colour(0xFFC9C7BF), cx - r * 0.7f, cy - r * 0.7f,
-                              juce::Colour(0xFF2E2C29), cx + r * 0.8f, cy + r * 0.9f, true);
-    g.setGradientFill(grad);
+    // drop shadow, light source top-left
+    g.setColour(juce::Colours::black.withAlpha(0.30f));
+    g.fillEllipse(cx - r * 1.2f + 1.0f, cy - r * 1.2f + 1.5f, r * 2.4f, r * 2.4f);
+    // countersink recess
+    juce::ColourGradient sink(juce::Colours::black.withAlpha(0.45f), cx - r, cy - r,
+                              juce::Colours::white.withAlpha(0.10f), cx + r, cy + r, true);
+    g.setGradientFill(sink);
+    g.fillEllipse(cx - r * 1.3f, cy - r * 1.3f, r * 2.6f, r * 2.6f);
+    // chamfered head: bright-to-dark metal, then an inner face slightly flatter
+    juce::ColourGradient rim(juce::Colour(0xFFDDDBD3), cx - r * 0.8f, cy - r * 0.8f,
+                             juce::Colour(0xFF232220), cx + r * 0.7f, cy + r * 0.8f, false);
+    g.setGradientFill(rim);
     g.fillEllipse(cx - r, cy - r, r * 2.0f, r * 2.0f);
-    g.setColour(juce::Colour(0xFF17161A));
-    g.drawEllipse(cx - r, cy - r, r * 2.0f, r * 2.0f, 1.0f);
-    // specular glint
-    g.setColour(juce::Colours::white.withAlpha(0.55f));
-    g.fillEllipse(cx - r * 0.55f, cy - r * 0.6f, r * 0.45f, r * 0.35f);
-    // Slot, rotated pseudo-randomly by position so screws don't all align.
+    juce::ColourGradient face(juce::Colour(0xFF8F8D86), cx - r * 0.5f, cy - r * 0.5f,
+                              juce::Colour(0xFF3F3D3A), cx + r * 0.5f, cy + r * 0.6f, false);
+    g.setGradientFill(face);
+    g.fillEllipse(cx - r * 0.78f, cy - r * 0.78f, r * 1.56f, r * 1.56f);
+    // anisotropic arc glint on the chamfer, top-left
+    juce::Path glint;
+    glint.addCentredArc(cx, cy, r * 0.88f, r * 0.88f, 0.0f, -2.4f, -0.9f, true);
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.strokePath(glint, juce::PathStrokeType(juce::jmax(0.8f, r * 0.16f)));
+    // Phillips cross, rotation pseudo-random by position; each slot dark with a
+    // bright lower edge (light falls INTO the slot from above)
     const float rot = std::fmod(cx * 12.9898f + cy * 78.233f, juce::MathConstants<float>::pi);
     g.saveState();
     g.addTransform(juce::AffineTransform::rotation(rot, cx, cy));
-    g.drawLine(cx - r * 0.55f, cy, cx + r * 0.55f, cy, 1.4f);
+    const float sl = r * 0.62f, swd = juce::jmax(0.9f, r * 0.22f);
+    g.setColour(juce::Colour(0xFF141312));
+    g.fillRect(juce::Rectangle<float>(cx - sl, cy - swd * 0.5f, sl * 2.0f, swd));
+    g.fillRect(juce::Rectangle<float>(cx - swd * 0.5f, cy - sl, swd, sl * 2.0f));
+    g.setColour(juce::Colours::white.withAlpha(0.22f));
+    g.fillRect(juce::Rectangle<float>(cx - sl, cy + swd * 0.5f, sl * 2.0f, 0.8f));
     g.restoreState();
 }
 
