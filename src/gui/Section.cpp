@@ -16,24 +16,29 @@ juce::Rectangle<int> Section::contentBounds() const {
 }
 
 void Section::paint(juce::Graphics& g) {
-    auto bounds = getLocalBounds().toFloat().reduced(1.0f);
     const float alpha = reserved_ ? 0.80f : 1.0f;   // reserved reads as a panel, not a hole
 
-    // Recessed charcoal panel: fill, dark edge, faint embossed top lip.
+    // The section is a leather-wrapped plate screwed ONTO the aluminum chassis
+    // (mood-board ruling 2026-07-11): the outer ~3px stay unpainted so the metal
+    // shows around the plate, and a soft drop shadow seats it on the chassis.
+    auto seat = getLocalBounds().toFloat().reduced(1.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.28f * alpha));
+    g.fillRoundedRectangle(seat.translated(0.0f, 1.5f), 6.0f);
+    auto bounds = getLocalBounds().toFloat().reduced(3.0f);
     VintageLookAndFeel::fillModulePanel(g, bounds, 5.0f, alpha);
     g.setColour(VintageLookAndFeel::panelEdge.withMultipliedAlpha(alpha));
-    g.drawRoundedRectangle(bounds, 5.0f, 1.5f);
-    g.setColour(juce::Colours::white.withAlpha(0.04f * alpha));
-    g.drawLine(bounds.getX() + 6.0f, bounds.getY() + 2.0f,
-               bounds.getRight() - 6.0f, bounds.getY() + 2.0f, 1.0f);
+    g.drawRoundedRectangle(bounds, 5.0f, 1.2f);
+    g.setColour(juce::Colours::white.withAlpha(0.06f * alpha));   // embossed top lip
+    g.drawLine(bounds.getX() + 6.0f, bounds.getY() + 1.5f,
+               bounds.getRight() - 6.0f, bounds.getY() + 1.5f, 1.0f);
 
     // Corner screws (small — panel-level, not chassis-level).
     if (getWidth() > 70 && getHeight() > 40) {
-        const float r = 3.5f, inset = 8.0f;
-        VintageLookAndFeel::drawScrew(g, bounds.getX() + inset,     bounds.getY() + inset,      r);
-        VintageLookAndFeel::drawScrew(g, bounds.getRight() - inset, bounds.getY() + inset,      r);
-        VintageLookAndFeel::drawScrew(g, bounds.getX() + inset,     bounds.getBottom() - inset, r);
-        VintageLookAndFeel::drawScrew(g, bounds.getRight() - inset, bounds.getBottom() - inset, r);
+        const float r = 4.5f, inset = 9.0f;
+        VintageLookAndFeel::drawScrew(g, bounds.getX() + inset,     bounds.getY() + inset,      r, true);
+        VintageLookAndFeel::drawScrew(g, bounds.getRight() - inset, bounds.getY() + inset,      r, true);
+        VintageLookAndFeel::drawScrew(g, bounds.getX() + inset,     bounds.getBottom() - inset, r, true);
+        VintageLookAndFeel::drawScrew(g, bounds.getRight() - inset, bounds.getBottom() - inset, r, true);
     }
 
     // Title strip; spine sections get the brass underline (the re-expressed

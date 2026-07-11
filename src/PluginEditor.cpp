@@ -267,16 +267,19 @@ void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
 void K2000AudioProcessorEditor::paintCanvas(juce::Graphics& g) {
     g.fillAll(VintageLookAndFeel::windowBg);
 
+    // ONE continuous brushed-aluminum chassis face between the rails -- the
+    // module panels are plates screwed onto it (mood-board ruling 2026-07-11),
+    // so the metal must show through between and around every section.
+    VintageLookAndFeel::fillCream(g, { kRailW, 0, kCanvasW - 2 * kRailW, kCanvasH });
+
     // Wood side rails, full height.
     VintageLookAndFeel::fillWood(g, { 0, 0, kRailW, kCanvasH });
     VintageLookAndFeel::fillWood(g, { kCanvasW - kRailW, 0, kRailW, kCanvasH });
 
-    // Cream header + footer plates between the rails.
+    // Header/footer remain engraved zones of the same plate.
     const juce::Rectangle<int> header(kRailW, 0, kCanvasW - 2 * kRailW, kHeaderH);
     const juce::Rectangle<int> footer(kRailW, kCanvasH - kFooterH,
                                       kCanvasW - 2 * kRailW, kFooterH);
-    VintageLookAndFeel::fillCream(g, header);
-    VintageLookAndFeel::fillCream(g, footer);
     g.setColour(VintageLookAndFeel::panelEdge.withAlpha(0.6f));
     g.drawHorizontalLine(header.getBottom() - 1, (float) header.getX(), (float) header.getRight());
     g.drawHorizontalLine(footer.getY(), (float) footer.getX(), (float) footer.getRight());

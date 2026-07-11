@@ -169,7 +169,7 @@ VintageLookAndFeel::VintageLookAndFeel() {
     setColour(juce::ResizableWindow::backgroundColourId,       windowBg);
     setColour(juce::Label::textColourId,                       capText);
     setColour(juce::Slider::textBoxTextColourId,               capText);
-    setColour(juce::Slider::rotarySliderOutlineColourId,       dimText);
+    setColour(juce::Slider::rotarySliderOutlineColourId,       juce::Colour::fromRGB(178, 175, 167));
     setColour(juce::Slider::textBoxBackgroundColourId,         charcoalWell);
     setColour(juce::Slider::textBoxOutlineColourId,            panelEdge);
     setColour(juce::ComboBox::backgroundColourId,              charcoalWell);
@@ -203,7 +203,7 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
         return;
     const auto centre = bounds.getCentre();
     const float angle = startAngle + sliderPos * (endAngle - startAngle);
-    const float bodyR = radius * 0.72f;
+    const float bodyR = radius * 0.80f;
 
     // Tick ring along the sweep, outside the body (major tick every 5th).
     // Colour is per-slider so knobs on aluminum plates can use dark ticks.
@@ -219,12 +219,20 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
 
     static juce::Image sprite = loadAsset(BinaryData::KnobBlack_png, BinaryData::KnobBlack_pngSize);
     if (sprite.isValid()) {
-        // photographic knob body (static -- lighting stays put), live pointer on top
-        g.setColour(juce::Colours::black.withAlpha(0.30f));
-        g.fillEllipse(centre.x - bodyR, centre.y - bodyR * 0.92f + 2.0f, bodyR * 2.0f, bodyR * 2.0f);
+        // photographic knob body (static -- lighting stays put), live pointer on top.
+        // Dark sprite on dark leather needs separation: a grounded shadow below
+        // and a thin top catch-light halo around the skirt.
+        g.setColour(juce::Colours::black.withAlpha(0.55f));
+        g.fillEllipse(centre.x - bodyR * 1.04f, centre.y - bodyR * 0.90f + 3.0f,
+                      bodyR * 2.08f, bodyR * 2.0f);
         g.drawImage(sprite, juce::Rectangle<float>(centre.x - bodyR, centre.y - bodyR,
                                                    bodyR * 2.0f, bodyR * 2.0f),
                     juce::RectanglePlacement::centred);
+        juce::Path halo;
+        halo.addCentredArc(centre.x, centre.y, bodyR * 0.99f, bodyR * 0.99f, 0.0f,
+                           -2.6f, 0.9f, true);   // top-left arc
+        g.setColour(juce::Colours::white.withAlpha(0.22f));
+        g.strokePath(halo, juce::PathStrokeType(1.4f));
         // pointer runs from hub to the metal cap's edge (cap ~= 0.72 of the sprite)
         const float capR = bodyR * 0.72f;
         const juce::Point<float> tip(centre.x + std::sin(angle) * capR * 0.96f,
@@ -308,18 +316,34 @@ void VintageLookAndFeel::fillWood(juce::Graphics& g, juce::Rectangle<int> area) 
     g.fillRect(area.removeFromLeft(6));
 }
 
-void VintageLookAndFeel::drawScrew(juce::Graphics& g, float cx, float cy, float r) {
+void VintageLookAndFeel::drawScrew(juce::Graphics& g, float cx, float cy, float r, bool onDark) {
     static juce::Image sprite = loadAsset(BinaryData::ScrewHead_png, BinaryData::ScrewHead_pngSize);
-    // soft drop shadow + countersink shade under the head
-    g.setColour(juce::Colours::black.withAlpha(0.35f));
-    g.fillEllipse(cx - r * 1.25f + 0.8f, cy - r * 1.25f + 1.2f, r * 2.5f, r * 2.5f);
-    if (sprite.isValid()) {
+    // Pre-brightened copy for dark leather panels, where the aged-nickel head
+    // otherwise disappears (user acceptance feedback, 2026-07-11).
+    static juce::Image spriteBright = [] {
+        juce::Image b = sprite.createCopy();
+        for (int y = 0; y < b.getHeight(); ++y)
+            for (int x = 0; x < b.getWidth(); ++x) {
+                auto c = b.getPixelAt(x, y);
+                b.setPixelAt(x, y, c.brighter(0.55f).withAlpha(c.getFloatAlpha()));
+            }
+        return b;
+    }();
+    const juce::Image& head = (onDark && spriteBright.isValid()) ? spriteBright : sprite;
+    // seat shadow ring for separation
+    g.setColour(juce::Colours::black.withAlpha(onDark ? 0.65f : 0.35f));
+    g.fillEllipse(cx - r * 1.3f + 0.8f, cy - r * 1.3f + 1.2f, r * 2.6f, r * 2.6f);
+    if (onDark) {   // faint raised-lip catch-light so the head pops off the leather
+        g.setColour(juce::Colours::white.withAlpha(0.18f));
+        g.drawEllipse(cx - r * 1.08f, cy - r * 1.08f, r * 2.16f, r * 2.16f, 1.0f);
+    }
+    if (head.isValid()) {
         // slot-angle jitter only (small, so the baked top-left light stays honest)
         const float rot = std::fmod(cx * 12.9898f + cy * 78.233f, 0.6f) - 0.3f;
         const float box = r * 2.15f;
         g.saveState();
         g.addTransform(juce::AffineTransform::rotation(rot, cx, cy));
-        g.drawImage(sprite, juce::Rectangle<float>(cx - box * 0.5f, cy - box * 0.5f, box, box),
+        g.drawImage(head, juce::Rectangle<float>(cx - box * 0.5f, cy - box * 0.5f, box, box),
                     juce::RectanglePlacement::centred);
         g.restoreState();
         return;

@@ -49,7 +49,8 @@ public:
     static void fillModulePanel(juce::Graphics&, juce::Rectangle<float> area,
                                 float corner, float alpha);
     static void fillWood(juce::Graphics&, juce::Rectangle<int> area);
-    static void drawScrew(juce::Graphics&, float cx, float cy, float radius);
+    static void drawScrew(juce::Graphics&, float cx, float cy, float radius,
+                          bool onDark = false);
     static void drawRecessedWell(juce::Graphics&, juce::Rectangle<float> area,
                                  float corner = 4.0f);
 
