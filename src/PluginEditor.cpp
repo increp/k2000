@@ -2,17 +2,49 @@
 #include "params/Parameters.h"
 #include "util/Utf8.h"
 
+namespace {
+constexpr int kRailW   = 30;   // wood side rails
+constexpr int kHeaderH = 92;   // cream header plate
+constexpr int kFooterH = 118;  // cream footer plate (layer routing strip)
+// Logical canvas size: all layout/chrome constants are in this coordinate
+// space; the window transform-scales the canvas (aspect-locked resize).
+constexpr int kCanvasW = 1400;
+constexpr int kCanvasH = 1050;
+}
+
 K2000AudioProcessorEditor::K2000AudioProcessorEditor(K2000AudioProcessor& p)
     : juce::AudioProcessorEditor(&p), processorRef(p) {
     setLookAndFeel(&lnf_);
+
+    // Fixed-size logical canvas; the window scales it (see resized()).
+    addAndMakeVisible(canvas_);
+    canvas_.onPaint = [this](juce::Graphics& g) { paintCanvas(g); };
+    canvas_.setBounds(0, 0, kCanvasW, kCanvasH);
+
     buildStaticControls();
 
     // master gain is not per-layer — bind once.
     binder_.bind(masterGain_, params::masterGain);
 
     bindLayer(0);
+    layoutCanvas();
     startTimerHz(24);
-    setSize(1040, 740);
+
+    // Aspect-locked resizable window (user ruling 2026-07-10: the fixed size
+    // overflowed a DPI-scaled 4K screen). Open at a size that fits the display.
+    setResizable(true, true);
+    setResizeLimits(kCanvasW / 2, kCanvasH / 2, kCanvasW * 2, kCanvasH * 2);
+    if (auto* c = getConstrainer())
+        c->setFixedAspectRatio((double) kCanvasW / (double) kCanvasH);
+    float fit = 1.0f;
+    if (auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+        const auto area = display->userArea;
+        fit = juce::jmin(1.0f,
+                         (float) (area.getWidth()  - 80)  / (float) kCanvasW,
+                         (float) (area.getHeight() - 140) / (float) kCanvasH);
+        fit = juce::jmax(fit, 0.5f);
+    }
+    setSize(juce::roundToInt((float) kCanvasW * fit), juce::roundToInt((float) kCanvasH * fit));
 }
 
 K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
@@ -25,12 +57,14 @@ K2000AudioProcessorEditor::~K2000AudioProcessorEditor() {
 void K2000AudioProcessorEditor::buildStaticControls() {
     title_.setText(juce::String("Bernie  v") + JucePlugin_VersionString,
                    juce::dontSendNotification);
-    title_.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
-    addAndMakeVisible(title_);
+    title_.setFont(VintageLookAndFeel::condensedFont(20.0f));
+    title_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
+    canvas_.addAndMakeVisible(title_);
 
     editLayerLabel_.setText("Edit Layer", juce::dontSendNotification);
     editLayerLabel_.setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(editLayerLabel_);
+    editLayerLabel_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
+    canvas_.addAndMakeVisible(editLayerLabel_);
     for (int i = 0; i < params::kNumLayers; ++i)
         editLayerCombo_.addItem("Layer " + juce::String(i), i + 1);
     editLayerCombo_.setSelectedId(1, juce::dontSendNotification);
@@ -38,33 +72,29 @@ void K2000AudioProcessorEditor::buildStaticControls() {
         editLayer_ = editLayerCombo_.getSelectedId() - 1;
         bindLayer(editLayer_);
     };
-    addAndMakeVisible(editLayerCombo_);
-    masterGainLbl_.setText("Gain", juce::dontSendNotification);
-    masterGainLbl_.setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(masterGainLbl_);
-    masterGain_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 52, 22);
-    addAndMakeVisible(masterGain_);
+    canvas_.addAndMakeVisible(editLayerCombo_);
+    masterGainLbl_.setText("OUTPUT", juce::dontSendNotification);
+    masterGainLbl_.setJustificationType(juce::Justification::centred);
+    masterGainLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
+    canvas_.addAndMakeVisible(masterGainLbl_);
+    masterGain_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 16);
+    masterGain_.setColour(juce::Slider::rotarySliderOutlineColourId, VintageLookAndFeel::creamText);
+    canvas_.addAndMakeVisible(masterGain_);
 
     menuButton_.onClick = [this] { showOversamplingMenu(); };
-    addAndMakeVisible(menuButton_);
+    canvas_.addAndMakeVisible(menuButton_);
 
-    // Source / DSP section
-    addAndMakeVisible(sourceSection_);
-    auto addToSource = [this](juce::Component& c) { sourceSection_.addAndMakeVisible(c); };
-    oscWaveLbl_.setText("Wave", juce::dontSendNotification);
-    oscWaveLbl_.setJustificationType(juce::Justification::centred);
-    oscWave_.addItemList(juce::StringArray{ "Saw", "Square", "Triangle", "Sine" }, 1);
-    addToSource(oscWaveLbl_); addToSource(oscWave_);
-    addToSource(oscCoarse_); addToSource(oscFine_);
+    // VAST DSP panel (bottom row) — the algorithm selector's new home.
+    canvas_.addAndMakeVisible(vastDspSection_);
     algoLbl_.setText("Algo", juce::dontSendNotification);
     algoLbl_.setJustificationType(juce::Justification::centred);
     // Same UTF-8-correct names that build the algorithm choice param.
     algo_.addItemList(params::algoNames(), 1);
-    addToSource(algoLbl_); addToSource(algo_);
-    addToSource(shaperDrive_); addToSource(shaperMix_);
+    vastDspSection_.addAndMakeVisible(algoLbl_);
+    vastDspSection_.addAndMakeVisible(algo_);
 
     // Filter section
-    addAndMakeVisible(filterSection_);
+    canvas_.addAndMakeVisible(filterSection_);
     filterSection_.addAndMakeVisible(filterCutoff_);
     filterSection_.addAndMakeVisible(filterRes_);
     spineModelLbl_.setText("Filter", juce::dontSendNotification);
@@ -96,17 +126,12 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     moogWaveLbl_.setText("Wave", juce::dontSendNotification);
     moogWaveLbl_.setJustificationType(juce::Justification::centred);
     moogWave_.addItemList(juce::StringArray{ "Sine", "Triangle", "Saw" }, 1);
-    filterSection_.addAndMakeVisible(moogWaveLbl_);
-    filterSection_.addAndMakeVisible(moogWave_);
     moogOctaveLbl_.setText("Octave", juce::dontSendNotification);
     moogOctaveLbl_.setJustificationType(juce::Justification::centred);
     moogOctave_.addItemList(juce::StringArray{ "0", "-1 oct", "-2 oct" }, 1);
-    filterSection_.addAndMakeVisible(moogOctaveLbl_);
-    filterSection_.addAndMakeVisible(moogOctave_);
-    filterSection_.addAndMakeVisible(moogBass_);
 
     // Wire model-selection visibility switching
-    spineModel_.onChange = [this] { updateModelVisibility(); resized(); };
+    spineModel_.onChange = [this] { updateModelVisibility(); layoutCanvas(); };
     updateModelVisibility();
 
     // HP pre-filter band controls
@@ -121,15 +146,20 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     filterSection_.addAndMakeVisible(hpCutoff_);
     filterSection_.addAndMakeVisible(hpReso_);
 
+    // Reserved Filter-Env sub-frame inside the VCF panel (params don't exist yet).
+    filterSection_.addAndMakeVisible(filterEnvSection_);
+
     // Amp env section
-    addAndMakeVisible(ampEnvSection_);
+    canvas_.addAndMakeVisible(ampEnvSection_);
     for (auto* k : { &ampA_, &ampD_, &ampS_, &ampR_ })
         ampEnvSection_.addAndMakeVisible(*k);
 
-    // Reserved sections — visible (framed/dimmed) but no children.
-    for (auto* s : { &mixerSection_, &driveSection_, &ampSection_,
+    // Reserved sections — visible (framed/dimmed) but no children yet.
+    for (auto* s : { &vco1Section_, &vco2Section_, &vco3Section_,
+                     &mixerSection_, &outputSection_,
                      &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
-        addAndMakeVisible(*s);
+        canvas_.addAndMakeVisible(*s);
+    canvas_.addAndMakeVisible(ampSection_);
 
     // Amp section: hearing-safety output limiter (protected control — not an APVTS param).
     safetyLbl_.setText("Safety", juce::dontSendNotification);
@@ -164,24 +194,28 @@ void K2000AudioProcessorEditor::buildStaticControls() {
 
     limitIndicator_.setText("LIMIT", juce::dontSendNotification);
     limitIndicator_.setJustificationType(juce::Justification::centred);
-    limitIndicator_.setColour(juce::Label::textColourId, juce::Colours::darkgrey);
+    limitIndicator_.setColour(juce::Label::textColourId, VintageLookAndFeel::dimText);
     ampSection_.addAndMakeVisible(limitIndicator_);
 
-    // Routing section
-    addAndMakeVisible(routingSection_);
+    // Footer routing strip — controls sit directly on the cream chassis plate.
     enableLbl_.setText("Enable", juce::dontSendNotification);
     enableLbl_.setJustificationType(juce::Justification::centred);
-    routingSection_.addAndMakeVisible(enableLbl_);
-    routingSection_.addAndMakeVisible(enable_);
-    for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ })
-        routingSection_.addAndMakeVisible(*k);
+    enableLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
+    canvas_.addAndMakeVisible(enableLbl_);
+    canvas_.addAndMakeVisible(enable_);
+    for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ }) {
+        k->setCaptionColour(VintageLookAndFeel::creamText);
+        k->slider().setColour(juce::Slider::rotarySliderOutlineColourId, VintageLookAndFeel::creamText);
+        canvas_.addAndMakeVisible(*k);
+    }
     channelLbl_.setText("Channel", juce::dontSendNotification);
     channelLbl_.setJustificationType(juce::Justification::centred);
+    channelLbl_.setColour(juce::Label::textColourId, VintageLookAndFeel::creamText);
     juce::StringArray chanItems{ "Omni" };
     for (int ch = 1; ch <= 16; ++ch) chanItems.add(juce::String(ch));
     channel_.addItemList(chanItems, 1);
-    routingSection_.addAndMakeVisible(channelLbl_);
-    routingSection_.addAndMakeVisible(channel_);
+    canvas_.addAndMakeVisible(channelLbl_);
+    canvas_.addAndMakeVisible(channel_);
 }
 
 // (Re)bind every per-layer control to the chosen layer's params. binder_'s
@@ -189,9 +223,6 @@ void K2000AudioProcessorEditor::buildStaticControls() {
 void K2000AudioProcessorEditor::bindLayer(int layer) {
     const auto& ids = params::layerIds(layer);
 
-    binder_.bind(oscWave_,             ids.oscWaveform);
-    binder_.bind(oscCoarse_.slider(),  ids.oscCoarse);
-    binder_.bind(oscFine_.slider(),    ids.oscFine);
     binder_.bind(algo_,                ids.algorithm);
     binder_.bind(shaperDrive_.slider(),ids.shaperDrive);
     binder_.bind(shaperMix_.slider(),  ids.shaperMix);
@@ -228,13 +259,60 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
 }
 
 void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
-    g.fillAll(SummitLookAndFeel::panelBg);
+    // Letterbox fill behind the transform-scaled canvas (normally invisible —
+    // the aspect lock keeps the canvas flush with the window).
+    g.fillAll(VintageLookAndFeel::windowBg);
+}
+
+void K2000AudioProcessorEditor::paintCanvas(juce::Graphics& g) {
+    g.fillAll(VintageLookAndFeel::windowBg);
+
+    // ONE continuous brushed-aluminum chassis face between the rails -- the
+    // module panels are plates screwed onto it (mood-board ruling 2026-07-11),
+    // so the metal must show through between and around every section.
+    VintageLookAndFeel::fillCream(g, { kRailW, 0, kCanvasW - 2 * kRailW, kCanvasH });
+
+    // Wood side rails, full height.
+    VintageLookAndFeel::fillWood(g, { 0, 0, kRailW, kCanvasH });
+    VintageLookAndFeel::fillWood(g, { kCanvasW - kRailW, 0, kRailW, kCanvasH });
+
+    // Header/footer remain engraved zones of the same plate.
+    const juce::Rectangle<int> header(kRailW, 0, kCanvasW - 2 * kRailW, kHeaderH);
+    const juce::Rectangle<int> footer(kRailW, kCanvasH - kFooterH,
+                                      kCanvasW - 2 * kRailW, kFooterH);
+    g.setColour(VintageLookAndFeel::panelEdge.withAlpha(0.6f));
+    g.drawHorizontalLine(header.getBottom() - 1, (float) header.getX(), (float) header.getRight());
+    g.drawHorizontalLine(footer.getY(), (float) footer.getX(), (float) footer.getRight());
+
+    // Chassis screws at the plate corners.
+    VintageLookAndFeel::drawScrew(g, (float) header.getX() + 18.0f,     (float) header.getY() + 18.0f, 5.0f);
+    VintageLookAndFeel::drawScrew(g, (float) header.getRight() - 18.0f, (float) header.getY() + 18.0f, 5.0f);
+    VintageLookAndFeel::drawScrew(g, (float) footer.getX() + 18.0f,     (float) footer.getBottom() - 18.0f, 5.0f);
+    VintageLookAndFeel::drawScrew(g, (float) footer.getRight() - 18.0f, (float) footer.getBottom() - 18.0f, 5.0f);
+
+    // Blank recessed VU plates (Stage 3 puts real meters here).
+    VintageLookAndFeel::drawRecessedWell(g, vuWellRect(0));
+    VintageLookAndFeel::drawRecessedWell(g, vuWellRect(1));
+
+    // Footer strip label.
+    g.setColour(VintageLookAndFeel::creamText);
+    g.setFont(VintageLookAndFeel::condensedFont(17.0f));
+    g.drawText("LAYER ROUTING", footer.reduced(20, 0), juce::Justification::centredLeft);
+}
+
+juce::Rectangle<float> K2000AudioProcessorEditor::vuWellRect(int index) const {
+    const float w = 168.0f, h = 56.0f, gap = 18.0f;
+    // Canvas-logical coords; 340 clears the layer/OS/output cluster laid out in
+    // layoutCanvas() (title=170, outZone=84, gaps 10+8, menu=34, combo=100, label=70).
+    const float right = (float) (kCanvasW - kRailW) - 340.0f;
+    const float x = right - (float) (2 - index) * (w + gap);
+    return { x, ((float) kHeaderH - h) * 0.5f, w, h };
 }
 
 void K2000AudioProcessorEditor::timerCallback() {
     const bool active = processorRef.gainReductionDb() > 0.1f;
     limitIndicator_.setColour(juce::Label::textColourId,
-                              active ? juce::Colours::red : juce::Colours::darkgrey);
+                              active ? VintageLookAndFeel::ledRed : VintageLookAndFeel::dimText);
     // keep the toggle in sync if state changed via load
     if (safetyLimiter_.getToggleState() != processorRef.isLimiterEnabled())
         safetyLimiter_.setToggleState(processorRef.isLimiterEnabled(), juce::dontSendNotification);
@@ -280,10 +358,7 @@ void K2000AudioProcessorEditor::showOversamplingMenu() {
 void K2000AudioProcessorEditor::updateModelVisibility() {
     const bool moog = (spineModel_.getSelectedItemIndex() == 1);
     // Moog-only controls
-    juce::Component* moogControls[] = { &moogModeLbl_,  &moogMode_,
-                                        &moogWaveLbl_,  &moogWave_,
-                                        &moogOctaveLbl_, &moogOctave_,
-                                        &moogBass_ };
+    juce::Component* moogControls[] = { &moogModeLbl_, &moogMode_ };
     for (auto* c : moogControls)
         c->setVisible(moog);
     // Huggett-only controls
@@ -294,19 +369,29 @@ void K2000AudioProcessorEditor::updateModelVisibility() {
 }
 
 void K2000AudioProcessorEditor::resized() {
-    auto area = getLocalBounds().reduced(10);
+    // Scale the fixed logical canvas to the window as one aspect-locked unit;
+    // the layout itself (layoutCanvas) never re-runs on resize.
+    const float s = juce::jmin((float) getWidth()  / (float) kCanvasW,
+                               (float) getHeight() / (float) kCanvasH);
+    const float dx = ((float) getWidth()  - (float) kCanvasW * s) * 0.5f;
+    const float dy = ((float) getHeight() - (float) kCanvasH * s) * 0.5f;
+    canvas_.setTransform(juce::AffineTransform::scale(s).translated(dx, dy));
+}
 
-    // Top bar (h 40): title | spacer | edit-layer | master gain | menu button
+void K2000AudioProcessorEditor::layoutCanvas() {
+    // --- Header (cream plate): version | ... VU wells (paint-only) ... | layer | OS | OUTPUT ---
     {
-        auto bar = area.removeFromTop(40);
-        title_.setBounds(bar.removeFromLeft(180));
-        menuButton_.setBounds(bar.removeFromRight(34).reduced(3, 6));
-        masterGain_.setBounds(bar.removeFromRight(150).reduced(4, 8));
-        masterGainLbl_.setBounds(bar.removeFromRight(40).reduced(0, 8));
-        editLayerCombo_.setBounds(bar.removeFromRight(110).reduced(0, 8));
-        editLayerLabel_.setBounds(bar.removeFromRight(90).reduced(0, 8));
+        auto bar = juce::Rectangle<int>(kRailW, 0, kCanvasW - 2 * kRailW, kHeaderH).reduced(14, 10);
+        title_.setBounds(bar.removeFromLeft(170));
+        auto outZone = bar.removeFromRight(104);
+        masterGainLbl_.setBounds(outZone.removeFromTop(14));
+        masterGain_.setBounds(outZone);
+        bar.removeFromRight(10);
+        menuButton_.setBounds(bar.removeFromRight(34).reduced(0, 18));
+        bar.removeFromRight(8);
+        editLayerCombo_.setBounds(bar.removeFromRight(100).withSizeKeepingCentre(100, 26));
+        editLayerLabel_.setBounds(bar.removeFromRight(70).withSizeKeepingCentre(70, 26));
     }
-    area.removeFromTop(8);
 
     // Helper: lay a row of {label,control} cells across a rectangle.
     auto layoutCells = [](juce::Rectangle<int> r,
@@ -317,9 +402,9 @@ void K2000AudioProcessorEditor::resized() {
         const int w = r.getWidth() / n;
         int x = r.getX();
         for (auto& [lbl, ctl] : cells) {
-            if (lbl) lbl->setBounds(x, r.getY(), w, 16);
-            const int topY  = r.getY() + (lbl ? 16 : 0);
-            const int cellH = r.getHeight() - (lbl ? 16 : 0);
+            if (lbl) lbl->setBounds(x, r.getY(), w, 20);
+            const int topY  = r.getY() + (lbl ? 20 : 0);
+            const int cellH = r.getHeight() - (lbl ? 20 : 0);
             if (dynamic_cast<juce::ComboBox*>(ctl) != nullptr)
                 // A combo must NOT fill the cell: JUCE sets the popup's item
                 // height from the box height, so a tall box yields a
@@ -331,110 +416,114 @@ void K2000AudioProcessorEditor::resized() {
         }
     };
 
-    // Signal row (h 330): source(48%) | mixer | filter | drive | amp
+    // --- Main content between header and footer, inside the rails ---
+    auto content = juce::Rectangle<int>(0, 0, kCanvasW, kCanvasH)
+                       .withTrimmedLeft(kRailW).withTrimmedRight(kRailW)
+                       .withTrimmedTop(kHeaderH).withTrimmedBottom(kFooterH)
+                       .reduced(10);
+
+    // Rows claimed from the bottom: mod row, gap, bottom control row, gap.
+    auto modRow = content.removeFromBottom(100);
+    content.removeFromBottom(8);
+    auto botRow = content.removeFromBottom(150);
+    content.removeFromBottom(8);
+
+    // Main columns: VCO stack (left) | VCF | slim OUTPUT column (right).
+    auto vcoCol = content.removeFromLeft((int) ((float) content.getWidth() * 0.52f));
+    content.removeFromLeft(8);
+    auto outCol = content.removeFromRight(130);
+    content.removeFromRight(8);
+    filterSection_.setBounds(content);
+    outputSection_.setBounds(outCol);
+
+    // Three equal VCO panels, empty until Stage 2.
+    const int vcoH = (vcoCol.getHeight() - 16) / 3;
+    vco1Section_.setBounds(vcoCol.removeFromTop(vcoH));
+    vcoCol.removeFromTop(8);
+    vco2Section_.setBounds(vcoCol.removeFromTop(vcoH));
+    vcoCol.removeFromTop(8);
+    vco3Section_.setBounds(vcoCol);
+
+    // --- VCF panel internals: reserved Filter-Env frame at the bottom, then the
+    //     existing three-row filter layout (HP band + shared row + model row). ---
     {
-        auto row = area.removeFromTop(330);
-        auto source = row.removeFromLeft((int) (row.getWidth() * 0.40f));
-        sourceSection_.setBounds(source.reduced(2));
-        // FILTER is now a primary 6-control section, so it gets the lion's share
-        // of the remaining width; the still-empty reserved placeholders are slim.
-        const int rest = row.getWidth();
-        mixerSection_.setBounds(row.removeFromLeft((int) (rest * 0.09f)).reduced(2));
-        filterSection_.setBounds(row.removeFromLeft((int) (rest * 0.55f)).reduced(2));
-        driveSection_.setBounds(row.removeFromLeft((int) (rest * 0.09f)).reduced(2));
-        ampSection_.setBounds(row.reduced(2));
-        {
-            auto ac = ampSection_.contentBounds();
-            safetyLbl_.setBounds(ac.removeFromTop(16));
-            safetyLimiter_.setBounds(ac.removeFromTop(28).reduced(4, 2));
-            limitIndicator_.setBounds(ac.removeFromTop(20));
-        }
+        auto fc = filterSection_.contentBounds();
+        auto envArea = fc.removeFromBottom((int) ((float) fc.getHeight() * 0.26f));
+        filterEnvSection_.setBounds(envArea.reduced(2));
+        fc.removeFromBottom(6);
 
-        // Source children: two stacked cell-rows inside contentBounds.
-        auto sc = sourceSection_.contentBounds();
-        auto top = sc.removeFromTop(sc.getHeight() / 2);
-        layoutCells(top, { { &oscWaveLbl_, &oscWave_ }, { nullptr, &oscCoarse_ }, { nullptr, &oscFine_ } });
-        layoutCells(sc,  { { &algoLbl_, &algo_ }, { nullptr, &shaperDrive_ }, { nullptr, &shaperMix_ } });
+        const int rowH   = fc.getHeight() / 3;
+        const int divGap = 4;
 
-        // Filter children: Layout B — HP pre-band + divider + two main rows.
-        // Row 1 (HP band): HP label, HP cutoff, HP reso, HP slope.
-        // [4 px divider gap]
-        // Row 2 (main top, always visible — SHARED params): filter model, cutoff, reso, slope.
-        // Row 3 (main bot, model-specific via updateModelVisibility): Huggett routing/
-        //   separation/post-drive OR Moog mode/wave/octave/bass. Slope is SHARED (applies
-        //   to both models), so it lives in the top row — keeping it in this row would let
-        //   the Moog group overlap and bury it.
-        {
-            auto fc = filterSection_.contentBounds();
-            const int rowH   = fc.getHeight() / 3;
-            const int divGap = 4;
+        // HP pre-filter row. No enable toggle — the HP is OFF when its cutoff
+        // knob sits at 0; turning it up engages it.
+        auto hpRow = fc.removeFromTop(rowH);
+        fc.removeFromTop(divGap);
+        const int lblW = 58;
+        hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 20);
+        hpRow.removeFromLeft(lblW);
+        layoutCells(hpRow, { { nullptr,      &hpCutoff_ },
+                              { nullptr,      &hpReso_   },
+                              { &hpSlopeLbl_, &hpSlope_  } });
 
-            // HP pre-filter row
-            auto hpRow = fc.removeFromTop(rowH);
-            fc.removeFromTop(divGap);  // visual divider gap
-            // HP section label (left column). No enable toggle — the HP is OFF when its
-            // cutoff knob sits at 0; turning it up engages it.
-            const int lblW = 58;
-            hpSectionLbl_.setBounds(hpRow.getX(), hpRow.getY(), lblW, 16);
-            hpRow.removeFromLeft(lblW);
-            // Remaining cells: HP cut, HP reso, HP slope (HP is clean — no drive)
-            layoutCells(hpRow, { { nullptr,      &hpCutoff_ },
-                                  { nullptr,      &hpReso_   },
-                                  { &hpSlopeLbl_, &hpSlope_  } });
-
-            // Main filter rows — split remaining height equally.
-            // The model selector ("Filter") lives in the main top row so the dropdown is
-            // wide enough for both model names (Huggett/Moog); it is always visible.
-            const int mainH = (fc.getHeight()) / 2;
-            auto mainTop = fc.removeFromTop(mainH);
-            layoutCells(mainTop, { { &spineModelLbl_, &spineModel_ },
-                                    { nullptr,         &filterCutoff_ },
-                                    { nullptr,         &filterRes_ },
-                                    { &spineSlopeLbl_, &spineSlope_ } });
-            // Both model-specific rows share the same cell rectangle;
-            // updateModelVisibility() ensures only the active group is shown.
-            layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
-                                { nullptr,          &spineSeparation_ },
-                                { nullptr,          &spinePostDrive_ } });
-            layoutCells(fc,  { { &moogModeLbl_,    &moogMode_ },
-                                { &moogWaveLbl_,    &moogWave_ },
-                                { &moogOctaveLbl_,  &moogOctave_ },
-                                { nullptr,          &moogBass_ } });
-            updateModelVisibility();
-        }
+        // Shared main row: model, cutoff, reso, slope (slope applies to both models).
+        const int mainH = fc.getHeight() / 2;
+        auto mainTop = fc.removeFromTop(mainH);
+        layoutCells(mainTop, { { &spineModelLbl_, &spineModel_ },
+                                { nullptr,         &filterCutoff_ },
+                                { nullptr,         &filterRes_ },
+                                { &spineSlopeLbl_, &spineSlope_ } });
+        // Model-specific rows share the same rectangle; updateModelVisibility()
+        // shows only the active group.
+        layoutCells(fc,  { { &spineRoutingLbl_, &spineRouting_ },
+                            { nullptr,          &spineSeparation_ },
+                            { nullptr,          &spinePostDrive_ } });
+        layoutCells(fc,  { { &moogModeLbl_, &moogMode_ } });
+        updateModelVisibility();
     }
-    area.removeFromTop(8);
 
-    // Modulation row (h 150): amp env | mod envs | lfo | mod matrix | fx
+    // --- Bottom control row: OSC BLEND | VAST DSP | AMP ENV | AMP ---
     {
-        auto row = area.removeFromTop(150);
-        const int w = row.getWidth() / 5;
-        ampEnvSection_.setBounds(row.removeFromLeft(w).reduced(2));
-        modEnvSection_.setBounds(row.removeFromLeft(w).reduced(2));
-        lfoSection_.setBounds(row.removeFromLeft(w).reduced(2));
-        modMatrixSection_.setBounds(row.removeFromLeft(w).reduced(2));
-        fxSection_.setBounds(row.reduced(2));
+        auto b = botRow;
+        const int bw = b.getWidth();
+        mixerSection_.setBounds(b.removeFromLeft((int) ((float) bw * 0.30f)).reduced(2));
+        vastDspSection_.setBounds(b.removeFromLeft((int) ((float) bw * 0.20f)).reduced(2));
+        ampEnvSection_.setBounds(b.removeFromLeft((int) ((float) bw * 0.30f)).reduced(2));
+        ampSection_.setBounds(b.reduced(2));
 
+        layoutCells(vastDspSection_.contentBounds(), { { &algoLbl_, &algo_ } });
         layoutCells(ampEnvSection_.contentBounds(),
                     { { nullptr, &ampA_ }, { nullptr, &ampD_ }, { nullptr, &ampS_ }, { nullptr, &ampR_ } });
+        auto ac = ampSection_.contentBounds();
+        safetyLbl_.setBounds(ac.removeFromTop(16));
+        safetyLimiter_.setBounds(ac.removeFromTop(28).reduced(4, 2));
+        limitIndicator_.setBounds(ac.removeFromTop(20));
     }
-    area.removeFromTop(8);
 
-    // Routing strip (remaining): enable | key/vel/level | channel
+    // --- Mod row: MOD ENVS | LFO 1-4 | MOD MATRIX | FX CHAINS (all reserved) ---
     {
-        routingSection_.setBounds(area.reduced(2));
-        auto rc = routingSection_.contentBounds();
-        const int n = 7;
-        const int w = rc.getWidth() / n;
-        int x = rc.getX();
-        enableLbl_.setBounds(x, rc.getY(), w, 16);
-        enable_.setBounds(x + w / 2 - 14, rc.getY() + 20, 28, 28);
-        x += w;
+        const int w = modRow.getWidth() / 4;
+        modEnvSection_.setBounds(modRow.removeFromLeft(w).reduced(2));
+        lfoSection_.setBounds(modRow.removeFromLeft(w).reduced(2));
+        modMatrixSection_.setBounds(modRow.removeFromLeft(w).reduced(2));
+        fxSection_.setBounds(modRow.reduced(2));
+    }
+
+    // --- Footer (cream plate): LAYER ROUTING label (painted) | controls ---
+    {
+        auto f = juce::Rectangle<int>(kRailW, kCanvasH - kFooterH,
+                                      kCanvasW - 2 * kRailW, kFooterH).reduced(14, 8);
+        f.removeFromLeft(150);   // painted "LAYER ROUTING" text zone
+        auto en = f.removeFromLeft(60);
+        enableLbl_.setBounds(en.removeFromTop(18));
+        enable_.setBounds(en.getCentreX() - 12, en.getY() + 2, 24, 24);
+        f.removeFromLeft(8);
         for (auto* k : { &keyLo_, &keyHi_, &velLo_, &velHi_, &level_ }) {
-            k->setBounds(x, rc.getY(), w, rc.getHeight());
-            x += w;
+            k->setBounds(f.removeFromLeft(100));
+            f.removeFromLeft(6);
         }
-        channelLbl_.setBounds(x, rc.getY(), w, 16);
-        channel_.setBounds(x, rc.getY() + 16, w, 26);
+        auto ch = f.removeFromRight(110);
+        channelLbl_.setBounds(ch.removeFromTop(18));
+        channel_.setBounds(ch.removeFromTop(26));
     }
 }

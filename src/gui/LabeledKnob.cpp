@@ -1,17 +1,22 @@
 #include "LabeledKnob.h"
+#include "VintageLookAndFeel.h"
 
 LabeledKnob::LabeledKnob(const juce::String& caption) {
-    slider_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, captionH_);
+    slider_.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 20);
     addAndMakeVisible(slider_);
 
     caption_.setText(caption, juce::dontSendNotification);
     caption_.setJustificationType(juce::Justification::centred);
-    caption_.setFont(juce::Font(juce::FontOptions(11.0f)));
+    caption_.setFont(VintageLookAndFeel::condensedFont(14.0f));
     addAndMakeVisible(caption_);
 }
 
 void LabeledKnob::setCaption(const juce::String& caption) {
     caption_.setText(caption, juce::dontSendNotification);
+}
+
+void LabeledKnob::setCaptionColour(juce::Colour c) {
+    caption_.setColour(juce::Label::textColourId, c);
 }
 
 void LabeledKnob::resized() {

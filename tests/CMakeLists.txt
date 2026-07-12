@@ -168,3 +168,60 @@ set_target_properties(k2000_device_characterization PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON)
 # NOTE: no add_test — stays out of CTest/CI default run.
+
+# ---------------------------------------------------------------------------
+# k2000_panel_snapshot — offscreen editor->PNG render (local GUI-tuning tool).
+# Compiles the REAL editor (no K2000_TESTING define -> createEditor() is live).
+# NOT registered in CTest; never run in CI (needs a display connection for
+# JUCE's Desktop init on some platforms; it exists for the dev loop only).
+# ---------------------------------------------------------------------------
+add_executable(k2000_panel_snapshot
+    panel_snapshot_main.cpp
+    ../src/PluginProcessor.cpp
+    ../src/PluginEditor.cpp
+    ../src/Voice.cpp
+    ../src/VoiceManager.cpp
+    ../src/Layer.cpp
+    ../src/Program.cpp
+    ../src/params/Parameters.cpp
+    ../src/gui/ParamBinder.cpp
+    ../src/gui/VintageLookAndFeel.cpp
+    ../src/gui/LabeledKnob.cpp
+    ../src/gui/Section.cpp
+    ../src/dsp/Oscillator.cpp
+    ../src/dsp/Envelope.cpp
+    ../src/dsp/blocks/Waveshaper.cpp
+    ../src/dsp/AlgorithmLibrary.cpp
+    ../src/dsp/spine/HuggettFilter.cpp
+    ../src/dsp/spine/FilterModelLibrary.cpp
+    ../src/dsp/spine/SpineFilterSlot.cpp
+    ../src/dsp/spine/HuggettHpStage.cpp
+    ../src/dsp/spine/MoogLadder.cpp
+    ../src/dsp/spine/cmajor/SvfLinearAdapter.cpp
+    ../src/dsp/spine/cmajor/CmajorSvfFilter.cpp
+    ../src/dsp/spine/cmajor/NlSvfAdapter.cpp
+    ../src/dsp/spine/cmajor/AsymDriveAdapter.cpp
+    ../src/dsp/spine/cmajor/NlSvfLeanAdapter.cpp
+    ../src/dsp/spine/cmajor/NlSvfDriveLeanAdapter.cpp
+    ../src/dsp/spine/cmajor/MoogLadderAdapter.cpp)
+
+target_link_libraries(k2000_panel_snapshot PRIVATE
+    k2000_assets
+    juce::juce_core
+    juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_gui_basics
+    juce::juce_recommended_config_flags)
+
+target_compile_definitions(k2000_panel_snapshot PRIVATE
+    JUCE_STANDALONE_APPLICATION=1
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JucePlugin_VersionString="${k2000_VERSION}")
+
+set_target_properties(k2000_panel_snapshot PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON)
+# NOTE: no add_test — dev-loop tool only.

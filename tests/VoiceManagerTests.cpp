@@ -14,7 +14,7 @@ public:
 
     void runTest() override {
         ParamSnapshot s;
-        s.oscWaveform = 3;
+        s.osc1BlendSine = 1.0f; s.osc1BlendSaw = 0.0f;
         s.svfCutoffHz = 20000.0f;
         s.wsMix = 0.0f;
         s.ampAttackS = 0.001f; s.ampDecayS = 0.01f;

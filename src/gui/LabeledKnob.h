@@ -10,10 +10,13 @@ public:
     juce::Slider& slider() { return slider_; }
     void setCaption(const juce::String& caption);
 
+    // Footer knobs sit on the cream chassis plate and need dark captions.
+    void setCaptionColour(juce::Colour c);
+
     void resized() override;
 
 private:
-    static constexpr int captionH_ = 16;
+    static constexpr int captionH_ = 20;
 
     juce::Slider slider_{ juce::Slider::RotaryHorizontalVerticalDrag,
                           juce::Slider::TextBoxBelow };

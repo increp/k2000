@@ -6,10 +6,25 @@
 // Adding new params here is a single-source-of-truth change: extend this
 // struct, the Parameters layout, and any consumer that needs the value.
 struct ParamSnapshot {
-    // Oscillator
-    int   oscWaveform   = 0;   // 0=saw 1=square 2=triangle 3=sine
-    float oscCoarse     = 0.0f; // semitones
-    float oscFine       = 0.0f; // cents
+    // VCO1/2/3: coarse/fine tuning (semitones/cents) + proportional 4-way
+    // waveform blend (each 0..1, combined as a weighted average -- see
+    // Oscillator::processSample()) + pulse duty cycle (0.01..0.99).
+    // All three default to unison pitch + 100% saw; only mixerOscNLevel
+    // differs between them (VCO1 audible, VCO2/3 silent) so a fresh patch
+    // sounds identical to today's single-oscillator saw default.
+    float osc1Coarse = 0.0f, osc1Fine = 0.0f;
+    float osc1BlendSine = 0.0f, osc1BlendTriangle = 0.0f, osc1BlendSaw = 1.0f, osc1BlendPulse = 0.0f;
+    float osc1PulseDuty = 0.5f;
+    float osc2Coarse = 0.0f, osc2Fine = 0.0f;
+    float osc2BlendSine = 0.0f, osc2BlendTriangle = 0.0f, osc2BlendSaw = 1.0f, osc2BlendPulse = 0.0f;
+    float osc2PulseDuty = 0.5f;
+    float osc3Coarse = 0.0f, osc3Fine = 0.0f;
+    float osc3BlendSine = 0.0f, osc3BlendTriangle = 0.0f, osc3BlendSaw = 1.0f, osc3BlendPulse = 0.0f;
+    float osc3PulseDuty = 0.5f;
+
+    // Mixer: linear gain (0..1) balancing the three VCOs before they sum
+    // into the algorithm-block graph.
+    float mixerOsc1Level = 1.0f, mixerOsc2Level = 0.0f, mixerOsc3Level = 0.0f;
 
     // Filter block (layer.filter.*)
     float svfCutoffHz   = 1000.0f;

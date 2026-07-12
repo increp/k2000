@@ -19,9 +19,30 @@ LayerIds buildIds(int layer) {
     const juce::String p = pfx(layer);
     LayerIds id;
     id.algorithm       = p + "algorithm";
-    id.oscWaveform     = p + "osc.waveform";
-    id.oscCoarse       = p + "osc.coarse";
-    id.oscFine         = p + "osc.fine";
+    id.osc1Coarse         = p + "osc1.coarse";
+    id.osc1Fine           = p + "osc1.fine";
+    id.osc1BlendSine      = p + "osc1.blend.sine";
+    id.osc1BlendTriangle  = p + "osc1.blend.triangle";
+    id.osc1BlendSaw       = p + "osc1.blend.saw";
+    id.osc1BlendPulse     = p + "osc1.blend.pulse";
+    id.osc1PulseDuty      = p + "osc1.blend.pulseDuty";
+    id.osc2Coarse         = p + "osc2.coarse";
+    id.osc2Fine           = p + "osc2.fine";
+    id.osc2BlendSine      = p + "osc2.blend.sine";
+    id.osc2BlendTriangle  = p + "osc2.blend.triangle";
+    id.osc2BlendSaw       = p + "osc2.blend.saw";
+    id.osc2BlendPulse     = p + "osc2.blend.pulse";
+    id.osc2PulseDuty      = p + "osc2.blend.pulseDuty";
+    id.osc3Coarse         = p + "osc3.coarse";
+    id.osc3Fine           = p + "osc3.fine";
+    id.osc3BlendSine      = p + "osc3.blend.sine";
+    id.osc3BlendTriangle  = p + "osc3.blend.triangle";
+    id.osc3BlendSaw       = p + "osc3.blend.saw";
+    id.osc3BlendPulse     = p + "osc3.blend.pulse";
+    id.osc3PulseDuty      = p + "osc3.blend.pulseDuty";
+    id.mixerOsc1Level     = p + "mixer.osc1.level";
+    id.mixerOsc2Level     = p + "mixer.osc2.level";
+    id.mixerOsc3Level     = p + "mixer.osc3.level";
     id.filterCutoff    = p + "filter.cutoff";
     id.filterResonance = p + "filter.resonance";
     id.shaperDrive     = p + "shaper.drive";
@@ -95,15 +116,88 @@ APVTS::ParameterLayout createLayout() {
 
         layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.algorithm, 1},
             "Algorithm " + juce::String(i), algoNames(), 0));
-        layout.add(std::make_unique<ChoiceParam>(juce::ParameterID{id.oscWaveform, 1},
-            "Osc Waveform " + juce::String(i),
-            juce::StringArray{"Saw", "Square", "Triangle", "Sine"}, 0));
-        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.oscCoarse, 1},
-            "Osc Coarse " + juce::String(i),
+        // VCO1/2/3: coarse/fine tuning + 4-way proportional waveform blend + pulse duty.
+        // All three default identically for coarse/fine/blend (unison pitch, 100% saw) --
+        // only the Mixer level differs (VCO1 audible, VCO2/3 silent) so the default patch
+        // sounds identical to today's single-oscillator saw patch.
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1Coarse, 1},
+            "VCO1 Coarse " + juce::String(i),
             juce::NormalisableRange<float>{-24.0f, 24.0f, 1.0f}, 0.0f));
-        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.oscFine, 1},
-            "Osc Fine " + juce::String(i),
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1Fine, 1},
+            "VCO1 Fine " + juce::String(i),
             juce::NormalisableRange<float>{-100.0f, 100.0f, 0.1f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1BlendSine, 1},
+            "VCO1 Blend Sine " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1BlendTriangle, 1},
+            "VCO1 Blend Triangle " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1BlendSaw, 1},
+            "VCO1 Blend Saw " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 1.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1BlendPulse, 1},
+            "VCO1 Blend Pulse " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc1PulseDuty, 1},
+            "VCO1 Pulse Duty " + juce::String(i),
+            juce::NormalisableRange<float>{0.01f, 0.99f, 0.0f}, 0.5f));
+
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2Coarse, 1},
+            "VCO2 Coarse " + juce::String(i),
+            juce::NormalisableRange<float>{-24.0f, 24.0f, 1.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2Fine, 1},
+            "VCO2 Fine " + juce::String(i),
+            juce::NormalisableRange<float>{-100.0f, 100.0f, 0.1f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2BlendSine, 1},
+            "VCO2 Blend Sine " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2BlendTriangle, 1},
+            "VCO2 Blend Triangle " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2BlendSaw, 1},
+            "VCO2 Blend Saw " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 1.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2BlendPulse, 1},
+            "VCO2 Blend Pulse " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc2PulseDuty, 1},
+            "VCO2 Pulse Duty " + juce::String(i),
+            juce::NormalisableRange<float>{0.01f, 0.99f, 0.0f}, 0.5f));
+
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3Coarse, 1},
+            "VCO3 Coarse " + juce::String(i),
+            juce::NormalisableRange<float>{-24.0f, 24.0f, 1.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3Fine, 1},
+            "VCO3 Fine " + juce::String(i),
+            juce::NormalisableRange<float>{-100.0f, 100.0f, 0.1f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3BlendSine, 1},
+            "VCO3 Blend Sine " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3BlendTriangle, 1},
+            "VCO3 Blend Triangle " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3BlendSaw, 1},
+            "VCO3 Blend Saw " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 1.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3BlendPulse, 1},
+            "VCO3 Blend Pulse " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.osc3PulseDuty, 1},
+            "VCO3 Pulse Duty " + juce::String(i),
+            juce::NormalisableRange<float>{0.01f, 0.99f, 0.0f}, 0.5f));
+
+        // Mixer: balances the three VCOs. VCO1 audible by default, VCO2/3 silent
+        // (so a fresh patch sounds identical to today's single-oscillator default).
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.mixerOsc1Level, 1},
+            "Mixer VCO1 Level " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 1.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.mixerOsc2Level, 1},
+            "Mixer VCO2 Level " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+        layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.mixerOsc3Level, 1},
+            "Mixer VCO3 Level " + juce::String(i),
+            juce::NormalisableRange<float>{0.0f, 1.0f, 0.0f}, 0.0f));
+
         layout.add(std::make_unique<FloatParam>(juce::ParameterID{id.filterCutoff, 1},
             "Filter Cutoff " + juce::String(i),
             juce::NormalisableRange<float>{20.0f, 20000.0f, 0.0f, 0.25f}, 1000.0f));
@@ -210,9 +304,30 @@ APVTS::ParameterLayout createLayout() {
 ParamSnapshot snapshot(const APVTS& apvts, int layer) {
     const LayerIds& id = layerIds(layer);
     ParamSnapshot s;
-    s.oscWaveform  = (int) raw(apvts, id.oscWaveform);
-    s.oscCoarse    = raw(apvts, id.oscCoarse);
-    s.oscFine      = raw(apvts, id.oscFine);
+    s.osc1Coarse        = raw(apvts, id.osc1Coarse);
+    s.osc1Fine          = raw(apvts, id.osc1Fine);
+    s.osc1BlendSine     = raw(apvts, id.osc1BlendSine);
+    s.osc1BlendTriangle = raw(apvts, id.osc1BlendTriangle);
+    s.osc1BlendSaw      = raw(apvts, id.osc1BlendSaw);
+    s.osc1BlendPulse    = raw(apvts, id.osc1BlendPulse);
+    s.osc1PulseDuty     = raw(apvts, id.osc1PulseDuty);
+    s.osc2Coarse        = raw(apvts, id.osc2Coarse);
+    s.osc2Fine          = raw(apvts, id.osc2Fine);
+    s.osc2BlendSine     = raw(apvts, id.osc2BlendSine);
+    s.osc2BlendTriangle = raw(apvts, id.osc2BlendTriangle);
+    s.osc2BlendSaw      = raw(apvts, id.osc2BlendSaw);
+    s.osc2BlendPulse    = raw(apvts, id.osc2BlendPulse);
+    s.osc2PulseDuty     = raw(apvts, id.osc2PulseDuty);
+    s.osc3Coarse        = raw(apvts, id.osc3Coarse);
+    s.osc3Fine          = raw(apvts, id.osc3Fine);
+    s.osc3BlendSine     = raw(apvts, id.osc3BlendSine);
+    s.osc3BlendTriangle = raw(apvts, id.osc3BlendTriangle);
+    s.osc3BlendSaw      = raw(apvts, id.osc3BlendSaw);
+    s.osc3BlendPulse    = raw(apvts, id.osc3BlendPulse);
+    s.osc3PulseDuty     = raw(apvts, id.osc3PulseDuty);
+    s.mixerOsc1Level    = raw(apvts, id.mixerOsc1Level);
+    s.mixerOsc2Level    = raw(apvts, id.mixerOsc2Level);
+    s.mixerOsc3Level    = raw(apvts, id.mixerOsc3Level);
     s.svfCutoffHz  = raw(apvts, id.filterCutoff);
     s.svfResonance = raw(apvts, id.filterResonance);
     s.wsDrive      = raw(apvts, id.shaperDrive);

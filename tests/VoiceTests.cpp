@@ -14,7 +14,7 @@ public:
 
     void runTest() override {
         ParamSnapshot s;
-        s.oscWaveform = 3;  // sine for clean test signal
+        s.osc1BlendSine = 1.0f; s.osc1BlendSaw = 0.0f;  // sine for clean test signal (overrides the struct's saw-by-default)
         s.svfCutoffHz = 20000.0f; s.svfResonance = 0.0f;
         s.wsDrive = 0.0f; s.wsMix = 0.0f;
         s.ampAttackS = 0.001f; s.ampDecayS = 0.01f;
@@ -93,7 +93,7 @@ public:
             // Spine driven hot: high resonance + moderate spine drive to exercise the
             // oversampled domain meaningfully. Layer prepared at base SR; Voice at 4x.
             ParamSnapshot s4;
-            s4.oscWaveform  = 3;     // sine
+            s4.osc1BlendSine = 1.0f; s4.osc1BlendSaw = 0.0f;     // sine
             s4.svfCutoffHz  = 8000.0f;
             s4.svfResonance = 0.9f;  // high resonance -> self-osc region
             s4.wsDrive      = 0.5f;

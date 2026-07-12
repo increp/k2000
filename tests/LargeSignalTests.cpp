@@ -155,8 +155,7 @@ struct LargeSignalTests : public juce::UnitTest {
             const int    os  = 8;
             Layer layer;
             layer.prepare(vsr * os, N * os);
-            ParamSnapshot s {};
-            s.oscWaveform = 0;                     // saw — harmonics land on the peak
+            ParamSnapshot s {};                    // defaults to VCO1 100% saw — harmonics land on the peak
             s.ampAttackS = 0.001f; s.ampDecayS = 0.1f;
             s.ampSustain = 1.0f;   s.ampReleaseS = 0.1f;
             s.algorithmId = 1;                     // thru
