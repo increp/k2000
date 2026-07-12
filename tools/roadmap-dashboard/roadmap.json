@@ -213,8 +213,9 @@
         {
           "id": "point-mqoj8s4o-1",
           "title": "First move towards a proper GUI based on sketches",
-          "status": "planned",
-          "kind": "point"
+          "status": "in-progress",
+          "kind": "point",
+          "summary": "Stage 1 SHIPPED 2026-07-11 (PR #21): vintage-hardware reskin -- photographic materials (user-generated aluminum/redwood/leather/knob/screw renders), reference geography, resizable transform-scaled canvas, three-VCO Blend DSP backend + knob pre-work in the same PR. Stage 2 next: VCO rows + Osc Blend mixer GUI; Stage 3: scopes + VU meters."
         }
       ]
     },
