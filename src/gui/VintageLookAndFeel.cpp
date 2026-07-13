@@ -268,6 +268,14 @@ void VintageLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int w
     const bool vertical = (style == juce::Slider::LinearVertical);
     const auto area = juce::Rectangle<int>(x, y, width, height).toFloat();
 
+    // Tiny-bounds early-out (same idiom as drawRotarySlider's radius guard):
+    // below this there is no room for a track slot + cap, and the cap's
+    // jlimit clamp would invert its limits.
+    const float across = vertical ? area.getWidth() : area.getHeight();
+    const float along  = vertical ? area.getHeight() : area.getWidth();
+    if (across < 12.0f || along < 20.0f)
+        return;
+
     // Recessed track slot through the middle -- same well vocabulary as the
     // value boxes and the blank Stage-3 plates.
     const float slotW = 8.0f;
