@@ -257,6 +257,62 @@ void VintageLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w
     }
 }
 
+void VintageLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
+                                          float sliderPos, float minSliderPos, float maxSliderPos,
+                                          juce::Slider::SliderStyle style, juce::Slider& slider) {
+    if (style != juce::Slider::LinearVertical && style != juce::Slider::LinearHorizontal) {
+        juce::LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos,
+                                               minSliderPos, maxSliderPos, style, slider);
+        return;
+    }
+    const bool vertical = (style == juce::Slider::LinearVertical);
+    const auto area = juce::Rectangle<int>(x, y, width, height).toFloat();
+
+    // Recessed track slot through the middle -- same well vocabulary as the
+    // value boxes and the blank Stage-3 plates.
+    const float slotW = 8.0f;
+    const auto track = vertical
+        ? juce::Rectangle<float>(area.getCentreX() - slotW * 0.5f, area.getY() + 2.0f,
+                                 slotW, area.getHeight() - 4.0f)
+        : juce::Rectangle<float>(area.getX() + 2.0f, area.getCentreY() - slotW * 0.5f,
+                                 area.getWidth() - 4.0f, slotW);
+    drawRecessedWell(g, track, 3.0f);
+
+    // Brushed-metal cap, lit from above like the knob sprite (static lighting;
+    // the cap only translates). Grip line runs across the travel direction.
+    const float capAcross = vertical ? juce::jmin(area.getWidth() - 2.0f, 26.0f)
+                                     : juce::jmin(area.getHeight() - 2.0f, 20.0f);
+    const float capAlong = 15.0f;
+    const auto cap = vertical
+        ? juce::Rectangle<float>(capAcross, capAlong).withCentre(
+              { area.getCentreX(),
+                juce::jlimit(area.getY() + capAlong * 0.5f,
+                             area.getBottom() - capAlong * 0.5f, sliderPos) })
+        : juce::Rectangle<float>(capAlong, capAcross).withCentre(
+              { juce::jlimit(area.getX() + capAlong * 0.5f,
+                             area.getRight() - capAlong * 0.5f, sliderPos),
+                area.getCentreY() });
+
+    g.setColour(juce::Colours::black.withAlpha(0.45f));   // seat shadow
+    g.fillRoundedRectangle(cap.translated(0.0f, 1.5f), 2.5f);
+    juce::ColourGradient metal(juce::Colour(0xFF8E8B84), cap.getX(), cap.getY(),
+                               juce::Colour(0xFF3A3936), cap.getX(), cap.getBottom(), false);
+    g.setGradientFill(metal);
+    g.fillRoundedRectangle(cap, 2.5f);
+    g.setColour(panelEdge);
+    g.drawRoundedRectangle(cap.reduced(0.5f), 2.5f, 1.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.6f));    // grip slot
+    if (vertical)
+        g.drawLine(cap.getX() + 3.0f, cap.getCentreY(), cap.getRight() - 3.0f, cap.getCentreY(), 1.5f);
+    else
+        g.drawLine(cap.getCentreX(), cap.getY() + 3.0f, cap.getCentreX(), cap.getBottom() - 3.0f, 1.5f);
+    g.setColour(juce::Colours::white.withAlpha(0.25f));   // catch-light beside the grip
+    if (vertical)
+        g.drawLine(cap.getX() + 3.0f, cap.getCentreY() + 1.5f, cap.getRight() - 3.0f, cap.getCentreY() + 1.5f, 1.0f);
+    else
+        g.drawLine(cap.getCentreX() + 1.5f, cap.getY() + 3.0f, cap.getCentreX() + 1.5f, cap.getBottom() - 3.0f, 1.0f);
+}
+
 // --- compact combo (carried over from SummitLookAndFeel, new palette) ---
 
 static constexpr int kComboArrowZone = 18;

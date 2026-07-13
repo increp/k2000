@@ -53,6 +53,7 @@ target_sources(k2000 PRIVATE
     src/gui/ValueFormat.cpp
     src/gui/VintageLookAndFeel.cpp
     src/gui/LabeledKnob.cpp
+    src/gui/LabeledFader.cpp
     src/gui/Section.cpp
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp

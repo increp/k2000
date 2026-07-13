@@ -190,6 +190,7 @@ add_executable(k2000_panel_snapshot
     ../src/gui/ValueFormat.cpp
     ../src/gui/VintageLookAndFeel.cpp
     ../src/gui/LabeledKnob.cpp
+    ../src/gui/LabeledFader.cpp
     ../src/gui/Section.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
