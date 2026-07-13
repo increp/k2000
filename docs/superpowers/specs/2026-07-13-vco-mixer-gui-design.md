@@ -1,6 +1,9 @@
 # VCO Rows + Osc Blend Mixer (GUI Stage 2 of 3) — Design
 
 **Version:** 5.33 (artifact) · **Date:** 2026-07-13 · **Status:** Approved in brainstorm; plan follows
+**Amended 2026-07-13 (plan-writing):** §5/§6 — one suite test added (`ValueFormatTests`, the §8
+round-trip requirement needs a real home), suite 297 → 298; the original "tests untouched" line
+contradicted §8 and lost.
 **Reference image:** `assets/2026-07-09-bernie-vintage-reference.png` (visual ground truth; VCO 1's
 "Wave Recipe" row is the direct template — our three rows are identical instances of it)
 **Depends on:** `2026-07-09-vintage-reskin-design.md` (Stage 1 — the chassis and reserved frames this
@@ -110,14 +113,16 @@ Exact precision/thresholds may be tuned in the live pass; the table is the inten
   §4 formatting to the existing value boxes.
 - `CMakeLists.txt` — new sources; `project(VERSION 5.5.0)`.
 
-**Untouched:** DSP, params, processor, snapshot code, tests. Suite count stays 297 — the
-test-catalog/README drift rule is not triggered.
+**Untouched:** DSP, params, processor, snapshot code. One suite addition (amended 2026-07-13):
+`tests/ValueFormatTests.cpp` carries the §8 round-trip check — suite 297 → 298, with
+`docs/filter-validation/README.md` and `docs/franklin/test-catalog.json` updated in the same
+task (the banked drift lesson). No other test changes.
 
 ## 6. Verification & acceptance
 
-- Build: `cmake --build build --target k2000_tests k2000_Standalone -j4`; suite **297/0**
-  (tee to `build/last-test-run.log`). The suite never compiles the editor — GUI
-  compile-correctness comes from the plugin targets.
+- Build: `cmake --build build --target k2000_tests k2000_Standalone -j4`; suite **298/0**
+  (tee to `build/last-test-run.log`; includes the new ValueFormat round-trip test). The suite
+  never compiles the editor — GUI compile-correctness comes from the plugin targets.
 - Visual: `./build/tests/k2000_panel_snapshot out.png`, judged **at 100% full-frame** (zoomed
   crops lie — Stage 1 lesson); then acceptance iterations against the relaunched local
   Standalone, exactly like the reskin tail.
