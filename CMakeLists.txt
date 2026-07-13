@@ -50,6 +50,7 @@ target_sources(k2000 PRIVATE
     src/Program.cpp
     src/params/Parameters.cpp
     src/gui/ParamBinder.cpp
+    src/gui/ValueFormat.cpp
     src/gui/VintageLookAndFeel.cpp
     src/gui/LabeledKnob.cpp
     src/gui/Section.cpp
