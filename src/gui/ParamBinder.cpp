@@ -1,27 +1,27 @@
 #include "ParamBinder.h"
 
 void ParamBinder::bind(juce::Slider& s, const juce::String& paramId) {
-    auto& slot = sliders_[&s];   // default-constructs an empty unique_ptr on first bind
-    slot.reset();  // MUST precede make_unique: the new attachment's ctor syncs while the old one is still live
+    auto it = sliders_.find(&s);
+    if (it == sliders_.end()) {
+        // First bind: whatever functions the slider carries now are
+        // caller-installed — no attachment has touched this slider yet.
+        SliderBinding b;
+        b.callerText  = s.textFromValueFunction;
+        b.callerValue = s.valueFromTextFunction;
+        it = sliders_.emplace(&s, std::move(b)).first;
+    }
 
-    // SliderAtt's ctor unconditionally overwrites s.textFromValueFunction /
-    // s.valueFromTextFunction with the parameter's own (see
-    // juce_ParameterAttachments.cpp). Caller-installed display formatting
-    // (e.g. vfmt::apply's instrument-style "100%" / "0 st" / "0 ct" text) must
-    // survive binding and every future re-bind, so save it before attaching
-    // and restore it after.
-    auto savedTextFromValue = s.textFromValueFunction;
-    auto savedValueFromText = s.valueFromTextFunction;
+    it->second.attachment.reset();   // detach BEFORE rebind (see class comment)
+    it->second.attachment = std::make_unique<SliderAtt>(apvts_, paramId, s);
 
-    slot = std::make_unique<SliderAtt>(apvts_, paramId, s);
-
-    if (savedTextFromValue || savedValueFromText) {
-        s.textFromValueFunction = std::move(savedTextFromValue);
-        s.valueFromTextFunction = std::move(savedValueFromText);
+    // The attachment ctor installed the parameter's text functions. If the
+    // caller had its own (vfmt), reinstate those; otherwise keep the
+    // parameter's — fresh from THIS bind, never a stale earlier one.
+    if (it->second.callerText != nullptr || it->second.callerValue != nullptr) {
+        s.textFromValueFunction = it->second.callerText;
+        s.valueFromTextFunction = it->second.callerValue;
         s.updateText();
     }
-    // else: slider never had custom formatting (e.g. Key/Vel) -- leave the
-    // attachment-installed parameter text functions in place, unchanged.
 }
 
 void ParamBinder::bind(juce::ComboBox& c, const juce::String& paramId) {

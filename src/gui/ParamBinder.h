@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <functional>
 #include <map>
 #include <memory>
 
@@ -27,8 +28,19 @@ private:
     using ComboAtt  = APVTS::ComboBoxAttachment;
     using ButtonAtt = APVTS::ButtonAttachment;
 
+    // Per-slider record: the attachment plus the text functions the CALLER had
+    // installed before the slider's first bind (vfmt formatting). Snapshotting
+    // at first bind is the only reliable signal — the attachment ctor
+    // overwrites the slider's functions and its dtor does NOT clear them, so
+    // the slider's current state is meaningless on later binds.
+    struct SliderBinding {
+        std::unique_ptr<SliderAtt> attachment;
+        std::function<juce::String(double)> callerText;
+        std::function<double(const juce::String&)> callerValue;
+    };
+
     APVTS& apvts_;
-    std::map<juce::Slider*,   std::unique_ptr<SliderAtt>> sliders_;
+    std::map<juce::Slider*, SliderBinding>                sliders_;
     std::map<juce::ComboBox*, std::unique_ptr<ComboAtt>>  combos_;
     std::map<juce::Button*,   std::unique_ptr<ButtonAtt>> buttons_;
 
