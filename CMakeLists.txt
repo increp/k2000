@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(k2000 VERSION 5.4.0 LANGUAGES C CXX)
+project(k2000 VERSION 5.5.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,9 +50,12 @@ target_sources(k2000 PRIVATE
     src/Program.cpp
     src/params/Parameters.cpp
     src/gui/ParamBinder.cpp
+    src/gui/ValueFormat.cpp
     src/gui/VintageLookAndFeel.cpp
     src/gui/LabeledKnob.cpp
+    src/gui/LabeledFader.cpp
     src/gui/Section.cpp
+    src/gui/VcoRow.cpp
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp
     src/dsp/blocks/Waveshaper.cpp

@@ -2,6 +2,7 @@ add_executable(k2000_tests
     TestMain.cpp
     SmokeTests.cpp
     ParamSnapshotTests.cpp
+    ValueFormatTests.cpp
     OscillatorTests.cpp
     EnvelopeTests.cpp
     WaveshaperTests.cpp
@@ -59,6 +60,7 @@ add_executable(k2000_tests
     ../src/Program.cpp
     ../src/params/Parameters.cpp
     ../src/gui/ParamBinder.cpp
+    ../src/gui/ValueFormat.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
     ../src/dsp/blocks/Waveshaper.cpp
@@ -185,9 +187,12 @@ add_executable(k2000_panel_snapshot
     ../src/Program.cpp
     ../src/params/Parameters.cpp
     ../src/gui/ParamBinder.cpp
+    ../src/gui/ValueFormat.cpp
     ../src/gui/VintageLookAndFeel.cpp
     ../src/gui/LabeledKnob.cpp
+    ../src/gui/LabeledFader.cpp
     ../src/gui/Section.cpp
+    ../src/gui/VcoRow.cpp
     ../src/dsp/Oscillator.cpp
     ../src/dsp/Envelope.cpp
     ../src/dsp/blocks/Waveshaper.cpp

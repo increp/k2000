@@ -1,6 +1,6 @@
 # Filter-Validation Framework — Internal SOTA Layer (Sub-Project #1) — Design
 
-**Version:** 5.08 (artifact; distinct from plugin SemVer 5.4.0)
+**Version:** 5.08 (artifact; distinct from plugin SemVer 5.5.0)
 **Date:** 2026-06-29
 **Status:** Approved (brainstorm) — pending spec review
 **Supersedes / refreshes:** `docs/superpowers/specs/2026-06-23-filter-characterization-harness-design.md` (shelved, artifact v5.07), updated for two facts that changed since: **oversampling shipped** (`Halfband2x`, `VoiceOversampler` on `main`, v5.4) and the effort was **decomposed into two sequential sub-projects** — this spec is **#1 (internal only)**.

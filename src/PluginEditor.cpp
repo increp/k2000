@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "gui/ValueFormat.h"
 #include "params/Parameters.h"
 #include "util/Utf8.h"
 
@@ -93,6 +94,12 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     vastDspSection_.addAndMakeVisible(algoLbl_);
     vastDspSection_.addAndMakeVisible(algo_);
 
+    // Osc Blend mixer (Stage 2): three per-VCO level knobs, % readouts.
+    for (auto* k : { &mixVco1_, &mixVco2_, &mixVco3_ }) {
+        vfmt::apply(k->slider(), vfmt::Fmt::Pct);
+        mixerSection_.addAndMakeVisible(*k);
+    }
+
     // Filter section
     canvas_.addAndMakeVisible(filterSection_);
     filterSection_.addAndMakeVisible(filterCutoff_);
@@ -154,9 +161,12 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     for (auto* k : { &ampA_, &ampD_, &ampS_, &ampR_ })
         ampEnvSection_.addAndMakeVisible(*k);
 
-    // Reserved sections — visible (framed/dimmed) but no children yet.
-    for (auto* s : { &vco1Section_, &vco2Section_, &vco3Section_,
-                     &mixerSection_, &outputSection_,
+    // The three live Wave Recipe rows (Stage 2).
+    for (auto* r : { &vco1_, &vco2_, &vco3_ })
+        canvas_.addAndMakeVisible(*r);
+
+    // Canvas sections: the mixer (live; its knobs attach above) + the still-reserved placeholders.
+    for (auto* s : { &mixerSection_, &outputSection_,
                      &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
         canvas_.addAndMakeVisible(*s);
     canvas_.addAndMakeVisible(ampSection_);
@@ -216,6 +226,8 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     channel_.addItemList(chanItems, 1);
     canvas_.addAndMakeVisible(channelLbl_);
     canvas_.addAndMakeVisible(channel_);
+
+    applyValueFormats();
 }
 
 // (Re)bind every per-layer control to the chosen layer's params. binder_'s
@@ -226,6 +238,33 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(algo_,                ids.algorithm);
     binder_.bind(shaperDrive_.slider(),ids.shaperDrive);
     binder_.bind(shaperMix_.slider(),  ids.shaperMix);
+
+    // VCO rows (Stage 2): 7 controls per row, per layer.
+    binder_.bind(vco1_.coarse(), ids.osc1Coarse);
+    binder_.bind(vco1_.fine(),   ids.osc1Fine);
+    binder_.bind(vco1_.sine(),   ids.osc1BlendSine);
+    binder_.bind(vco1_.tri(),    ids.osc1BlendTriangle);
+    binder_.bind(vco1_.saw(),    ids.osc1BlendSaw);
+    binder_.bind(vco1_.pulse(),  ids.osc1BlendPulse);
+    binder_.bind(vco1_.duty(),   ids.osc1PulseDuty);
+    binder_.bind(vco2_.coarse(), ids.osc2Coarse);
+    binder_.bind(vco2_.fine(),   ids.osc2Fine);
+    binder_.bind(vco2_.sine(),   ids.osc2BlendSine);
+    binder_.bind(vco2_.tri(),    ids.osc2BlendTriangle);
+    binder_.bind(vco2_.saw(),    ids.osc2BlendSaw);
+    binder_.bind(vco2_.pulse(),  ids.osc2BlendPulse);
+    binder_.bind(vco2_.duty(),   ids.osc2PulseDuty);
+    binder_.bind(vco3_.coarse(), ids.osc3Coarse);
+    binder_.bind(vco3_.fine(),   ids.osc3Fine);
+    binder_.bind(vco3_.sine(),   ids.osc3BlendSine);
+    binder_.bind(vco3_.tri(),    ids.osc3BlendTriangle);
+    binder_.bind(vco3_.saw(),    ids.osc3BlendSaw);
+    binder_.bind(vco3_.pulse(),  ids.osc3BlendPulse);
+    binder_.bind(vco3_.duty(),   ids.osc3PulseDuty);
+
+    binder_.bind(mixVco1_.slider(), ids.mixerOsc1Level);
+    binder_.bind(mixVco2_.slider(), ids.mixerOsc2Level);
+    binder_.bind(mixVco3_.slider(), ids.mixerOsc3Level);
 
     binder_.bind(filterCutoff_.slider(),ids.filterCutoff);
     binder_.bind(filterRes_.slider(),  ids.filterResonance);
@@ -256,6 +295,25 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(velHi_.slider(),ids.velHi);
     binder_.bind(level_.slider(),ids.level);
     binder_.bind(channel_,       ids.channel);
+}
+
+// Instrument-style value-box text on the pre-Stage-2 controls (spec v5.33 §4).
+// VcoRow formats its own sliders at construction; the mixer knobs are
+// formatted in buildStaticControls(); Key/Vel sliders already display
+// integers (their params step by 1).
+void K2000AudioProcessorEditor::applyValueFormats() {
+    vfmt::apply(filterCutoff_.slider(),    vfmt::Fmt::Hz);
+    vfmt::apply(hpCutoff_.slider(),        vfmt::Fmt::HzOff);
+    vfmt::apply(filterRes_.slider(),       vfmt::Fmt::Plain2);
+    vfmt::apply(hpReso_.slider(),          vfmt::Fmt::Plain2);
+    vfmt::apply(spineSeparation_.slider(), vfmt::Fmt::Oct);
+    vfmt::apply(spinePostDrive_.slider(),  vfmt::Fmt::Plain2);
+    vfmt::apply(ampA_.slider(),            vfmt::Fmt::EnvTime);
+    vfmt::apply(ampD_.slider(),            vfmt::Fmt::EnvTime);
+    vfmt::apply(ampS_.slider(),            vfmt::Fmt::Plain2);
+    vfmt::apply(ampR_.slider(),            vfmt::Fmt::EnvTime);
+    vfmt::apply(level_.slider(),           vfmt::Fmt::Db);
+    vfmt::apply(masterGain_,               vfmt::Fmt::Db);
 }
 
 void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
@@ -436,13 +494,13 @@ void K2000AudioProcessorEditor::layoutCanvas() {
     filterSection_.setBounds(content);
     outputSection_.setBounds(outCol);
 
-    // Three equal VCO panels, empty until Stage 2.
+    // Three Wave Recipe rows (Stage 2).
     const int vcoH = (vcoCol.getHeight() - 16) / 3;
-    vco1Section_.setBounds(vcoCol.removeFromTop(vcoH));
+    vco1_.setBounds(vcoCol.removeFromTop(vcoH));
     vcoCol.removeFromTop(8);
-    vco2Section_.setBounds(vcoCol.removeFromTop(vcoH));
+    vco2_.setBounds(vcoCol.removeFromTop(vcoH));
     vcoCol.removeFromTop(8);
-    vco3Section_.setBounds(vcoCol);
+    vco3_.setBounds(vcoCol);
 
     // --- VCF panel internals: reserved Filter-Env frame at the bottom, then the
     //     existing three-row filter layout (HP band + shared row + model row). ---
@@ -492,6 +550,8 @@ void K2000AudioProcessorEditor::layoutCanvas() {
         ampSection_.setBounds(b.reduced(2));
 
         layoutCells(vastDspSection_.contentBounds(), { { &algoLbl_, &algo_ } });
+        layoutCells(mixerSection_.contentBounds(),
+                    { { nullptr, &mixVco1_ }, { nullptr, &mixVco2_ }, { nullptr, &mixVco3_ } });
         layoutCells(ampEnvSection_.contentBounds(),
                     { { nullptr, &ampA_ }, { nullptr, &ampD_ }, { nullptr, &ampS_ }, { nullptr, &ampR_ } });
         auto ac = ampSection_.contentBounds();

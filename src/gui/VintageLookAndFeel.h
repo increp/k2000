@@ -15,6 +15,13 @@ public:
                           float rotaryStartAngle, float rotaryEndAngle,
                           juce::Slider&) override;
 
+    // Vintage fader: recessed track slot + brushed-metal cap with a grip line.
+    // Handles LinearVertical (blend faders) and LinearHorizontal (DUTY);
+    // other styles fall through to the V4 default.
+    void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height,
+                          float sliderPos, float minSliderPos, float maxSliderPos,
+                          juce::Slider::SliderStyle, juce::Slider&) override;
+
     // Compact combo rendering carried over from SummitLookAndFeel: the V4
     // default's 30 px arrow gutter + 16 px font truncates panel combos.
     void drawComboBox(juce::Graphics&, int width, int height, bool isButtonDown,

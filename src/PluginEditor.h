@@ -4,6 +4,7 @@
 #include "gui/VintageLookAndFeel.h"
 #include "gui/LabeledKnob.h"
 #include "gui/Section.h"
+#include "gui/VcoRow.h"
 #include "gui/ParamBinder.h"
 
 class K2000AudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -41,16 +42,15 @@ private:
     juce::TextButton menuButton_{ juce::String::fromUTF8("\xE2\x8B\xAE") };
 
     // --- Main geography (reference mockup) ---
-    // Left column: three VCO panels, empty until GUI Stage 2 fills them.
-    Section vco1Section_{ "VCO 1", /*spine*/ false, /*reserved*/ true };
-    Section vco2Section_{ "VCO 2", /*spine*/ false, /*reserved*/ true };
-    Section vco3Section_{ "VCO 3", /*spine*/ false, /*reserved*/ true };
+    // Left column: the three Wave Recipe rows (GUI Stage 2).
+    VcoRow vco1_{ "VCO 1" }, vco2_{ "VCO 2" }, vco3_{ "VCO 3" };
 
     juce::ComboBox algo_;
     juce::Label    algoLbl_;
     LabeledKnob    shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };   // hidden, still bound
 
-    Section mixerSection_{ "Osc Blend", /*spine*/ true, /*reserved*/ true };
+    Section mixerSection_{ "Osc Blend", /*spine*/ true };
+    LabeledKnob mixVco1_{ "VCO 1" }, mixVco2_{ "VCO 2" }, mixVco3_{ "VCO 3" };
     Section vastDspSection_{ "VAST DSP", /*spine*/ false };
     Section outputSection_{ "Output", /*spine*/ true, /*reserved*/ true };
 
@@ -103,6 +103,7 @@ private:
     void buildStaticControls();      // combos' item lists, labels, child attach (once)
     void bindLayer(int layer);       // (re)bind every per-layer control via binder_
     void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
+    void applyValueFormats();        // instrument-style value-box text (spec v5.33 §4)
     void showOversamplingMenu();
     void timerCallback() override;
     void layoutCanvas();             // lays out all children in canvas-logical coords

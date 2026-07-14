@@ -3408,6 +3408,16 @@
       "links": [],
       "compares": "params::snapshot() values read back through the real APVTS against the literal design defaults (1.0/0.0/0.5 table from the three-VCO spec) -- fixed expected values, no golden file.",
       "succeedingMeans": "A fresh patch is guaranteed to sound exactly like the pre-three-VCO default: VCO1 full saw audible, VCO2/3 silent at the mixer, every new control wired end to end."
+    },
+    {
+      "key": "ValueFormat / formats and round-trips per family",
+      "file": "tests/ValueFormatTests.cpp",
+      "what": "Asserts exact display strings per formatting family (48%, +7 st, 2.50 kHz, Off, 5 ms, -9.0 dB, 0.80) and that value(text(v)) round-trips within display precision for every family.",
+      "why": "Every value box on the Bernie panel routes through these formatter/parser pairs (spec v5.33 Sec 4); a drifted formatter mislabels what the user reads on every knob, and a non-inverse parser corrupts values typed into value boxes.",
+      "deviationMeans": "A formatting family changed its display contract (units, precision, thresholds) or its parser stopped being the formatter's inverse — check whether a deliberate readout retune forgot to update the test, or a refactor broke text round-tripping.",
+      "links": [],
+      "compares": "vfmt::text() output strings against literal expected strings, and vfmt::value(vfmt::text(v)) against the original v with per-family tolerances — no golden file, the literals ARE the contract.",
+      "succeedingMeans": "Panel readouts show exactly the documented instrument-style text, and typing a displayed value back into any value box reproduces the same parameter value."
     }
   ]
 }
