@@ -154,9 +154,12 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     for (auto* k : { &ampA_, &ampD_, &ampS_, &ampR_ })
         ampEnvSection_.addAndMakeVisible(*k);
 
+    // The three live Wave Recipe rows (Stage 2).
+    for (auto* r : { &vco1_, &vco2_, &vco3_ })
+        canvas_.addAndMakeVisible(*r);
+
     // Reserved sections — visible (framed/dimmed) but no children yet.
-    for (auto* s : { &vco1Section_, &vco2Section_, &vco3Section_,
-                     &mixerSection_, &outputSection_,
+    for (auto* s : { &mixerSection_, &outputSection_,
                      &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
         canvas_.addAndMakeVisible(*s);
     canvas_.addAndMakeVisible(ampSection_);
@@ -226,6 +229,29 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(algo_,                ids.algorithm);
     binder_.bind(shaperDrive_.slider(),ids.shaperDrive);
     binder_.bind(shaperMix_.slider(),  ids.shaperMix);
+
+    // VCO rows (Stage 2): 7 controls per row, per layer.
+    binder_.bind(vco1_.coarse(), ids.osc1Coarse);
+    binder_.bind(vco1_.fine(),   ids.osc1Fine);
+    binder_.bind(vco1_.sine(),   ids.osc1BlendSine);
+    binder_.bind(vco1_.tri(),    ids.osc1BlendTriangle);
+    binder_.bind(vco1_.saw(),    ids.osc1BlendSaw);
+    binder_.bind(vco1_.pulse(),  ids.osc1BlendPulse);
+    binder_.bind(vco1_.duty(),   ids.osc1PulseDuty);
+    binder_.bind(vco2_.coarse(), ids.osc2Coarse);
+    binder_.bind(vco2_.fine(),   ids.osc2Fine);
+    binder_.bind(vco2_.sine(),   ids.osc2BlendSine);
+    binder_.bind(vco2_.tri(),    ids.osc2BlendTriangle);
+    binder_.bind(vco2_.saw(),    ids.osc2BlendSaw);
+    binder_.bind(vco2_.pulse(),  ids.osc2BlendPulse);
+    binder_.bind(vco2_.duty(),   ids.osc2PulseDuty);
+    binder_.bind(vco3_.coarse(), ids.osc3Coarse);
+    binder_.bind(vco3_.fine(),   ids.osc3Fine);
+    binder_.bind(vco3_.sine(),   ids.osc3BlendSine);
+    binder_.bind(vco3_.tri(),    ids.osc3BlendTriangle);
+    binder_.bind(vco3_.saw(),    ids.osc3BlendSaw);
+    binder_.bind(vco3_.pulse(),  ids.osc3BlendPulse);
+    binder_.bind(vco3_.duty(),   ids.osc3PulseDuty);
 
     binder_.bind(filterCutoff_.slider(),ids.filterCutoff);
     binder_.bind(filterRes_.slider(),  ids.filterResonance);
@@ -436,13 +462,13 @@ void K2000AudioProcessorEditor::layoutCanvas() {
     filterSection_.setBounds(content);
     outputSection_.setBounds(outCol);
 
-    // Three equal VCO panels, empty until Stage 2.
+    // Three Wave Recipe rows (Stage 2).
     const int vcoH = (vcoCol.getHeight() - 16) / 3;
-    vco1Section_.setBounds(vcoCol.removeFromTop(vcoH));
+    vco1_.setBounds(vcoCol.removeFromTop(vcoH));
     vcoCol.removeFromTop(8);
-    vco2Section_.setBounds(vcoCol.removeFromTop(vcoH));
+    vco2_.setBounds(vcoCol.removeFromTop(vcoH));
     vcoCol.removeFromTop(8);
-    vco3Section_.setBounds(vcoCol);
+    vco3_.setBounds(vcoCol);
 
     // --- VCF panel internals: reserved Filter-Env frame at the bottom, then the
     //     existing three-row filter layout (HP band + shared row + model row). ---

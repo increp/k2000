@@ -4,6 +4,7 @@
 #include "gui/VintageLookAndFeel.h"
 #include "gui/LabeledKnob.h"
 #include "gui/Section.h"
+#include "gui/VcoRow.h"
 #include "gui/ParamBinder.h"
 
 class K2000AudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -41,10 +42,8 @@ private:
     juce::TextButton menuButton_{ juce::String::fromUTF8("\xE2\x8B\xAE") };
 
     // --- Main geography (reference mockup) ---
-    // Left column: three VCO panels, empty until GUI Stage 2 fills them.
-    Section vco1Section_{ "VCO 1", /*spine*/ false, /*reserved*/ true };
-    Section vco2Section_{ "VCO 2", /*spine*/ false, /*reserved*/ true };
-    Section vco3Section_{ "VCO 3", /*spine*/ false, /*reserved*/ true };
+    // Left column: the three Wave Recipe rows (GUI Stage 2).
+    VcoRow vco1_{ "VCO 1" }, vco2_{ "VCO 2" }, vco3_{ "VCO 3" };
 
     juce::ComboBox algo_;
     juce::Label    algoLbl_;

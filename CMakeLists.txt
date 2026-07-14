@@ -55,6 +55,7 @@ target_sources(k2000 PRIVATE
     src/gui/LabeledKnob.cpp
     src/gui/LabeledFader.cpp
     src/gui/Section.cpp
+    src/gui/VcoRow.cpp
     src/dsp/Oscillator.cpp
     src/dsp/Envelope.cpp
     src/dsp/blocks/Waveshaper.cpp
