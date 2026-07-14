@@ -49,7 +49,8 @@ private:
     juce::Label    algoLbl_;
     LabeledKnob    shaperDrive_{ "Drive" }, shaperMix_{ "Mix" };   // hidden, still bound
 
-    Section mixerSection_{ "Osc Blend", /*spine*/ true, /*reserved*/ true };
+    Section mixerSection_{ "Osc Blend", /*spine*/ true };
+    LabeledKnob mixVco1_{ "VCO 1" }, mixVco2_{ "VCO 2" }, mixVco3_{ "VCO 3" };
     Section vastDspSection_{ "VAST DSP", /*spine*/ false };
     Section outputSection_{ "Output", /*spine*/ true, /*reserved*/ true };
 
@@ -102,6 +103,7 @@ private:
     void buildStaticControls();      // combos' item lists, labels, child attach (once)
     void bindLayer(int layer);       // (re)bind every per-layer control via binder_
     void updateModelVisibility();    // show/hide Moog vs Huggett model-specific controls
+    void applyValueFormats();        // instrument-style value-box text (spec v5.33 §4)
     void showOversamplingMenu();
     void timerCallback() override;
     void layoutCanvas();             // lays out all children in canvas-logical coords

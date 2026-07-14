@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "gui/ValueFormat.h"
 #include "params/Parameters.h"
 #include "util/Utf8.h"
 
@@ -92,6 +93,12 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     algo_.addItemList(params::algoNames(), 1);
     vastDspSection_.addAndMakeVisible(algoLbl_);
     vastDspSection_.addAndMakeVisible(algo_);
+
+    // Osc Blend mixer (Stage 2): three per-VCO level knobs, % readouts.
+    for (auto* k : { &mixVco1_, &mixVco2_, &mixVco3_ }) {
+        vfmt::apply(k->slider(), vfmt::Fmt::Pct);
+        mixerSection_.addAndMakeVisible(*k);
+    }
 
     // Filter section
     canvas_.addAndMakeVisible(filterSection_);
@@ -219,6 +226,8 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     channel_.addItemList(chanItems, 1);
     canvas_.addAndMakeVisible(channelLbl_);
     canvas_.addAndMakeVisible(channel_);
+
+    applyValueFormats();
 }
 
 // (Re)bind every per-layer control to the chosen layer's params. binder_'s
@@ -253,6 +262,10 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(vco3_.pulse(),  ids.osc3BlendPulse);
     binder_.bind(vco3_.duty(),   ids.osc3PulseDuty);
 
+    binder_.bind(mixVco1_.slider(), ids.mixerOsc1Level);
+    binder_.bind(mixVco2_.slider(), ids.mixerOsc2Level);
+    binder_.bind(mixVco3_.slider(), ids.mixerOsc3Level);
+
     binder_.bind(filterCutoff_.slider(),ids.filterCutoff);
     binder_.bind(filterRes_.slider(),  ids.filterResonance);
 
@@ -282,6 +295,24 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
     binder_.bind(velHi_.slider(),ids.velHi);
     binder_.bind(level_.slider(),ids.level);
     binder_.bind(channel_,       ids.channel);
+}
+
+// Instrument-style value-box text on the pre-Stage-2 controls (spec v5.33 §4).
+// VcoRow and the mixer knobs format their own sliders at construction; Key/Vel
+// sliders already display integers (their params step by 1).
+void K2000AudioProcessorEditor::applyValueFormats() {
+    vfmt::apply(filterCutoff_.slider(),    vfmt::Fmt::Hz);
+    vfmt::apply(hpCutoff_.slider(),        vfmt::Fmt::HzOff);
+    vfmt::apply(filterRes_.slider(),       vfmt::Fmt::Plain2);
+    vfmt::apply(hpReso_.slider(),          vfmt::Fmt::Plain2);
+    vfmt::apply(spineSeparation_.slider(), vfmt::Fmt::Oct);
+    vfmt::apply(spinePostDrive_.slider(),  vfmt::Fmt::Plain2);
+    vfmt::apply(ampA_.slider(),            vfmt::Fmt::EnvTime);
+    vfmt::apply(ampD_.slider(),            vfmt::Fmt::EnvTime);
+    vfmt::apply(ampS_.slider(),            vfmt::Fmt::Plain2);
+    vfmt::apply(ampR_.slider(),            vfmt::Fmt::EnvTime);
+    vfmt::apply(level_.slider(),           vfmt::Fmt::Db);
+    vfmt::apply(masterGain_,               vfmt::Fmt::Db);
 }
 
 void K2000AudioProcessorEditor::paint(juce::Graphics& g) {
@@ -518,6 +549,8 @@ void K2000AudioProcessorEditor::layoutCanvas() {
         ampSection_.setBounds(b.reduced(2));
 
         layoutCells(vastDspSection_.contentBounds(), { { &algoLbl_, &algo_ } });
+        layoutCells(mixerSection_.contentBounds(),
+                    { { nullptr, &mixVco1_ }, { nullptr, &mixVco2_ }, { nullptr, &mixVco3_ } });
         layoutCells(ampEnvSection_.contentBounds(),
                     { { nullptr, &ampA_ }, { nullptr, &ampD_ }, { nullptr, &ampS_ }, { nullptr, &ampR_ } });
         auto ac = ampSection_.contentBounds();

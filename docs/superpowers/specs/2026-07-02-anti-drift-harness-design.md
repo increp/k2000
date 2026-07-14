@@ -1,6 +1,6 @@
 # Anti-Drift Harness — Design
 
-**Version:** 5.14 (artifact; distinct from plugin SemVer 5.4.0)
+**Version:** 5.14 (artifact; distinct from plugin SemVer 5.5.0)
 **Date:** 2026-07-02
 **Status:** Approved (brainstorm) — pending spec review
 **Relates to:** the 2026-07-02 codebase audit (`docs/audit/2026-07-02/`), the fit-for-purpose review (`docs/reviews/2026-07-02-fit-for-purpose-review.md`), and the gold-standard engagement (item 4).

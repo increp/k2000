@@ -1,6 +1,6 @@
 # Device-Characterization Framework — The Core (SP-A) — Design
 
-**Version:** 5.10 (artifact; distinct from plugin SemVer — 5.4.0 at time of writing. NB: an earlier revision said "5.9.0", misreading the artifact stream 5.09 as a plugin version; the two numbering streams are unrelated.)
+**Version:** 5.10 (artifact; distinct from plugin SemVer — 5.5.0 at time of writing. NB: an earlier revision said "5.9.0", misreading the artifact stream 5.09 as a plugin version; the two numbering streams are unrelated.)
 **Date:** 2026-07-01
 **Status:** Approved (brainstorm) — pending spec review
 **Relates to:** Generalizes PR #7 (`feat/filter-validation-internal`, the filter-validation harness) per the L3 analysis [`ROADMAP-PR7-filter-validation-L3.md`](../../reviews/ROADMAP-PR7-filter-validation-L3.md). Extends spec [`2026-06-29-filter-validation-internal-design.md`](2026-06-29-filter-validation-internal-design.md).
