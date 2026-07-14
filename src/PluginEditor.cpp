@@ -165,7 +165,7 @@ void K2000AudioProcessorEditor::buildStaticControls() {
     for (auto* r : { &vco1_, &vco2_, &vco3_ })
         canvas_.addAndMakeVisible(*r);
 
-    // Reserved sections — visible (framed/dimmed) but no children yet.
+    // Canvas sections: the mixer (live; its knobs attach above) + the still-reserved placeholders.
     for (auto* s : { &mixerSection_, &outputSection_,
                      &modEnvSection_, &lfoSection_, &modMatrixSection_, &fxSection_ })
         canvas_.addAndMakeVisible(*s);
@@ -298,8 +298,9 @@ void K2000AudioProcessorEditor::bindLayer(int layer) {
 }
 
 // Instrument-style value-box text on the pre-Stage-2 controls (spec v5.33 §4).
-// VcoRow and the mixer knobs format their own sliders at construction; Key/Vel
-// sliders already display integers (their params step by 1).
+// VcoRow formats its own sliders at construction; the mixer knobs are
+// formatted in buildStaticControls(); Key/Vel sliders already display
+// integers (their params step by 1).
 void K2000AudioProcessorEditor::applyValueFormats() {
     vfmt::apply(filterCutoff_.slider(),    vfmt::Fmt::Hz);
     vfmt::apply(hpCutoff_.slider(),        vfmt::Fmt::HzOff);

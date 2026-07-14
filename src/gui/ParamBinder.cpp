@@ -37,6 +37,14 @@ void ParamBinder::bind(juce::Button& b, const juce::String& paramId) {
 }
 
 void ParamBinder::clear() {
+    // Restore each slider's caller-installed text functions (null included)
+    // before dropping the bindings: attachment dtors never clear the
+    // functions they installed, so a slider re-bound after clear() would
+    // otherwise snapshot stale attachment lambdas as "caller-installed".
+    for (auto& [slider, binding] : sliders_) {
+        slider->textFromValueFunction = binding.callerText;
+        slider->valueFromTextFunction = binding.callerValue;
+    }
     sliders_.clear();
     combos_.clear();
     buttons_.clear();
